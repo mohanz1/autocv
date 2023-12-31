@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.11
+
+      - name: Install dependencies
+        run: |
+          pip install -U pip
+          pip install poetry
+          poetry config virtualenvs.create false
+          poetry install --no-root
+
+      - name: Run ruff
+        if: always()
+        run: ruff check --preview --output-format=github .
+
+      - name: Run mypy
+        if: always()
+        run: mypy --check .
+
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.11
+
+      - name: Install dependencies
+        working-directory: ./emr_reprocessing
+        run: |
+          pip install -U pip
+          pip install poetry
+          poetry config virtualenvs.create false
+          poetry install --no-root
+
+      - name: Test yaml
+        working-directory: ./emr_reprocessing
+        run: pytest test.py
+
+  ci-done:
+    needs: [lint, test]
+    if: always() && !cancelled()
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set status based on required jobs
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          for result in $RESULTS; do
+            if [ "$result" != "success" ]; then
+              exit 1
+            fi
+          done
