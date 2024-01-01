@@ -1,9 +1,22 @@
+"""The `autocv` module provides a comprehensive interface for automation and computer vision tasks.
+
+This module contains the AutoCV class which extends the functionality of the `Input` class from the `core` module. It
+provides high-level methods for screen capture, image processing, color picking, and window manipulation. The module is
+designed to be an all-encompassing tool for building computer vision and GUI automation applications.
+
+Classes:
+- AutoCV: Inherits from Input, providing methods for finding and manipulating windows, capturing and processing images,
+performing OCR, and simulating user input.
+"""
+
+from __future__ import annotations
+
+__all__ = ("AutoCV",)
+
 import logging
 from tkinter import Tk
 
 import cv2 as cv
-import numpy as np
-import numpy.typing as npt
 import win32api
 import win32con
 import win32gui
@@ -14,20 +27,24 @@ from .core import Input
 from .core.vision import check_valid_hwnd, check_valid_image
 from .image_filter import ImageFilter
 from .image_picker import ImagePicker
-from .models import ColorWithPoint, FilterSettings, Rectangle
+from typing import TYPE_CHECKING, Self
 
-__all__ = ("AutoCV",)
+if TYPE_CHECKING:
+    from .models import ColorWithPoint, FilterSettings, Rectangle
+    import numpy.typing as npt
+    import numpy as np
 
 
 class AutoCV(Input):
-    """AutoCV is a class that provides an interface for interacting with windows and images on a computer screen. It uses
-    OpenCV and Tesseract OCR to manipulate the images and extract information. This class provides methods for
+    """AutoCV is a class that provides an interface for interacting with windows and images on a computer screen.
+
+    It uses OpenCV and Tesseract OCR to manipulate the images and extract information. This class provides methods for
     finding windows by title, setting the current window and inner window by title, getting all visible windows, getting
     all child windows of the current window, setting an image as the current image buffer, refreshing the image of the
     current window, and extracting text and color information from the current image buffer.
     """
 
-    def __init__(self, hwnd: int | None = None) -> None:
+    def __init__(self: Self, hwnd: int | None = None) -> None:
         """Initializes an instance of the AutoCV class with a specified window handle (hwnd).
 
         Args:
@@ -38,10 +55,10 @@ class AutoCV(Input):
         self._instance_logger = logging.getLogger(__name__).getChild(self.__class__.__name__).getChild(str(id(self)))
 
     @check_valid_hwnd
-    def get_hwnd(self) -> int:
+    def get_hwnd(self: Self) -> int:
         """Gets the handle for the specified window.
 
-        Returns
+        Returns:
         -------
             int: The handle for the specified window.
         """
@@ -49,10 +66,10 @@ class AutoCV(Input):
         return self.hwnd
 
     @check_valid_hwnd
-    def get_window_size(self) -> tuple[int, int]:
+    def get_window_size(self: Self) -> tuple[int, int]:
         """Retrieves the size of the window.
 
-        Returns
+        Returns:
         -------
             A tuple representing the width and height of the window in pixels.
         """
@@ -62,11 +79,10 @@ class AutoCV(Input):
         height = bottom - top
         return width, height
 
-    def antigcp(self) -> bool:
-        """Replaces the `GetCursorPos` function in the `user32.dll` module of the target process with a function that
-        simply returns 0.
+    def antigcp(self: Self) -> bool:
+        """Replaces the `GetCursorPos` function in the `user32.dll` module of the target process.
 
-        Returns
+        Returns:
         -------
             True if the function was successfully patched, False otherwise.
         """
@@ -74,7 +90,7 @@ class AutoCV(Input):
         process_id = win32process.GetWindowThreadProcessId(self._get_topmost_hwnd())[1]
 
         # Open a handle to the target process.
-        process_handle = win32api.OpenProcess(win32con.PROCESS_ALL_ACCESS, False, process_id)
+        process_handle = win32api.OpenProcess(win32con.PROCESS_ALL_ACCESS, __bInherit=False, __pid=process_id)
 
         module_handle = win32api.GetModuleHandle("user32.dll")
         function_address = win32api.GetProcAddress(module_handle, "GetCursorPos")  # type: ignore[arg-type]
@@ -96,10 +112,10 @@ class AutoCV(Input):
         return bytes_written == len(new_bytes) and buffer.tobytes() == new_bytes
 
     @check_valid_hwnd
-    def image_picker(self) -> tuple[npt.NDArray[np.uint8], Rectangle] | None:
+    def image_picker(self: Self) -> tuple[npt.NDArray[np.uint8], Rectangle] | None:
         """Sets up an image picker interface and returns the selected image as a NumPy array.
 
-        Returns
+        Returns:
         -------
             Optional[np.ndarray]: The selected image as a NumPy array, or None if no image was selected.
         """
@@ -111,14 +127,15 @@ class AutoCV(Input):
         image = app.result
         rect = app.rect
         root.destroy()
-        assert image is not None and rect is not None
+        assert image is not None
+        assert rect is not None
         return image, rect
 
     @check_valid_hwnd
-    def color_picker(self) -> ColorWithPoint | None:
+    def color_picker(self: Self) -> ColorWithPoint | None:
         """Sets up a color picker interface and returns the selected color and its location.
 
-        Returns
+        Returns:
         -------
             ColorWithPoint: The selected color and its location.
         """
@@ -132,11 +149,13 @@ class AutoCV(Input):
         return color_with_point
 
     @check_valid_image
-    def image_filter(self) -> FilterSettings:
+    def image_filter(self: Self) -> FilterSettings:
+        """A class for applying an HSV filter, Canny edge detection, erode, and dilate operations to an image."""
         assert self.opencv_image is not None
         return ImageFilter(self.opencv_image).filter_settings
 
-    def show_backbuffer(self, live: bool = False) -> None:
+    @check_valid_image
+    def show_backbuffer(self: Self, *, live: bool = False) -> None:
         """Displays the backbuffer image of the window.
 
         Args:
@@ -144,5 +163,6 @@ class AutoCV(Input):
             live (bool): Whether to show a live refreshing view. Defaults to False.
         """
         self._instance_logger.debug("Showing backbuffer.")
+        assert self.opencv_image is not None
         cv.imshow("AutoCV Backbuffer", self.opencv_image)
         cv.waitKey(int(live))

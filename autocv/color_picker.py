@@ -1,5 +1,21 @@
+"""The `color_picker` module provides functionality for picking colors from a specified window.
+
+It features a ColorPicker class that allows users to pick a color from any point on the screen. This module is
+particularly useful in applications that require color selection or recognition, such as graphic design tools or
+automation scripts.
+
+The ColorPicker class uses a Tkinter interface to display a magnified area around the mouse cursor, allowing users to
+accurately pick colors from pixels. It integrates with the Vision class from the `core` module for screen capture and
+color analysis.
+"""
+
+from __future__ import annotations
+
+__all__ = ("ColorPicker",)
+
 from pathlib import Path
 from tkinter import NW, Canvas, Tk, Toplevel
+from typing import Self
 
 import cv2 as cv
 import numpy as np
@@ -18,7 +34,25 @@ ZOOM = 40
 
 
 class ColorPicker:
-    def __init__(self, hwnd: int, master: Tk) -> None:
+    """The ColorPicker class provides an interactive color picking tool using a Tkinter window.
+
+    It captures a portion of the screen around the mouse cursor, allowing users to pick a pixel's color from within a
+    specified window.
+
+    Attributes:
+        hwnd (int): Handle of the window from which colors will be picked.
+        master (Tk): The root Tkinter window for the color picker interface.
+        size (int): The size of the color picker magnifier.
+        snip_surface (Canvas|None): The Tkinter canvas on which the magnified screen portion is drawn.
+        result (ColorWithPoint|None): The most recently picked color along with its screen coordinates.
+        prev_state (int): The previous state of the left mouse button to detect clicks.
+        vision (Vision): An instance of Vision used for capturing and processing the screen image.
+
+    The class creates a magnified view of the screen around the cursor's current position, allowing the user
+    to pick a color by clicking. The picked color, along with its screen coordinates, is stored in `result` attribute.
+    """
+
+    def __init__(self: Self, hwnd: int, master: Tk) -> None:
         """Creates a color picker instance.
 
         Args:
@@ -42,7 +76,7 @@ class ColorPicker:
         self.picture_frame = None
         self.create_screen_canvas()
 
-    def set_geometry(self, cursor_pos: tuple[int, int] | None = None) -> None:
+    def set_geometry(self: Self, cursor_pos: tuple[int, int] | None = None) -> None:
         """Sets the position and size of the color picker window.
 
         Args:
@@ -55,7 +89,7 @@ class ColorPicker:
         x, y = cursor_pos or win32gui.GetCursorPos()
         self.master_screen.geometry(f"{self.size}x{self.size}+{x}+{y}")
 
-    def create_screen_canvas(self) -> None:
+    def create_screen_canvas(self: Self) -> None:
         """Creates the canvas for the color picker and sets up the window."""
         self.master_screen.withdraw()
         self.master.withdraw()
@@ -72,12 +106,12 @@ class ColorPicker:
         self.set_geometry()
         self.master_screen.deiconify()
         self.master_screen.lift()
-        self.master_screen.attributes("-topmost", True)
-        self.master_screen.overrideredirect(True)
+        self.master_screen.attributes("-topmost", True)  # noqa: FBT003
+        self.master_screen.overrideredirect(boolean=True)
         self.master_screen.focus_set()  # Restricted access main menu
         self.master.after(0, self.on_tick)
 
-    def on_tick(self) -> None:
+    def on_tick(self: Self) -> None:
         """Handles the mouse movement and updates the color picker canvas accordingly."""
         if not self.master_screen:
             return
@@ -121,7 +155,7 @@ class ColorPicker:
         if self.master:
             self.master.after(5, self.on_tick)
 
-    def draw_cursor_coordinates(self, img: Image.Image, x: int, y: int) -> Image.Image:
+    def draw_cursor_coordinates(self: Self, img: Image.Image, x: int, y: int) -> Image.Image:
         """Draws the cursor coordinates onto the given image.
 
         Args:
@@ -152,9 +186,8 @@ class ColorPicker:
         )
         return img
 
-    def draw_center_rectangle(self, cropped_image: npt.NDArray[np.uint8]) -> None:
-        """Draw the center rectangle on the color picker canvas, with a color that represents the average color of the
-        image.
+    def draw_center_rectangle(self: Self, cropped_image: npt.NDArray[np.uint8]) -> None:
+        """Draw the center rectangle on the color picker canvas.
 
         Args:
         ----
@@ -180,9 +213,8 @@ class ColorPicker:
             outline=hex_color,
         )
 
-    def handle_button_press(self, x: int, y: int) -> None:
-        """Get the color of the pixel at the given coordinates (x,y), create a ColorWithPoint instance with the result,
-        and exit the screenshot mode.
+    def handle_button_press(self: Self, x: int, y: int) -> None:
+        """Get the color of the pixel at the given coordinates (x,y).
 
         Args:
         ----

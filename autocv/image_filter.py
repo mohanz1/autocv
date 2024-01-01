@@ -1,4 +1,14 @@
-from typing import Any, cast
+"""This module defines the ImageFilter class which is used for applying various image processing techniques.
+
+This includes HSV filtering, Canny edge detection, eroding, and dilating operations. It uses OpenCV for image
+manipulation and provides a user interface using trackbars to adjust the filter settings in real-time.
+"""
+
+from __future__ import annotations
+
+__all__ = ("ImageFilter",)
+
+from typing import cast, Self
 
 import cv2 as cv
 import numpy as np
@@ -6,15 +16,17 @@ import numpy.typing as npt
 
 from .models import FilterSettings
 
+ESC_CODE = 27
 
-def nothing(_: Any) -> None:
+
+def nothing(_: int) -> None:
     pass
 
 
 class ImageFilter:
-    """A class for applying an HSV filter, Canny edge detection, erode, and dilate operations to an image using trackbars."""
+    """A class for applying an HSV filter, Canny edge detection, erode, and dilate operations to an image."""
 
-    def __init__(self, image: npt.NDArray[np.uint8]) -> None:
+    def __init__(self: Self, image: npt.NDArray[np.uint8]) -> None:
         """Initialize the HSV filter with an input image.
 
         Args:
@@ -54,7 +66,7 @@ class ImageFilter:
         # Start event loop
         while cv.getWindowProperty("Trackbars", 0) >= 0:
             k = cv.waitKey(1)
-            if k == 27:
+            if k == ESC_CODE:
                 # Exit on ESC key press
                 break
 
@@ -94,7 +106,7 @@ class ImageFilter:
         # Release resources
         cv.destroyAllWindows()
 
-    def update_filter_settings(self) -> None:
+    def update_filter_settings(self: Self) -> None:
         """Update filter settings based on current trackbar values."""
         self.filter_settings.h_min = cv.getTrackbarPos("H min", "Trackbars")
         self.filter_settings.h_max = cv.getTrackbarPos("H max", "Trackbars")
@@ -111,10 +123,10 @@ class ImageFilter:
         self.filter_settings.erode_kernel_size = cv.getTrackbarPos("Erode", "Trackbars")
         self.filter_settings.dilate_kernel_size = cv.getTrackbarPos("Dilate", "Trackbars")
 
-    def get_filtered_image(self) -> npt.NDArray[np.uint8]:
+    def get_filtered_image(self: Self) -> npt.NDArray[np.uint8]:
         """Get the image with filters applied.
 
-        Returns
+        Returns:
         -------
             The filtered image.
         """
@@ -124,20 +136,16 @@ class ImageFilter:
         # Apply HSV filter
         hsv_mask = cv.inRange(
             self.hsv_image,
-            np.array(
-                [
-                    self.filter_settings.h_min,
-                    self.filter_settings.s_min,
-                    self.filter_settings.v_min,
-                ]
-            ),
-            np.array(
-                [
-                    self.filter_settings.h_max,
-                    self.filter_settings.s_max,
-                    self.filter_settings.v_max,
-                ]
-            ),
+            np.array([
+                self.filter_settings.h_min,
+                self.filter_settings.s_min,
+                self.filter_settings.v_min,
+            ]),
+            np.array([
+                self.filter_settings.h_max,
+                self.filter_settings.s_max,
+                self.filter_settings.v_max,
+            ]),
         )
         hsv_filtered = cv.bitwise_and(self.hsv_image, self.hsv_image, mask=hsv_mask)
         hsv_filtered[..., 1] = np.clip(

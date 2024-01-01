@@ -1,17 +1,23 @@
+"""This module defines the ColorWithPoint class.
+
+This is a data structure to store a color and its corresponding point in 2D space. It includes methods to construct this
+class from various types of sequences and numpy arrays.
+"""
+
 from __future__ import annotations
 
-from typing import NamedTuple
+__all__ = ("Color",)
+
+from typing import NamedTuple, Self
 
 import numpy as np
 import numpy.typing as npt
-
-__all__ = ("Color",)
 
 
 class Color(NamedTuple):
     """A class representing a color as a combination of red, green, and blue components.
 
-    Attributes
+    Attributes:
     ----------
         r: An integer representing the red component.
         g: An integer representing the green component.
@@ -22,7 +28,7 @@ class Color(NamedTuple):
     g: int
     b: int
 
-    def __array__(self, dtype: npt.DTypeLike = np.int16) -> npt.NDArray[np.int16]:
+    def __array__(self: Self, dtype: npt.DTypeLike = np.int16) -> npt.NDArray[np.int16]:  # noqa: PLW3201
         """Return a numpy array of the red, green, and blue components.
 
         Args:
@@ -37,7 +43,7 @@ class Color(NamedTuple):
         """
         return np.array([self.r, self.g, self.b], dtype=dtype)
 
-    def is_color_within_color_and_tolerance(self, color: tuple[int, int, int], tolerance: int = 0) -> bool:
+    def is_color_within_color_and_tolerance(self: Self, color: tuple[int, int, int], tolerance: int = 0) -> bool:
         """Check if this color is within the specified color and tolerance.
 
         Args:
@@ -60,7 +66,7 @@ class Color(NamedTuple):
         # Check if this color is within the specified color and tolerance
         return bool(np.all((current_color >= lower_bounds) & (current_color <= upper_bounds)))
 
-    def invert(self, color: Color | tuple[int, int, int] | None = None) -> Color:
+    def invert(self: Self, color: Color | tuple[int, int, int] | None = None) -> Color:
         """Return the inverse of the color.
 
         Args:

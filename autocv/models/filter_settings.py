@@ -1,16 +1,24 @@
-from dataclasses import dataclass
+"""This module defines the FilterSettings dataclass.
+
+This is used for storing configuration settings for various image processing filters. These settings include ranges for
+hue, saturation, and value, parameters for edge detection, erosion and dilation kernel sizes, among others.
+"""
+
+from __future__ import annotations
 
 __all__ = ("FilterSettings",)
 
+from dataclasses import dataclass
 
-SLOTS_DATACLASS = dict(slots=True) if "slots" in dataclass.__kwdefaults__ else {}
+
+SLOTS_DATACLASS = {"slots": True} if "slots" in dataclass.__kwdefaults__ else {}
 
 
 @dataclass(**SLOTS_DATACLASS)
 class FilterSettings:
     """Class to store settings for image processing filters.
 
-    Attributes
+    Attributes:
     ----------
         h_min (int): The minimum hue value.
         h_max (int): The maximum hue value.

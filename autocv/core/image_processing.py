@@ -1,12 +1,22 @@
+"""The image_processing module provides utility functions for processing images.
+
+This includes filtering colors within specific tolerance ranges. It primarily supports the operations related to color
+manipulation and filtering in OpenCV images.
+"""
+
+from __future__ import annotations
+
+__all__ = ("filter_colors",)
+
 import logging
-from collections.abc import Sequence
-from typing import cast
+from typing import cast, TYPE_CHECKING
 
 import cv2 as cv
 import numpy as np
 import numpy.typing as npt
 
-__all__ = ("filter_colors",)
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 
 logger = logging.getLogger(__name__)
@@ -16,6 +26,7 @@ def filter_colors(
     opencv_image: npt.NDArray[np.uint8],
     colors: tuple[int, int, int] | Sequence[tuple[int, int, int]],
     tolerance: int = 0,
+    *,
     keep_original_colors: bool = False,
 ) -> npt.NDArray[np.uint8]:
     """Filter out all colors from the image that are not in the specified list of colors with a given tolerance.
@@ -40,7 +51,12 @@ def filter_colors(
     if color_values.ndim == 1:
         color_values = color_values[np.newaxis, :]
 
-    logger.debug(f"Filtering with {len(color_values)} color(s) with {tolerance=} and {keep_original_colors=}.")
+    logger.debug(
+        "Filtering with %s color(s) with tolerance=%s and keep_original_colors=%s.",
+        len(color_values),
+        tolerance,
+        keep_original_colors,
+    )
 
     # Convert color_values from RGB to BGR order
     color_values = color_values[..., ::-1]
@@ -52,10 +68,13 @@ def filter_colors(
     # Create a mask for each color and combine them using bitwise OR
     mask = cv.inRange(opencv_image, lower_bounds[0], upper_bounds[0])
     logger.debug(
-        f"Filtering color 1/{len(color_values)} with lower bound {lower_bounds[0]} and upper bound {upper_bounds[0]}.",
+        "Filtering color 1/%s with lower bound %s and upper bound %s.",
+        len(color_values),
+        lower_bounds[0],
+        upper_bounds[0],
     )
-    for i, (lb, ub) in enumerate(zip(lower_bounds[1:], upper_bounds[1:]), start=2):
-        logger.debug(f"Filtering color {i}/{len(color_values)} with lower bound {lb} and upper bound {ub}.")
+    for i, (lb, ub) in enumerate(zip(lower_bounds[1:], upper_bounds[1:], strict=False), start=2):
+        logger.debug("Filtering color %s with lower bound %s and upper bound %s.", i / len(color_values), lb, ub)
         color_mask = cv.inRange(opencv_image, lb, ub)
         mask = cv.bitwise_or(mask, color_mask)
 
