@@ -1,16 +1,25 @@
-import math
-import random
-from typing import NamedTuple
+"""This module defines the Circle class, which is used for representing circles in a 2D space.
 
-from .point import Point
+It includes functionality for identifying the center of the circle and generating random points within the circle. The
+Circle class is defined with center coordinates and a radius and provides methods to interact with the geometric
+properties of the circle.
+"""
+
+from __future__ import annotations
 
 __all__ = ("Circle",)
+
+import math
+import random
+from typing import NamedTuple, Self
+
+from .point import Point
 
 
 class Circle(NamedTuple):
     """A class to represent a rectangle.
 
-    Attributes
+    Attributes:
     ----------
     - x (int): The x-coordinate of the center of the circle.
     - y (int): The y-coordinate of the center of the circle.
@@ -21,19 +30,19 @@ class Circle(NamedTuple):
     y: int
     radius: int
 
-    def center(self) -> Point:
+    def center(self: Self) -> Point:
         """Get the center point of the circle.
 
-        Returns
+        Returns:
         -------
             autocv.models.point: The center point of the circle.
         """
         return Point(self.x, self.y)
 
-    def random_point(self) -> Point:
+    def random_point(self: Self) -> Point:
         """Get a random point of the circle.
 
-        Returns
+        Returns:
         -------
             autocv.models.point: The random point of the circle.
         """

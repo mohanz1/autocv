@@ -1,20 +1,32 @@
-from collections.abc import Sequence
+"""This module defines the WindowCapture class which is used for capturing images from specified windows on the desktop.
 
-import win32gui
+It includes methods for obtaining window handles and titles, capturing specific windows, and listing child windows.
+The class interacts with the Windows API to manage window handles and capture screens.
+"""
 
-from autocv.utils import filtering
+from __future__ import annotations
 
 __all__ = ("WindowCapture",)
 
 
+import win32gui
+
+from autocv.utils import filtering
+from typing import TYPE_CHECKING, Self
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+
 class WindowCapture:
-    """The WindowCapture class is used to capture images of windows on the desktop. It provides methods for getting
-    information about windows, setting the current window to a new window, and getting a list of child windows for the
-    current window. The class can be initialized with a handle to a specific window to capture or left unspecified to
-    capture the entire screen.
+    """The WindowCapture class is used to capture images of windows on the desktop.
+
+    It provides methods for getting information about windows, setting the current window to a new window, and getting a
+    list of child windows for the current window. The class can be initialized with a handle to a specific window to
+    capture or left unspecified to capture the entire screen.
     """
 
-    def __init__(self, hwnd: int | None = None) -> None:
+    def __init__(self: Self, hwnd: int | None = None) -> None:
         """Initialize the WindowCapture object.
 
         Args:
@@ -49,10 +61,10 @@ class WindowCapture:
         if class_name:
             child_windows.append((hwnd, class_name))
 
-    def get_windows_with_hwnds(self) -> Sequence[tuple[int, str]]:
+    def get_windows_with_hwnds(self: Self) -> Sequence[tuple[int, str]]:
         """Returns a list of all visible windows with their corresponding IDs.
 
-        Returns
+        Returns:
         -------
             List[Tuple[int, str]]: A list of tuples containing the window handle (HWND) and the window title (str).
         """
@@ -60,7 +72,7 @@ class WindowCapture:
         win32gui.EnumWindows(self._window_enumeration_handler, top_windows)
         return top_windows
 
-    def get_hwnd_by_title(self, title: str) -> int | None:
+    def get_hwnd_by_title(self: Self, title: str) -> int | None:
         """Returns the window ID of the first visible window whose title contains the specified string.
 
         Args:
@@ -77,10 +89,10 @@ class WindowCapture:
         first = filtering.find_first(lambda x: title in x[1].casefold(), top_windows)
         return first[0] if first else None
 
-    def get_child_windows(self) -> Sequence[tuple[int, str]]:
+    def get_child_windows(self: Self) -> Sequence[tuple[int, str]]:
         """Returns a list of all child windows for the current window.
 
-        Returns
+        Returns:
         -------
             List[Tuple[int, str]]: A list of tuples, each containing a child window's ID and class name.
         """
@@ -88,7 +100,7 @@ class WindowCapture:
         win32gui.EnumChildWindows(self.hwnd, self._child_window_enumeration_handler, child_windows)
         return child_windows
 
-    def set_hwnd_by_title(self, title: str, case_insensitive: bool = False) -> bool:
+    def set_hwnd_by_title(self: Self, title: str, *, case_insensitive: bool = False) -> bool:
         """Sets the current window to the first visible window whose title contains the specified string.
 
         Args:
@@ -114,7 +126,7 @@ class WindowCapture:
             return True
         return False
 
-    def set_inner_hwnd_by_title(self, class_name: str) -> bool:
+    def set_inner_hwnd_by_title(self: Self, class_name: str) -> bool:
         """Sets the current window to the first child window whose class name contains the specified string.
 
         Args:

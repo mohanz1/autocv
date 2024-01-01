@@ -1,7 +1,17 @@
+"""Module for representing and manipulating contours in 2D space.
+
+It includes the Contour class which encapsulates methods for computing properties of contours such as area, perimeter,
+centroid, and methods for conversion to other shapes.
+"""
+
+from __future__ import annotations
+
+__all__ = ("Contour",)
+
 from abc import abstractmethod
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import cast, overload
+from typing import cast, overload, Self
 
 import cv2 as cv
 import numpy as np
@@ -10,40 +20,41 @@ import numpy.typing as npt
 from .circle import Circle
 from .point import Point
 from .rectangle import Rectangle
+from itertools import starmap
 
-__all__ = ("Contour",)
-
-SLOTS_DATACLASS = dict(slots=True) if "slots" in dataclass.__kwdefaults__ else {}
+SLOTS_DATACLASS = {"slots": True} if "slots" in dataclass.__kwdefaults__ else {}
 
 
 @dataclass(frozen=True, **SLOTS_DATACLASS)
 class Contour(Sequence[Sequence[tuple[int, int]]]):
+    """Represents a contour in 2D space with various geometric properties and methods."""
+
     data: npt.NDArray[np.uintp]
 
-    def __len__(self) -> int:
+    def __len__(self: Self) -> int:
+        """Return the number of points in the contour."""
         return len(self.data)
 
     @overload
     @abstractmethod
-    def __getitem__(self, index: int) -> Sequence[tuple[int, int]]:
-        ...
+    def __getitem__(self: Self, index: int) -> Sequence[tuple[int, int]]: ...
 
     @overload
     @abstractmethod
-    def __getitem__(self, index: slice) -> Sequence[Sequence[tuple[int, int]]]:
-        ...
+    def __getitem__(self: Self, index: slice) -> Sequence[Sequence[tuple[int, int]]]: ...
 
     def __getitem__(
         self,
         index: int | slice,
     ) -> Sequence[Sequence[tuple[int, int]]] | Sequence[tuple[int, int]]:
+        """Retrieve a point or a sequence of points from the contour by index."""
         return cast(
             Sequence[Sequence[tuple[int, int]]] | Sequence[tuple[int, int]],
             self.data[index].tolist(),
         )
 
     @classmethod
-    def from_ndarray(cls, data: npt.NDArray[np.uintp]) -> "Contour":
+    def from_ndarray(cls: Contour, data: npt.NDArray[np.uintp]) -> Contour:
         """Create a new Contour instance from a given numpy ndarray.
 
         Args:
@@ -56,28 +67,28 @@ class Contour(Sequence[Sequence[tuple[int, int]]]):
         """
         return cls(data)
 
-    def area(self) -> float:
+    def area(self: Self) -> float:
         """Compute the area of the contour.
 
-        Returns
+        Returns:
         -------
             float: A float representing the area of the contour.
         """
         return float(cv.contourArea(self.data))
 
-    def perimeter(self) -> float:
+    def perimeter(self: Self) -> float:
         """Compute the perimeter of the contour.
 
-        Returns
+        Returns:
         -------
             float: A float representing the perimeter of the contour.
         """
-        return float(cv.arcLength(self.data, True))
+        return float(cv.arcLength(self.data, closed=True))
 
-    def centroid(self) -> Point:
+    def centroid(self: Self) -> Point:
         """Compute the centroid of the contour.
 
-        Returns
+        Returns:
         -------
             autocv.models.Point: A Point representing the (x, y) coordinates of the centroid of the contour.
         """
@@ -86,16 +97,16 @@ class Contour(Sequence[Sequence[tuple[int, int]]]):
         cy = int(m["m01"] / m["m00"])
         return Point(cx, cy)
 
-    def center(self) -> Point:
+    def center(self: Self) -> Point:
         """Compute the centroid of the contour.
 
-        Returns
+        Returns:
         -------
             autocv.models.Point: A Point representing the (x, y) coordinates of the centroid of the contour.
         """
         return self.centroid()
 
-    def is_point_inside_contour(self, x: int, y: int) -> bool:
+    def is_point_inside_contour(self: Self, x: int, y: int) -> bool:
         """Check whether a given point lies within the contour.
 
         Args:
@@ -107,12 +118,12 @@ class Contour(Sequence[Sequence[tuple[int, int]]]):
         -------
             bool: True if the point lies inside the contour, False otherwise.
         """
-        return bool(cv.pointPolygonTest(self.data, (x, y), False) >= 0)
+        return bool(cv.pointPolygonTest(self.data, (x, y), measureDist=False) >= 0)
 
-    def random_point(self) -> Point:
+    def random_point(self: Self) -> Point:
         """Get a random point inside the contour.
 
-        Returns
+        Returns:
         -------
             autocv.models.Point: A Point object representing the random point.
         """
@@ -122,28 +133,28 @@ class Contour(Sequence[Sequence[tuple[int, int]]]):
             if self.is_point_inside_contour(x, y):
                 return Point(int(x), int(y))
 
-    def to_points(self) -> Sequence[Point]:
+    def to_points(self: Self) -> Sequence[Point]:
         """Convert the contour to a list of points.
 
-        Returns
+        Returns:
         -------
             Sequence[autocv.models.Point]: A list of Point objects representing the points in the contour.
         """
-        return tuple(Point(*point) for point in self.data.squeeze())
+        return tuple(starmap(Point, self.data.squeeze()))
 
-    def get_bounding_rect(self) -> Rectangle:
+    def get_bounding_rect(self: Self) -> Rectangle:
         """Returns a Rectangle object representing the minimum bounding box that encloses the contour.
 
-        Returns
+        Returns:
         -------
             Rectangle: A Rectangle object representing the minimum bounding box that encloses the contour.
         """
         return Rectangle(*cv.boundingRect(self.data))
 
-    def get_bounding_circle(self) -> Circle:
+    def get_bounding_circle(self: Self) -> Circle:
         """Returns a Circle object representing the minimum bounding circle that encloses the contour.
 
-        Returns
+        Returns:
         -------
             Circle: A Circle object representing the minimum bounding box that encloses the contour.
         """

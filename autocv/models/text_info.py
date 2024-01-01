@@ -1,17 +1,25 @@
+"""This module defines the TextInfo data class for representing text information detected in an image.
+
+It includes attributes for the text itself, its confidence level,and its bounding box coordinates as defined by the
+Rectangle class.
+"""
+
+from __future__ import annotations
+
+__all__ = ("TextInfo",)
+
 from dataclasses import dataclass
 from typing import Any
 
 from autocv.models.rectangle import Rectangle
 
-SLOTS_DATACLASS = dict(slots=True) if "slots" in dataclass.__kwdefaults__ else {}
-
-
-__all__ = ("TextInfo",)
+SLOTS_DATACLASS = {"slots": True} if "slots" in dataclass.__kwdefaults__ else {}
 
 
 @dataclass(frozen=True, **SLOTS_DATACLASS)
 class TextInfo:
     """A dataclass representing information about text detected in an image.
+
     Inherits from Rectangle class to store the bounding box coordinates of the text.
     """
 
@@ -20,7 +28,7 @@ class TextInfo:
     rectangle: Rectangle
 
     @classmethod
-    def from_row(cls, row: dict[str, Any]) -> "TextInfo":
+    def from_row(cls: TextInfo, row: dict[str, Any]) -> TextInfo:
         """Creates a TextInfo object from a dictionary-like object.
 
         Args:
