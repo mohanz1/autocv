@@ -35,6 +35,9 @@ jobs:
 
   lint:
     runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
 
     steps:
       - name: Checkout repository
