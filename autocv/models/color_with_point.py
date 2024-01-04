@@ -9,7 +9,8 @@ from __future__ import annotations
 __all__ = ("ColorWithPoint",)
 
 from dataclasses import astuple, dataclass
-from typing import Any, TYPE_CHECKING, Self
+from typing import Any, TYPE_CHECKING
+from typing_extensions import Self
 
 from .color import Color
 from .exceptions import InvalidLengthError

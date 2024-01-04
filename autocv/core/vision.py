@@ -12,7 +12,8 @@ import functools
 import logging
 import pathlib
 from collections.abc import Callable, Sequence
-from typing import Any, TypeVar, cast, Self
+from typing import Any, TypeVar, cast
+from typing_extensions import Self
 
 import cv2 as cv
 import numpy as np

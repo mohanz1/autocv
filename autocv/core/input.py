@@ -12,7 +12,8 @@ import logging
 import math
 import time
 from random import randint, random
-from typing import Final, Self
+from typing import Final
+from typing_extensions import Self
 
 import win32api
 import win32con

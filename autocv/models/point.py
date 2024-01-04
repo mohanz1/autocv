@@ -9,7 +9,8 @@ from __future__ import annotations
 __all__ = ("Point",)
 
 import math
-from typing import NamedTuple, TYPE_CHECKING, Self
+from typing import NamedTuple, TYPE_CHECKING
+from typing_extensions import Self
 
 if TYPE_CHECKING:
     import numpy as np
@@ -71,7 +72,7 @@ class Point(NamedTuple):
         -------
             autocv.models.Point: A Point object with the specified coordinates.
         """
-        return cls(data[0], data[1])
+        return cls(int(data[0]), int(data[1]))
 
     def distance_to(self: Self, other: tuple[int, int]) -> float:
         """Calculate the Euclidean distance between this point and another point.

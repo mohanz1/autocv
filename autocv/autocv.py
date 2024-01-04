@@ -27,7 +27,8 @@ from .core import Input
 from .core.vision import check_valid_hwnd, check_valid_image
 from .image_filter import ImageFilter
 from .image_picker import ImagePicker
-from typing import TYPE_CHECKING, Self
+from typing import TYPE_CHECKING
+from typing_extensions import Self
 
 if TYPE_CHECKING:
     from .models import ColorWithPoint, FilterSettings, Rectangle
@@ -90,7 +91,7 @@ class AutoCV(Input):
         process_id = win32process.GetWindowThreadProcessId(self._get_topmost_hwnd())[1]
 
         # Open a handle to the target process.
-        process_handle = win32api.OpenProcess(win32con.PROCESS_ALL_ACCESS, __bInherit=False, __pid=process_id)
+        process_handle = win32api.OpenProcess(win32con.PROCESS_ALL_ACCESS, __bInherit=False, __pid=process_id)  # type: ignore[call-arg]
 
         module_handle = win32api.GetModuleHandle("user32.dll")
         function_address = win32api.GetProcAddress(module_handle, "GetCursorPos")  # type: ignore[arg-type]

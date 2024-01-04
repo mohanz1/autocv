@@ -8,7 +8,8 @@ from __future__ import annotations
 
 __all__ = ("ImageFilter",)
 
-from typing import cast, Self
+from typing import cast
+from typing_extensions import Self
 
 import cv2 as cv
 import numpy as np

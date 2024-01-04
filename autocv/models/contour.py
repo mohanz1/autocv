@@ -11,7 +11,8 @@ __all__ = ("Contour",)
 from abc import abstractmethod
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import cast, overload, Self
+from typing import cast, overload
+from typing_extensions import Self
 
 import cv2 as cv
 import numpy as np

@@ -12,7 +12,8 @@ __all__ = ("WindowCapture",)
 import win32gui
 
 from autocv.utils import filtering
-from typing import TYPE_CHECKING, Self
+from typing import TYPE_CHECKING
+from typing_extensions import Self
 
 if TYPE_CHECKING:
     from collections.abc import Sequence

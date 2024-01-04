@@ -10,7 +10,8 @@ from __future__ import annotations
 __all__ = ("Rectangle",)
 
 import random
-from typing import NamedTuple, TYPE_CHECKING, Self
+from typing import NamedTuple, TYPE_CHECKING
+from typing_extensions import Self
 
 from autocv.models.exceptions import InvalidLengthError
 from autocv.models.point import Point

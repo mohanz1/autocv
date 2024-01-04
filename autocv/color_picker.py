@@ -15,7 +15,7 @@ __all__ = ("ColorPicker",)
 
 from pathlib import Path
 from tkinter import NW, Canvas, Tk, Toplevel
-from typing import Self
+from typing_extensions import Self
 
 import cv2 as cv
 import numpy as np

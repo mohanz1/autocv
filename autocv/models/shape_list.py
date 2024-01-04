@@ -11,7 +11,8 @@ __all__ = ("OrderBy", "ShapeList")
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import TypeVar, overload, Self
+from typing import TypeVar, overload
+from typing_extensions import Self
 
 import numpy as np
 import numpy.typing as npt

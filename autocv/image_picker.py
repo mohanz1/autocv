@@ -7,8 +7,9 @@ from __future__ import annotations
 
 __all__ = ("ImagePicker",)
 
-from tkinter import BOTH, YES, Canvas, Event, Frame, Tk, Toplevel
-from typing import TYPE_CHECKING, Self, Any
+from tkinter import BOTH, YES, Canvas, Event, Frame, Tk, Toplevel, Misc
+from typing import TYPE_CHECKING, Any, TypeVar
+from typing_extensions import Self
 
 import win32con
 import win32gui
@@ -113,7 +114,7 @@ class ImagePicker:
         self.result = vision.opencv_image[y1:y2, x1:x2]
         self.rect = Rectangle.from_coordinates((x1, y1, x2, y2))
 
-    def on_button_release(self: Self, _: Callable[[Event], Any]) -> None:
+    def on_button_release(self: Self, _) -> None:
         """Handles the release of the screenshot button by taking a screenshot of the selected region."""
         # Exit screenshot mode and destroy the screenshot window
 

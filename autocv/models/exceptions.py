@@ -12,7 +12,7 @@ __all__ = (
     "InvalidLengthError",
 )
 
-from typing import Self
+from typing_extensions import Self
 
 
 class InvalidHandleError(Exception):
