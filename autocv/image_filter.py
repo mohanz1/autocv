@@ -137,29 +137,25 @@ class ImageFilter:
         # Apply HSV filter
         hsv_mask = cv.inRange(
             self.hsv_image,
-            np.array(
-                [
-                    self.filter_settings.h_min,
-                    self.filter_settings.s_min,
-                    self.filter_settings.v_min,
-                ]
-            ),
-            np.array(
-                [
-                    self.filter_settings.h_max,
-                    self.filter_settings.s_max,
-                    self.filter_settings.v_max,
-                ]
-            ),
+            np.array([
+                self.filter_settings.h_min,
+                self.filter_settings.s_min,
+                self.filter_settings.v_min,
+            ]),
+            np.array([
+                self.filter_settings.h_max,
+                self.filter_settings.s_max,
+                self.filter_settings.v_max,
+            ]),
         )
         hsv_filtered = cv.bitwise_and(self.hsv_image, self.hsv_image, mask=hsv_mask)
         hsv_filtered[..., 1] = np.clip(
-            hsv_filtered[..., 1] + self.filter_settings.s_add - self.filter_settings.s_subtract,
+            hsv_filtered[..., 1] + self.filter_settings.s_add - self.filter_settings.s_subtract,  # type: ignore[operator]
             0,
             255,
         )
         hsv_filtered[..., 2] = np.clip(
-            hsv_filtered[..., 2] + self.filter_settings.v_add - self.filter_settings.v_subtract,
+            hsv_filtered[..., 2] + self.filter_settings.v_add - self.filter_settings.v_subtract,  # type: ignore[operator]
             0,
             255,
         )

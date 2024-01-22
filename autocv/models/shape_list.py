@@ -79,7 +79,7 @@ class ShapeList(Sequence[T]):
     """
 
     shape_cls: type[T]
-    data: npt.NDArray[np.uintp] | Sequence[npt.NDArray[np.uintp]]
+    data: npt.NDArray[np.uintp] | Sequence[npt.NDArray[np.uintp]] | Sequence[Sequence[int]]
     center_of_bitmap: Point = field(repr=False)
 
     def __len__(self: Self) -> int:
@@ -93,12 +93,10 @@ class ShapeList(Sequence[T]):
         return len(self.data)
 
     @overload
-    def __getitem__(self: Self, index: int) -> T:
-        ...
+    def __getitem__(self: Self, index: int) -> T: ...
 
     @overload
-    def __getitem__(self: Self, index: slice) -> Sequence[T]:
-        ...
+    def __getitem__(self: Self, index: slice) -> Sequence[T]: ...
 
     def __getitem__(self: Self, index: int | slice) -> T | Sequence[T]:
         """Retrieve a shape or a sequence of shapes from the list by index.
@@ -110,9 +108,9 @@ class ShapeList(Sequence[T]):
             T | Sequence[T]: The requested shape or sequence of shapes.
         """
         if isinstance(index, int):
-            return self.shape_cls.from_ndarray(self.data[index])
+            return self.shape_cls.from_ndarray(self.data[index])  # type: ignore[arg-type]
 
-        return tuple(self.shape_cls.from_ndarray(self.data[i]) for i in range(*index.indices(len(self))))
+        return tuple(self.shape_cls.from_ndarray(self.data[i]) for i in range(*index.indices(len(self))))  # type: ignore[arg-type]
 
     def order_by(self: Self, by: OrderBy) -> ShapeList[T]:
         """Order the shapes in the list according to the given algorithm. Orders in place.

@@ -38,13 +38,11 @@ class Contour(Sequence[Sequence[tuple[int, int]]]):
 
     @overload
     @abstractmethod
-    def __getitem__(self: Self, index: int) -> Sequence[tuple[int, int]]:
-        ...
+    def __getitem__(self: Self, index: int) -> Sequence[tuple[int, int]]: ...
 
     @overload
     @abstractmethod
-    def __getitem__(self: Self, index: slice) -> Sequence[Sequence[tuple[int, int]]]:
-        ...
+    def __getitem__(self: Self, index: slice) -> Sequence[Sequence[tuple[int, int]]]: ...
 
     def __getitem__(
         self,

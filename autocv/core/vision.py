@@ -154,9 +154,9 @@ class Vision(WindowCapture):
             None
         """
         if isinstance(image, Image.Image):
-            self.opencv_image = cv.cvtColor(np.array(image), cv.COLOR_RGB2BGR)
+            self.opencv_image = cast(npt.NDArray[np.uint8], cv.cvtColor(np.array(image), cv.COLOR_RGB2BGR))
         else:
-            self.opencv_image = image
+            self.opencv_image = cast(npt.NDArray[np.uint8], image)
 
     @check_valid_hwnd
     def refresh(self: Self, *, set_backbuffer: bool | None = True) -> npt.NDArray[np.uint8] | None:
@@ -186,13 +186,13 @@ class Vision(WindowCapture):
         bmp_dc = mem_dc.CreateCompatibleDC()
         bitmap = win32ui.CreateBitmap()
         bitmap.CreateCompatibleBitmap(mem_dc, width, height)
-        bmp_dc.SelectObject(bitmap)  # type: ignore[no-untyped-call]
+        bmp_dc.SelectObject(bitmap)
 
         # Copy window image data onto bitmap
         bmp_dc.BitBlt((0, 0), (width, height), mem_dc, (0, 0), win32con.SRCCOPY)
 
         # Convert raw data into a format OpenCV can read
-        signed_ints_array = bitmap.GetBitmapBits(__asString=True)
+        signed_ints_array = bitmap.GetBitmapBits(__asString=True)  # type: ignore[call-overload]
         img = np.fromstring(signed_ints_array, dtype="uint8")  # type: ignore[call-overload]
         img.shape = (height, width, 4)
 
@@ -314,16 +314,14 @@ class Vision(WindowCapture):
         # Group text data by block and extract relevant columns
         grouped_text = (
             text.groupby("block_num", as_index=False)
-            .agg(
-                {
-                    "word_num": "max",
-                    "left": "min",
-                    "top": "min",
-                    "height": "max",
-                    "conf": "median",
-                    "text": " ".join,
-                }
-            )
+            .agg({
+                "word_num": "max",
+                "left": "min",
+                "top": "min",
+                "height": "max",
+                "conf": "median",
+                "text": " ".join,
+            })
             .rename(columns={"conf": "confidence", "text": "text"})
         )
 
@@ -728,7 +726,7 @@ class Vision(WindowCapture):
         cropped_image = self._crop_image(rect)
         dominant_color = self._get_dominant_color(cropped_image)
         best_color, best_tolerance = self._find_best_color_match(
-            cropped_image, dominant_color, initial_tolerance, tolerance_step
+            cropped_image, dominant_color.tolist(), initial_tolerance, tolerance_step
         )
         return best_color, best_tolerance
 
@@ -752,7 +750,7 @@ class Vision(WindowCapture):
         """
         tolerance = initial_tolerance
         best_tolerance = 0
-        best_ratio = -1
+        best_ratio = -1.0
         inner_total_pixels = cropped_image.size // 3
         outer_total_pixels = (self.opencv_image.size // 3) - inner_total_pixels
 
@@ -863,7 +861,7 @@ class Vision(WindowCapture):
         self: Self,
         sub_image: npt.NDArray[np.uint8] | Image.Image,
         rect: tuple[int, int, int, int] | None = None,
-        confidence: float | None = 0.95,
+        confidence: float = 0.95,
         median_tolerance: int | None = None,
     ) -> ShapeList[Rectangle]:
         """Find a subimage in a larger image given a confidence level and optional color tolerance.
@@ -912,7 +910,7 @@ class Vision(WindowCapture):
         else:
             sub_image_bgr = cv.cvtColor(sub_image, cv.COLOR_RGB2BGR)
             mask = None
-        return sub_image_bgr, mask
+        return cast(npt.NDArray[np.uint8], sub_image_bgr), cast(npt.NDArray[np.uint8], mask)
 
     @staticmethod
     def _convert_to_grayscale(
@@ -929,7 +927,7 @@ class Vision(WindowCapture):
         """
         main_image_gray = cv.cvtColor(main_image, cv.COLOR_BGR2GRAY)
         sub_image_gray = cv.cvtColor(sub_image_bgr, cv.COLOR_BGR2GRAY)
-        return main_image_gray, sub_image_gray
+        return cast(npt.NDArray[np.uint8], main_image_gray), cast(npt.NDArray[np.uint8], sub_image_gray)
 
     @staticmethod
     def _perform_template_matching(
@@ -950,7 +948,7 @@ class Vision(WindowCapture):
             A numpy array of matching results.
         """
         res = cv.matchTemplate(main_image_gray, sub_image_gray, cv.TM_CCORR_NORMED, mask=mask)
-        return np.logical_and(res >= confidence, np.logical_not(np.isinf(res)))
+        return np.logical_and(res >= confidence, np.logical_not(np.isinf(res)))  # type: ignore[operator, no-any-return]
 
     def _process_matching_results(
         self: Self,
@@ -1003,7 +1001,7 @@ class Vision(WindowCapture):
             A ShapeList of Rectangles after grouping similar ones.
         """
         rects = np.repeat(np.array(rects), 2, axis=0)
-        rects, _ = cv.groupRectangles(rects, groupThreshold=1, eps=0.1)
+        rects, _ = cv.groupRectangles(rects, groupThreshold=1, eps=0.1)  # type: ignore[arg-type]
         center_of_bitmap = Point(self.opencv_image.shape[1] // 2, self.opencv_image.shape[0] // 2)
         return ShapeList(Rectangle, rects, center_of_bitmap)
 
