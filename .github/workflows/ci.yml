@@ -73,7 +73,7 @@ jobs:
         if: always()
         run: |
           source .venv/scripts/activate
-          ruff format --check .
+          ruff format --preview --check .
 
       - name: Run ruff check
         if: always()
