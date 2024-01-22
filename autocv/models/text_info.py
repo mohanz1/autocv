@@ -28,7 +28,7 @@ class TextInfo:
     rectangle: Rectangle
 
     @classmethod
-    def from_row(cls: TextInfo, row: dict[str, Any]) -> TextInfo:
+    def from_row(cls: type[TextInfo], row: dict[str, Any]) -> TextInfo:
         """Creates a TextInfo object from a dictionary-like object.
 
         Args:

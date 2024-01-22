@@ -69,7 +69,13 @@ jobs:
       - name: Install project
         run: poetry install --no-interaction
 
-      - name: Run ruff
+      - name: Run ruff format
+        if: always()
+        run: |
+          source .venv/scripts/activate
+          ruff format --check .
+
+      - name: Run ruff check
         if: always()
         run: |
           source .venv/scripts/activate

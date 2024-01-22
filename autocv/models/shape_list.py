@@ -12,10 +12,10 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from typing import TypeVar, overload
-from typing_extensions import Self
 
 import numpy as np
 import numpy.typing as npt
+from typing_extensions import Self
 
 from autocv.models import Contour, Point, Rectangle
 
@@ -93,10 +93,12 @@ class ShapeList(Sequence[T]):
         return len(self.data)
 
     @overload
-    def __getitem__(self: Self, index: int) -> T: ...
+    def __getitem__(self: Self, index: int) -> T:
+        ...
 
     @overload
-    def __getitem__(self: Self, index: slice) -> Sequence[T]: ...
+    def __getitem__(self: Self, index: slice) -> Sequence[T]:
+        ...
 
     def __getitem__(self: Self, index: int | slice) -> T | Sequence[T]:
         """Retrieve a shape or a sequence of shapes from the list by index.

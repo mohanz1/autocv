@@ -15,7 +15,6 @@ __all__ = ("ColorPicker",)
 
 from pathlib import Path
 from tkinter import NW, Canvas, Tk, Toplevel
-from typing_extensions import Self
 
 import cv2 as cv
 import numpy as np
@@ -25,9 +24,10 @@ import win32con
 import win32gui
 from PIL import Image, ImageDraw, ImageFont, ImageTk
 from PIL.ImageTk import PhotoImage
+from typing_extensions import Self
 
 from .core import Vision
-from .models import Color, ColorWithPoint
+from .models import Color, ColorWithPoint, Point
 
 PIXELS = 1
 ZOOM = 40
@@ -63,8 +63,8 @@ class ColorPicker:
         self.hwnd = hwnd
         self.master = master
         self.size = (PIXELS * 2 + 1) * ZOOM
-        self.snip_surface: Canvas | None = None
-        self.result: ColorWithPoint | None = None
+        self.snip_surface: Canvas
+        self.result: ColorWithPoint
         self.prev_state = win32api.GetKeyState(win32con.VK_LBUTTON)  # type: ignore[no-untyped-call]
         self.vision = Vision(self.hwnd)
 
@@ -115,11 +115,9 @@ class ColorPicker:
         """Handles the mouse movement and updates the color picker canvas accordingly."""
         if not self.master_screen:
             return
-        assert self.snip_surface
 
         # Refresh the vision and get the cursor position
         self.vision.refresh()
-        assert self.vision.opencv_image is not None
         cursor_pos = win32gui.GetCursorPos()
         x, y = win32gui.ScreenToClient(self.hwnd, cursor_pos)
 
@@ -171,7 +169,6 @@ class ColorPicker:
         draw = ImageDraw.Draw(img)
         font = ImageFont.truetype(str(Path(__file__).parent / "data" / "Helvetica.ttf"), 8)
         try:
-            assert self.vision.opencv_image is not None
             color = self.vision.opencv_image[y + PIXELS, x, ::-1]
         except IndexError:
             color = np.zeros(3, dtype=np.uint8)
@@ -193,7 +190,6 @@ class ColorPicker:
         ----
             cropped_image: The cropped image around the current mouse position.
         """
-        assert self.snip_surface
         average_color_row = np.nanmean(cropped_image, axis=0)
         average_color = np.round(np.average(average_color_row, axis=0)).astype(int)
 
@@ -221,10 +217,9 @@ class ColorPicker:
             x (int): The x coordinate of the pixel.
             y (int): The y coordinate of the pixel.
         """
-        assert self.vision.opencv_image is not None
         # Check if the coordinates are within the bounds of the image
         if x < 0 or x > self.vision.opencv_image.shape[1] or y < 0 or y > self.vision.opencv_image.shape[0]:
-            self.result = None
+            self.result = ColorWithPoint(Color(-1, -1, -1), Point(-1, -1))
         else:
             # Get the color of the pixel at (x,y) and create a ColorWithPoint instance
             color = np.flip(self.vision.opencv_image[y, x])

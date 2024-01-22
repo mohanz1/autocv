@@ -9,10 +9,10 @@ from __future__ import annotations
 __all__ = ("Color",)
 
 from typing import NamedTuple
-from typing_extensions import Self
 
 import numpy as np
 import numpy.typing as npt
+from typing_extensions import Self
 
 
 class Color(NamedTuple):

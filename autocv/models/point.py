@@ -9,7 +9,8 @@ from __future__ import annotations
 __all__ = ("Point",)
 
 import math
-from typing import NamedTuple, TYPE_CHECKING
+from typing import TYPE_CHECKING, NamedTuple
+
 from typing_extensions import Self
 
 if TYPE_CHECKING:
@@ -61,7 +62,7 @@ class Point(NamedTuple):
         return self
 
     @classmethod
-    def from_ndarray(cls: Point, data: npt.NDArray[np.uintp]) -> Point:
+    def from_ndarray(cls: type[Point], data: npt.NDArray[np.uintp]) -> Point:
         """Create a Point object from a numpy array of shape (2,) containing the x and y coordinates.
 
         Args:

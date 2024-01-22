@@ -10,7 +10,7 @@ from __future__ import annotations
 __all__ = ("find_first", "get_first")
 
 from operator import attrgetter
-from typing import TypeVar, TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeVar
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Sequence

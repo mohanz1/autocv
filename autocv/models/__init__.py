@@ -9,14 +9,14 @@ __all__ = [
     "Color",
     "ColorWithPoint",
     "Contour",
+    "FilterSettings",
     "InvalidHandleError",
     "InvalidImageError",
     "InvalidLengthError",
-    "FilterSettings",
+    "OrderBy",
     "Point",
     "Rectangle",
     "ShapeList",
-    "OrderBy",
     "TextInfo",
 ]
 

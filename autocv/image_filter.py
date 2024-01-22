@@ -9,11 +9,11 @@ from __future__ import annotations
 __all__ = ("ImageFilter",)
 
 from typing import cast
-from typing_extensions import Self
 
 import cv2 as cv
 import numpy as np
 import numpy.typing as npt
+from typing_extensions import Self
 
 from .models import FilterSettings
 
@@ -137,16 +137,20 @@ class ImageFilter:
         # Apply HSV filter
         hsv_mask = cv.inRange(
             self.hsv_image,
-            np.array([
-                self.filter_settings.h_min,
-                self.filter_settings.s_min,
-                self.filter_settings.v_min,
-            ]),
-            np.array([
-                self.filter_settings.h_max,
-                self.filter_settings.s_max,
-                self.filter_settings.v_max,
-            ]),
+            np.array(
+                [
+                    self.filter_settings.h_min,
+                    self.filter_settings.s_min,
+                    self.filter_settings.v_min,
+                ]
+            ),
+            np.array(
+                [
+                    self.filter_settings.h_max,
+                    self.filter_settings.s_max,
+                    self.filter_settings.v_max,
+                ]
+            ),
         )
         hsv_filtered = cv.bitwise_and(self.hsv_image, self.hsv_image, mask=hsv_mask)
         hsv_filtered[..., 1] = np.clip(

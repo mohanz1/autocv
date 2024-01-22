@@ -8,11 +8,11 @@ from __future__ import annotations
 __all__ = ("ImagePicker",)
 
 from tkinter import BOTH, YES, Canvas, Event, Frame, Tk, Toplevel
-from typing import TYPE_CHECKING
-from typing_extensions import Self
+from typing import TYPE_CHECKING, Any
 
 import win32con
 import win32gui
+from typing_extensions import Self
 
 from .core import Vision
 from .models import Rectangle
@@ -39,7 +39,7 @@ class ImagePicker:
         """
         self.hwnd: int = hwnd
         self.master: Tk = master
-        self.snip_surface: Canvas | None = None
+        self.snip_surface: Canvas
         self.start_x = -1
         self.start_y = -1
         self.current_x = -1
@@ -82,17 +82,11 @@ class ImagePicker:
         """Records the starting position of the mouse when the left mouse button is pressed down."""
         self.start_x = event.x
         self.start_y = event.y
-        assert self.snip_surface
         self.snip_surface.create_rectangle(0, 0, 1, 1, outline="red", width=3, fill="maroon3")
 
     def on_snip_drag(self: Self, event: Event) -> None:  # type: ignore[type-arg]
         """Updates the position of the rectangle as the mouse is dragged."""
         self.current_x, self.current_y = (event.x, event.y)
-        assert self.start_x
-        assert self.current_x
-        assert self.start_y
-        assert self.current_y
-        assert self.snip_surface
         self.snip_surface.coords(1, self.start_x, self.start_y, self.current_x, self.current_y)
 
     def take_bounded_screenshot(self: Self, x1: float, y1: float, x2: float, y2: float) -> None:
@@ -108,12 +102,11 @@ class ImagePicker:
         # Capture screenshot and crop to selected region
         vision = Vision(self.hwnd)
         vision.refresh()
-        assert vision.opencv_image is not None
         x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
         self.result = vision.opencv_image[y1:y2, x1:x2]
         self.rect = Rectangle.from_coordinates((x1, y1, x2, y2))
 
-    def on_button_release(self: Self, _) -> None:  # noqa: ANN001
+    def on_button_release(self: Self, _: Any) -> None:
         """Handles the release of the screenshot button by taking a screenshot of the selected region."""
         # Exit screenshot mode and destroy the screenshot window
 

@@ -10,16 +10,18 @@ from __future__ import annotations
 __all__ = ("Rectangle",)
 
 import random
-from typing import NamedTuple, TYPE_CHECKING
+from typing import TYPE_CHECKING, NamedTuple
+
 from typing_extensions import Self
 
 from autocv.models.exceptions import InvalidLengthError
 from autocv.models.point import Point
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     import numpy as np
     import numpy.typing as npt
-    from collections.abc import Sequence
 
 
 MAX_SIDES = 4
@@ -62,7 +64,7 @@ class Rectangle(NamedTuple):
         return self.top + self.height
 
     @classmethod
-    def from_ndarray(cls: Rectangle, data: npt.NDArray[np.uintp]) -> Rectangle:
+    def from_ndarray(cls: type[Rectangle], data: npt.NDArray[np.uintp]) -> Rectangle:
         """Create a Rectangle object from a NumPy array.
 
         Args:
@@ -124,7 +126,7 @@ class Rectangle(NamedTuple):
         )
 
     @classmethod
-    def from_row(cls: Rectangle, row: dict[str, int]) -> Rectangle:
+    def from_row(cls: type[Rectangle], row: dict[str, int]) -> Rectangle:
         """Creates a Rectangle object from a dictionary-like object.
 
         Args:
@@ -139,7 +141,7 @@ class Rectangle(NamedTuple):
         return cls(row["left"], row["top"], row["width"], row["height"])
 
     @classmethod
-    def from_dimensions(cls: Rectangle, dimensions: Sequence[int]) -> Rectangle:
+    def from_dimensions(cls: type[Rectangle], dimensions: Sequence[int]) -> Rectangle:
         """Create a new rectangle from its dimensions.
 
         Args:
@@ -157,7 +159,7 @@ class Rectangle(NamedTuple):
         return cls(*dimensions)
 
     @classmethod
-    def from_coordinates(cls: Rectangle, coordinates: Sequence[int]) -> Rectangle:
+    def from_coordinates(cls: type[Rectangle], coordinates: Sequence[int]) -> Rectangle:
         """Create a new rectangle from its coordinates.
 
         Args:

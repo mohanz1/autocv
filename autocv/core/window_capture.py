@@ -9,11 +9,12 @@ from __future__ import annotations
 __all__ = ("WindowCapture",)
 
 
+from typing import TYPE_CHECKING
+
 import win32gui
+from typing_extensions import Self
 
 from autocv.utils import filtering
-from typing import TYPE_CHECKING
-from typing_extensions import Self
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -34,7 +35,7 @@ class WindowCapture:
         ----
             hwnd: The handle to the window to capture. If None, it will need to be set later.
         """
-        self.hwnd = hwnd
+        self.hwnd = hwnd or -1
 
     @staticmethod
     def _window_enumeration_handler(hwnd: int, top_windows: list[tuple[int, str]]) -> None:

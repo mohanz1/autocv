@@ -12,6 +12,7 @@ __all__ = ("Circle",)
 import math
 import random
 from typing import NamedTuple
+
 from typing_extensions import Self
 
 from .point import Point

@@ -13,7 +13,6 @@ import logging
 import pathlib
 from collections.abc import Callable, Sequence
 from typing import Any, TypeVar, cast
-from typing_extensions import Self
 
 import cv2 as cv
 import numpy as np
@@ -24,6 +23,7 @@ import win32con
 import win32gui
 import win32ui
 from PIL import Image
+from typing_extensions import Self
 
 from autocv.models import Color, Contour, InvalidHandleError, InvalidImageError, Point, Rectangle, ShapeList, TextInfo
 
@@ -53,7 +53,7 @@ def check_valid_hwnd(func: FuncT) -> FuncT:
     """
 
     @functools.wraps(func)
-    def wrapper(self: WindowCapture, *args: Any, **kwargs: Any) -> Any:  # noqa: ANN401
+    def wrapper(self: WindowCapture, *args: Any, **kwargs: Any) -> Any:
         """Wrapper function that checks if the `hwnd` attribute is set before calling the decorated method.
 
         If `hwnd` is `None`, raises an `InvalidHandle` exception.
@@ -66,13 +66,13 @@ def check_valid_hwnd(func: FuncT) -> FuncT:
 
         Raises:
         ------
-            InvalidHandle: If `hwnd` is `None`.
+            InvalidHandle: If `hwnd` is `-1`.
 
         Returns:
         -------
             Any: The return value of the decorated function.
         """
-        if not self.hwnd:
+        if self.hwnd == -1:
             raise InvalidHandleError(self.hwnd)
         return func(self, *args, **kwargs)
 
@@ -94,7 +94,7 @@ def check_valid_image(func: FuncT) -> FuncT:
     """
 
     @functools.wraps(func)
-    def wrapper(self: Vision, *args: Any, **kwargs: Any) -> Any:  # noqa: ANN401
+    def wrapper(self: Vision, *args: Any, **kwargs: Any) -> Any:
         """Wrapper function that checks if the `opencv_image` attribute is set before calling the decorated method.
 
         If `opencv_image` is `None`, raises an `InvalidImage` exception.
@@ -113,7 +113,7 @@ def check_valid_image(func: FuncT) -> FuncT:
         -------
             Any: The return value of the decorated function.
         """
-        if self.opencv_image is None:
+        if self.opencv_image.size == 0:
             raise InvalidImageError
         return func(self, *args, **kwargs)
 
@@ -135,7 +135,8 @@ class Vision(WindowCapture):
             None
         """
         super().__init__(hwnd)
-        self.opencv_image: npt.NDArray[np.uint8] | None = None  # Holds the image in OpenCV format
+        # Holds the image in OpenCV format
+        self.opencv_image: npt.NDArray[np.uint8] = np.empty(0, dtype=np.uint8)
 
         # Define the path to the tessdata directory and set up Tesseract configuration
         absolute_directory = pathlib.Path(__file__).parents[1] / "data" / "traineddata"
@@ -175,7 +176,6 @@ class Vision(WindowCapture):
                 or None if set_backbuffer is True.
         """
         # Get window dimensions
-        assert self.hwnd
         left, top, right, bottom = win32gui.GetWindowRect(self.hwnd)
         width = right - left
         height = bottom - top
@@ -314,14 +314,16 @@ class Vision(WindowCapture):
         # Group text data by block and extract relevant columns
         grouped_text = (
             text.groupby("block_num", as_index=False)
-            .agg({
-                "word_num": "max",
-                "left": "min",
-                "top": "min",
-                "height": "max",
-                "conf": "median",
-                "text": " ".join,
-            })
+            .agg(
+                {
+                    "word_num": "max",
+                    "left": "min",
+                    "top": "min",
+                    "height": "max",
+                    "conf": "median",
+                    "text": " ".join,
+                }
+            )
             .rename(columns={"conf": "confidence", "text": "text"})
         )
 
@@ -365,7 +367,6 @@ class Vision(WindowCapture):
             an image in the OpenCV format.
         """
         image = image if image is not None else self.opencv_image
-        assert image is not None
 
         if rect:
             # Extract the coordinates and dimensions from the rectangle
@@ -487,7 +488,6 @@ class Vision(WindowCapture):
             autocv.exceptions.InvalidImage: If the input image is invalid or None.
             IndexError: If the coordinates are out of bounds.
         """
-        assert self.opencv_image is not None
         x, y = point
 
         # Check if the coordinates are within the image bounds
@@ -523,7 +523,6 @@ class Vision(WindowCapture):
         ------
             autocv.exceptions.InvalidImage: If the input image is invalid or None.
         """
-        assert self.opencv_image is not None
         image = self._crop_image(rect)
         mask = filter_colors(image, color, tolerance)
 
@@ -552,7 +551,6 @@ class Vision(WindowCapture):
             Color: The average color within the specified region.
 
         """
-        assert self.opencv_image is not None
         return Color(*self._get_average_color(self.opencv_image, rect))
 
     def _get_average_color(
@@ -606,7 +604,6 @@ class Vision(WindowCapture):
         -------
           Color: Most common color.
         """
-        assert self.opencv_image is not None
         cropped_image = self._crop_image(rect)
 
         # Reshape the image to a 2D array (height*width, channels)
@@ -652,7 +649,6 @@ class Vision(WindowCapture):
         -------
           Color: Most common color.
         """
-        assert self.opencv_image is not None
         cropped_image = self._crop_image(rect)
 
         # Reshape the image to a 2D array (height*width, channels)
@@ -679,7 +675,6 @@ class Vision(WindowCapture):
         -------
           Color: Dominant color.
         """
-        assert self.opencv_image is not None
         cropped_image = self._crop_image(rect)
 
         # Reshape the image to a 2D array (height*width, channels)
@@ -846,7 +841,8 @@ class Vision(WindowCapture):
         -------
             int: The median difference between the images.
         """
-        assert image1.shape == image2.shape, "Image shapes must match."
+        if image1.shape != image2.shape:
+            return -1
 
         # Apply the mask if provided
         if mask is not None:
@@ -888,7 +884,6 @@ class Vision(WindowCapture):
             ShapeList[Rectangle]: An object containing the coordinates of the subimage matches.
 
         """
-        assert self.opencv_image is not None
         image = self._crop_image(rect)
         sub_image_bgr, mask = self._prepare_sub_image(sub_image)
         main_image_gray, sub_image_gray = self._convert_to_grayscale(image, sub_image_bgr)
@@ -1041,7 +1036,6 @@ class Vision(WindowCapture):
         ------
             autocv.exceptions.InvalidImage: If the input image is invalid or None.
         """
-        assert self.opencv_image is not None
         image = self._crop_image(rect)
 
         image = filter_colors(image, color, tolerance)
@@ -1084,8 +1078,6 @@ class Vision(WindowCapture):
         ------
             autocv.exceptions.InvalidImage: If the input image is invalid or None.
         """
-        assert self.opencv_image is not None
-
         if not isinstance(points, ShapeList):
             center_of_bitmap = Point(self.opencv_image.shape[1] // 2, self.opencv_image.shape[0] // 2)
             points = ShapeList(Point, np.array(points), center_of_bitmap)
@@ -1114,13 +1106,11 @@ class Vision(WindowCapture):
         ------
             autocv.exceptions.InvalidImage: If the input image is invalid or None.
         """
-        assert self.opencv_image is not None
-
         if not isinstance(contours, ShapeList):
             center_of_bitmap = Point(self.opencv_image.shape[1] // 2, self.opencv_image.shape[0] // 2)
             contours = ShapeList(Contour, [np.array(c) for c in contours], center_of_bitmap)  # type: ignore[type-abstract]
 
-        cv.drawContours(self.opencv_image, contours.data, -1, color[::-1], 2)
+        cv.drawContours(self.opencv_image, contours.data, -1, color[::-1], 2)  # type: ignore[arg-type]
 
     @check_valid_image
     def draw_circle(
@@ -1138,7 +1128,6 @@ class Vision(WindowCapture):
             color (Tuple[int, int, int]): The color of the rectangle. Defaults to red (255, 0, 0).
         """
         # Convert the top-left and bottom-right coordinates to OpenCV format
-        assert self.opencv_image is not None
         x, y, r = circle
 
         # Draw the rectangle onto the image
@@ -1160,7 +1149,6 @@ class Vision(WindowCapture):
             color (Tuple[int, int, int]): The color of the rectangle. Defaults to red (255, 0, 0).
         """
         # Convert the top-left and bottom-right coordinates to OpenCV format
-        assert self.opencv_image is not None
         x, y, w, h = rect
 
         # Draw the rectangle onto the image
@@ -1194,6 +1182,5 @@ class Vision(WindowCapture):
         ------
             autocv.exceptions.InvalidImage: If the input image is invalid or None.
         """
-        assert self.opencv_image is not None
         grey_image = filter_colors(self.opencv_image, colors, tolerance, keep_original_colors=keep_original_colors)
-        self.opencv_image = cv.cvtColor(grey_image, cv.COLOR_GRAY2BGR)
+        self.opencv_image = cast(npt.NDArray[np.uint8], cv.cvtColor(grey_image, cv.COLOR_GRAY2BGR))

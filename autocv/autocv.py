@@ -15,25 +15,26 @@ __all__ = ("AutoCV",)
 
 import logging
 from tkinter import Tk
+from typing import TYPE_CHECKING
 
 import cv2 as cv
 import win32api
 import win32con
 import win32gui
 import win32process
+from typing_extensions import Self
 
 from .color_picker import ColorPicker
 from .core import Input
 from .core.vision import check_valid_hwnd, check_valid_image
 from .image_filter import ImageFilter
 from .image_picker import ImagePicker
-from typing import TYPE_CHECKING
-from typing_extensions import Self
 
 if TYPE_CHECKING:
-    from .models import ColorWithPoint, FilterSettings, Rectangle
-    import numpy.typing as npt
     import numpy as np
+    import numpy.typing as npt
+
+    from .models import ColorWithPoint, FilterSettings, Rectangle
 
 
 class AutoCV(Input):
@@ -63,7 +64,6 @@ class AutoCV(Input):
         -------
             int: The handle for the specified window.
         """
-        assert self.hwnd
         return self.hwnd
 
     @check_valid_hwnd
@@ -74,7 +74,6 @@ class AutoCV(Input):
         -------
             A tuple representing the width and height of the window in pixels.
         """
-        assert self.hwnd is not None
         left, top, right, bottom = win32gui.GetWindowRect(self.hwnd)
         width = right - left
         height = bottom - top
@@ -113,14 +112,13 @@ class AutoCV(Input):
         return bytes_written == len(new_bytes) and buffer.tobytes() == new_bytes
 
     @check_valid_hwnd
-    def image_picker(self: Self) -> tuple[npt.NDArray[np.uint8], Rectangle] | None:
+    def image_picker(self: Self) -> tuple[npt.NDArray[np.uint8] | None, Rectangle | None]:
         """Sets up an image picker interface and returns the selected image as a NumPy array.
 
         Returns:
         -------
             Optional[np.ndarray]: The selected image as a NumPy array, or None if no image was selected.
         """
-        assert self.hwnd
         self._instance_logger.debug("Setting up image picker.")
         root = Tk()
         app = ImagePicker(self.hwnd, root)
@@ -128,8 +126,6 @@ class AutoCV(Input):
         image = app.result
         rect = app.rect
         root.destroy()
-        assert image is not None
-        assert rect is not None
         return image, rect
 
     @check_valid_hwnd
@@ -140,7 +136,6 @@ class AutoCV(Input):
         -------
             ColorWithPoint: The selected color and its location.
         """
-        assert self.hwnd
         self._instance_logger.debug("Setting up color picker.")
         root = Tk()
         app = ColorPicker(self.hwnd, root)
@@ -152,7 +147,6 @@ class AutoCV(Input):
     @check_valid_image
     def image_filter(self: Self) -> FilterSettings:
         """A class for applying an HSV filter, Canny edge detection, erode, and dilate operations to an image."""
-        assert self.opencv_image is not None
         return ImageFilter(self.opencv_image).filter_settings
 
     @check_valid_image
@@ -164,6 +158,5 @@ class AutoCV(Input):
             live (bool): Whether to show a live refreshing view. Defaults to False.
         """
         self._instance_logger.debug("Showing backbuffer.")
-        assert self.opencv_image is not None
         cv.imshow("AutoCV Backbuffer", self.opencv_image)
         cv.waitKey(int(live))

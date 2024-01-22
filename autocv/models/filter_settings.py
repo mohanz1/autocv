@@ -10,7 +10,6 @@ __all__ = ("FilterSettings",)
 
 from dataclasses import dataclass
 
-
 SLOTS_DATACLASS = {"slots": True} if "slots" in dataclass.__kwdefaults__ else {}
 
 

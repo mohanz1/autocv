@@ -9,7 +9,8 @@ from __future__ import annotations
 __all__ = ("ColorWithPoint",)
 
 from dataclasses import astuple, dataclass
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
+
 from typing_extensions import Self
 
 from .color import Color
@@ -17,9 +18,10 @@ from .exceptions import InvalidLengthError
 from .point import Point
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator, Sequence
+
     import numpy as np
     import numpy.typing as npt
-    from collections.abc import Iterator, Sequence
 
 COLOR_WITH_POINT_LENGTH = 5
 SLOTS_DATACLASS = {"slots": True} if "slots" in dataclass.__kwdefaults__ else {}
@@ -37,7 +39,7 @@ class ColorWithPoint:
         yield from astuple(self)
 
     @classmethod
-    def from_sequence(cls: ColorWithPoint, sequence: Sequence[int]) -> ColorWithPoint:
+    def from_sequence(cls: type[ColorWithPoint], sequence: Sequence[int]) -> ColorWithPoint:
         """Constructs a ColorWithPoint instance from a sequence of integers.
 
         Args:
@@ -60,7 +62,7 @@ class ColorWithPoint:
 
     @classmethod
     def from_ndarray_sequence(
-        cls: ColorWithPoint, data: npt.NDArray[np.uint8], sequence: Sequence[int]
+        cls: type[ColorWithPoint], data: npt.NDArray[np.uint8], sequence: Sequence[int]
     ) -> ColorWithPoint:
         """Constructs a ColorWithPoint instance from a numpy ndarray and a sequence of integers.
 

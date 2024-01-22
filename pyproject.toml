@@ -15,7 +15,7 @@ python = ">=3.10,<3.13"
 
 numpy                       = "~1.26"
 opencv-python               = "~4.9"
-pandas                      = "~2.1"
+pandas                      = "~2.2"
 pillow                      = "~10.2"
 pytesseract                 = "~0.3"
 pywin32                     = "~306"
@@ -28,7 +28,7 @@ mypy                        = "~1.8"
 opencv-stubs                = "~0.0"
 pandas-stubs                = "~2.1"
 ruff                        = "~0.1"
-types-Pillow                = "~10.1"
+types-Pillow                = "~10.2"
 types_pywin32               = "~306"
 
 [tool.ruff]
@@ -41,6 +41,7 @@ select = [
     "E",  # pycodestyle error
     "W",  # pycodestyle warning
     "C90",  # mccabe
+    "I",  # isort
     "N",  # pep8-naming
     "D",  # pydocstyle
     "UP",  # pyupgrade
@@ -89,6 +90,7 @@ ignore = [
     "S311",
     "S101",
     "PLR2004",
+    "ANN401",
 ]
 
 [tool.ruff.lint.pydocstyle]
@@ -120,6 +122,9 @@ allow_redefinition = true
 disallow_untyped_decorators = true
 disallow_incomplete_defs = true
 disallow_untyped_defs = true
+untyped_calls_exclude = [
+    "win32api"
+]
 
 # warnings
 warn_no_return = true

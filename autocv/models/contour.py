@@ -11,17 +11,17 @@ __all__ = ("Contour",)
 from abc import abstractmethod
 from collections.abc import Sequence
 from dataclasses import dataclass
+from itertools import starmap
 from typing import cast, overload
-from typing_extensions import Self
 
 import cv2 as cv
 import numpy as np
 import numpy.typing as npt
+from typing_extensions import Self
 
 from .circle import Circle
 from .point import Point
 from .rectangle import Rectangle
-from itertools import starmap
 
 SLOTS_DATACLASS = {"slots": True} if "slots" in dataclass.__kwdefaults__ else {}
 
@@ -38,11 +38,13 @@ class Contour(Sequence[Sequence[tuple[int, int]]]):
 
     @overload
     @abstractmethod
-    def __getitem__(self: Self, index: int) -> Sequence[tuple[int, int]]: ...
+    def __getitem__(self: Self, index: int) -> Sequence[tuple[int, int]]:
+        ...
 
     @overload
     @abstractmethod
-    def __getitem__(self: Self, index: slice) -> Sequence[Sequence[tuple[int, int]]]: ...
+    def __getitem__(self: Self, index: slice) -> Sequence[Sequence[tuple[int, int]]]:
+        ...
 
     def __getitem__(
         self,
@@ -55,7 +57,7 @@ class Contour(Sequence[Sequence[tuple[int, int]]]):
         )
 
     @classmethod
-    def from_ndarray(cls: Contour, data: npt.NDArray[np.uintp]) -> Contour:
+    def from_ndarray(cls: type[Contour], data: npt.NDArray[np.uintp]) -> Contour:
         """Create a new Contour instance from a given numpy ndarray.
 
         Args:

@@ -13,14 +13,13 @@ import math
 import time
 from random import randint, random
 from typing import Final
-from typing_extensions import Self
 
 import win32api
 import win32con
 import win32gui
+from typing_extensions import Self
 
 from .vision import Vision, check_valid_hwnd
-
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +63,6 @@ class Input(Vision):
         -------
             int: The handle for the specified window.
         """
-        assert self.hwnd
         parent_hwnd: int = win32gui.GetAncestor(self.hwnd, win32con.GA_ROOT)
         logger.debug("Found parent handle: %s", parent_hwnd)
         return parent_hwnd
@@ -117,7 +115,7 @@ class Input(Vision):
             10 / speed,
             10 * speed,
             8 * speed,
-            ghost_mouse,
+            ghost_mouse=ghost_mouse,
         )
         return None
 
@@ -215,7 +213,6 @@ class Input(Vision):
         -------
             None.
         """
-        assert self.hwnd
         # Convert the target point from client coordinates to screen coordinates.
         screen_point = win32gui.ClientToScreen(self.hwnd, (x, y))
 
@@ -227,7 +224,7 @@ class Input(Vision):
             win32api.SendMessage(
                 self.hwnd,
                 win32con.WM_SETCURSOR,
-                self.hwnd,
+                self.hwnd,  # type: ignore[arg-type]
                 self._make_lparam(result, win32con.WM_MOUSEMOVE),  # type: ignore[arg-type]
             )
 
@@ -252,8 +249,6 @@ class Input(Vision):
             None.
         """
         # Convert the last moved point from client coordinates to screen coordinates.
-        assert self._last_moved_point
-        assert self.hwnd
         screen_point = win32gui.ClientToScreen(self.hwnd, self._last_moved_point)
 
         # Determine which button to press.
@@ -303,7 +298,6 @@ class Input(Vision):
         -------
             None
         """
-        assert self.hwnd
         scan_code = win32api.MapVirtualKey(vk_code, 0)  # type: ignore[no-untyped-call]
         # Create the lparam value for the key down message
         l_param = (scan_code << 16) | 1
@@ -324,7 +318,6 @@ class Input(Vision):
         -------
             None
         """
-        assert self.hwnd
         # Set the transition state bit in the lparam value for the key up message
         scan_code = win32api.MapVirtualKey(vk_code, 0)  # type: ignore[no-untyped-call]
 
@@ -346,7 +339,6 @@ class Input(Vision):
         -------
             None
         """
-        assert self.hwnd
         self.press_vk_key(vk_code)
         time.sleep(randint(3, 5) / 1_000)
         self.release_vk_key(vk_code)
@@ -363,10 +355,9 @@ class Input(Vision):
         -------
             None
         """
-        assert self.hwnd
         win32api.SendMessage(self.hwnd, win32con.WM_ACTIVATE, 1, self.hwnd)  # type: ignore[arg-type]
         for c in characters:
-            vk = win32api.VkKeyScan(c)
+            vk = win32api.VkKeyScan(c)  # type: ignore[no-untyped-call, call-arg]
             scan_code = win32api.MapVirtualKey(ord(c.upper()), 0)  # type: ignore[no-untyped-call]
 
             # Create the lparam value for the key down message

@@ -9,7 +9,7 @@ from __future__ import annotations
 __all__ = ("filter_colors",)
 
 import logging
-from typing import cast, TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import cv2 as cv
 import numpy as np
