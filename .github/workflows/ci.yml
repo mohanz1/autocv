@@ -62,9 +62,6 @@ jobs:
         run: |
           pipx install poetry==${{ steps.poetry-version.outputs.version }} || echo "Poetry ${${{ steps.poetry-version.outputs.version }}} is already installed."
 
-      - name: Install poetry
-        run: pipx install poetry
-
       - name: Setup python
         id: setup-python
         uses: actions/setup-python@v5
