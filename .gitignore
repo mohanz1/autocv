@@ -39,6 +39,3 @@ credentials.env
 
 # Logs
 *.log
-
-# Poetry Lock
-poetry.lock
