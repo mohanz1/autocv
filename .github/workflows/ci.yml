@@ -44,6 +44,24 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Get latest Poetry version
+        id: poetry-version
+        run: echo "version=$(python3 -m pip index versions poetry | grep Available | cut -d ' ' -f 3 | head -n 1)" >> $GITHUB_OUTPUT
+
+      - name: Cache pipx environments
+        uses: actions/cache@v4
+        id: cache-pipx
+        with:
+          path: |
+            $PIPX_HOME
+            $PIPX_BIN_DIR
+          key: ${{ runner.os }}-pipx-${{ steps.poetry-version.outputs.version }}
+
+      - name: Install Poetry
+        if: steps.cache-pipx.outputs.cache-hit != 'true'
+        run: |
+          pipx install poetry==${{ steps.poetry-version.outputs.version }} || echo "Poetry ${${{ steps.poetry-version.outputs.version }}} is already installed."
+
       - name: Install poetry
         run: pipx install poetry
 
