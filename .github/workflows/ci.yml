@@ -46,7 +46,7 @@ jobs:
 
       - name: Get latest Poetry version
         id: poetry-version
-        run: echo "version=$(python3 -m pip index versions poetry | grep Available | cut -d ' ' -f 3 | head -n 1)" >> $GITHUB_OUTPUT
+        run: echo "version=$(python3 -m pip index versions poetry | grep 'LATEST' | awk '{print $2}')" >> $GITHUB_OUTPUT
 
       - name: Cache pipx environments
         uses: actions/cache@v4
