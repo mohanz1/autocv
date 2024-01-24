@@ -62,17 +62,17 @@ jobs:
         if: always()
         run: |
           source .venv/scripts/activate
-          poetry ruff format --preview --check .
+          poetry run ruff format --preview --check .
 
       - name: Run ruff check
         if: always()
         run: |
           source .venv/scripts/activate
-          poetry ruff check --preview --output-format=github .
+          poetry run ruff check --preview --output-format=github .
 
       - name: Run mypy
         if: always()
-        run: poetry mypy --check .
+        run: poetry run mypy --check .
 
   ci-done:
     needs: [lint, test]
