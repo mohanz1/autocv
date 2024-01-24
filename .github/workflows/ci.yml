@@ -47,8 +47,8 @@ jobs:
       - name: Get latest Poetry version
         id: poetry-version
         run: |
-          echo "version=$(python3 -m pip index versions poetry | grep 'LATEST' | awk '{print $2}')" >> $GITHUB_OUTPUT
-          echo "version=$(python3 -m pip index versions poetry | grep 'LATEST' | awk '{print $2}')"
+          echo "version=$(python -m pip index versions poetry | grep 'LATEST' | awk '{print $2}')" >> $GITHUB_OUTPUT
+          echo "version=$(python -m pip index versions poetry | grep 'LATEST' | awk '{print $2}')"
 
       - name: Echo the captured Poetry version
         run: echo "Captured Poetry version is ${{ steps.poetry-version.outputs.version }}"
