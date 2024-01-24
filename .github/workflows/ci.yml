@@ -60,15 +60,11 @@ jobs:
 
       - name: Run ruff format
         if: always()
-        run: |
-          source .venv/scripts/activate
-          poetry run ruff format --preview --check .
+        run: poetry run ruff format --preview --check .
 
       - name: Run ruff check
         if: always()
-        run: |
-          source .venv/scripts/activate
-          poetry run ruff check --preview --output-format=github .
+        run: poetry run ruff check --preview --output-format=github .
 
       - name: Run mypy
         if: always()
