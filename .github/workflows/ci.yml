@@ -63,8 +63,8 @@ jobs:
         id: cache-pipx
         with:
           path: |
-            ${{ env.PIPX_HOME }}
-            ${{ env.PIPX_BIN_DIR }}
+            $PIPX_HOME
+            $PIPX_BIN_DIR
           key: ${{ runner.os }}-pipx-${{ steps.poetry-version.outputs.version }}
 
       - name: Install Poetry
