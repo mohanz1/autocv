@@ -54,10 +54,6 @@ jobs:
           echo "PIPX_BIN_DIR=$PIPX_BIN_DIR"
           echo "$LATEST_VERSION"
 
-      - name: Echo the captured Poetry version
-        run: echo "Captured Poetry version is ${{ steps.poetry-version.outputs.version }}"
-
-
       - name: Cache pipx environments
         uses: actions/cache@v4
         id: cache-pipx
@@ -94,6 +90,9 @@ jobs:
       - name: Run mypy
         if: always()
         run: poetry run mypy --check .
+
+      - name: Ensure Pipx Paths
+        run: pipx ensurepath
 
   ci-done:
     needs: [lint, test]
