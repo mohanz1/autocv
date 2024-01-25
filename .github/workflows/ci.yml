@@ -32,7 +32,6 @@ jobs:
         shell: bash
         run: |
           pip install .
-          pip uninstall -y autocv
 
   lint:
     runs-on: windows-latest
