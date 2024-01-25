@@ -52,7 +52,7 @@ jobs:
           echo "version=$LATEST_VERSION" >> $GITHUB_OUTPUT
           echo "pipx-home=$PIPX_HOME" >> $GITHUB_OUTPUT
           echo "pipx-bin-dir=$PIPX_BIN_DIR" >> $GITHUB_OUTPUT
-          echo "cache-key-pipx=pipx-${{ runner.os }}-pipx-$(LATEST_VERSION)" >> $GITHUB_OUTPUT
+          echo "cache-key-pipx=pipx-${{ runner.os }}-$LATEST_VERSION" >> $GITHUB_OUTPUT
 
       - name: Cache pipx
         id: cache-pipx
