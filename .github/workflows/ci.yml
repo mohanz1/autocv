@@ -48,8 +48,9 @@ jobs:
         id: poetry-version
         shell: bash
         run: |
-          echo "version=$(curl -s https://api.github.com/repos/python-poetry/poetry/releases/latest | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')" >> $GITHUB_OUTPUT
-          echo "curl -s https://api.github.com/repos/python-poetry/poetry/releases/latest | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'"
+          LATEST_VERSION=$(curl -s https://api.github.com/repos/python-poetry/poetry/releases/latest | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+          echo "version=$LATEST_VERSION" >> $GITHUB_OUTPUT
+          echo "$LATEST_VERSION"
 
       - name: Echo the captured Poetry version
         run: echo "Captured Poetry version is ${{ steps.poetry-version.outputs.version }}"
