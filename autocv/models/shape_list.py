@@ -112,15 +112,21 @@ class ShapeList(Sequence[T]):
 
         return tuple(self.shape_cls.from_ndarray(self.data[i]) for i in range(*index.indices(len(self))))  # type: ignore[arg-type]
 
+    def first(self: Self) -> T:
+        """Return the first shape in the ShapeList.
+
+        Returns:
+            T: The first shape in the list.
+        """
+        return self[0]
+
     def order_by(self: Self, by: OrderBy) -> ShapeList[T]:
         """Order the shapes in the list according to the given algorithm. Orders in place.
 
         Args:
-        ----
             by: An OrderBy enum specifying the algorithm to use.
 
         Returns:
-        -------
             ShapeList(Sequence[T]): The sorted ShapeList.
         """
         if isinstance(self.data, np.ndarray):

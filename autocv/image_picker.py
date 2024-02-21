@@ -33,7 +33,6 @@ class ImagePicker:
         """A class for taking a screenshot of a selected region of a window.
 
         Args:
-        ----
             hwnd (int): The window handle of the window to take the screenshot of.
             master (Tk): The parent tkinter window of the ImagePicker.
         """
@@ -93,7 +92,6 @@ class ImagePicker:
         """Takes a screenshot of the selected region of the window.
 
         Args:
-        ----
             x1 (float): The starting x position of the selected region.
             y1 (float): The starting y position of the selected region.
             x2 (float): The ending x position of the selected region.

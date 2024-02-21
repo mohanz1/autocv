@@ -18,7 +18,6 @@ class FilterSettings:
     """Class to store settings for image processing filters.
 
     Attributes:
-    ----------
         h_min (int): The minimum hue value.
         h_max (int): The maximum hue value.
         s_min (int): The minimum saturation value.

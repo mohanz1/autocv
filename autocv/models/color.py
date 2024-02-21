@@ -19,10 +19,9 @@ class Color(NamedTuple):
     """A class representing a color as a combination of red, green, and blue components.
 
     Attributes:
-    ----------
-        r: An integer representing the red component.
-        g: An integer representing the green component.
-        b: An integer representing the blue component.
+        r (int): An integer representing the red component.
+        g (int): An integer representing the green component.
+        b (int): An integer representing the blue component.
     """
 
     r: int
@@ -33,13 +32,11 @@ class Color(NamedTuple):
         """Return a numpy array of the red, green, and blue components.
 
         Args:
-        ----
             dtype (np.int16): The desired data-type for the array.  If not given, then the type will
             be determined as the minimum type required to hold the objects in the
             sequence.
 
         Returns:
-        -------
             npt.NDArray[np.int16]: A 1D numpy array of shape (3,) representing the red, green, and blue components.
         """
         return np.array([self.r, self.g, self.b], dtype=dtype)
@@ -48,12 +45,10 @@ class Color(NamedTuple):
         """Check if this color is within the specified color and tolerance.
 
         Args:
-        ----
             color (Tuple[int, int, int]): The color to compare against.
             tolerance (int, optional): The maximum difference allowed for each channel. Defaults to 0.
 
         Returns:
-        -------
             bool: True if this color is within the specified color and tolerance, False otherwise.
         """
         # Convert this color to a numpy array
@@ -71,12 +66,10 @@ class Color(NamedTuple):
         """Return the inverse of the color.
 
         Args:
-        ----
             color (Optional[Union[Color, Tuple[int, int, int]]]): An optional color or sequence of integers representing
-            the color to be inverted. If not provided, the color instance on which the method is called is used.
+                the color to be inverted. If not provided, the color instance on which the method is called is used.
 
         Returns:
-        -------
             Color: A new Color instance representing the inverted color.
         """
         color = color or self
@@ -87,12 +80,10 @@ class Color(NamedTuple):
         """Return the decimal representation of the color.
 
         Args:
-        ----
             color (Union[Color, Tuple[int, int, int]]): A color or sequence of integers representing the color to be
                 converted.
 
         Returns:
-        -------
             int: An integer representing the decimal value of the color.
         """
         if isinstance(color, Color):
@@ -104,12 +95,10 @@ class Color(NamedTuple):
         """Return the hexadecimal representation of the color.
 
         Args:
-        ----
             color (Union[Color, Tuple[int, int, int]]): A color or sequence of integers representing the color to be
                 converted.
 
         Returns:
-        -------
             str: A string representing the hexadecimal value of the color.
         """
         if isinstance(color, Color):

@@ -22,7 +22,6 @@ class Point(NamedTuple):
     """A class representing a point in 2D space.
 
     Args:
-    ----
         x: The x-coordinate of the point.
         y: The y-coordinate of the point.
     """
@@ -34,11 +33,9 @@ class Point(NamedTuple):
         """Calculate the vector difference between this point and another point.
 
         Args:
-        ----
             other: The other Point instance.
 
         Returns:
-        -------
             A new Point instance representing the vector difference between the two points.
         """
         return Point(self.x - other[0], self.y - other[1])
@@ -47,7 +44,6 @@ class Point(NamedTuple):
         """Calculate the center of the point, which is simply the point itself.
 
         Returns:
-        -------
             autocv.models.Point: The center of the point.
         """
         return self
@@ -56,7 +52,6 @@ class Point(NamedTuple):
         """Calculate a random point, which is simply the point itself.
 
         Returns:
-        -------
             autocv.models.Point: The center of the point.
         """
         return self
@@ -66,11 +61,9 @@ class Point(NamedTuple):
         """Create a Point object from a numpy array of shape (2,) containing the x and y coordinates.
 
         Args:
-        ----
             data (npt.NDArray[np.uintp]): A numpy array of shape (2,) containing the x and y coordinates.
 
         Returns:
-        -------
             autocv.models.Point: A Point object with the specified coordinates.
         """
         return cls(int(data[0]), int(data[1]))
@@ -79,12 +72,10 @@ class Point(NamedTuple):
         """Calculate the Euclidean distance between this point and another point.
 
         Args:
-        ----
             other (Tuple[int, int]): A Point instance or a sequence of two integers representing the x and y coordinates
                 of another point.
 
         Returns:
-        -------
             float: The Euclidean distance between the two points.
         """
         return math.dist((self.x, self.y), (other[0], other[1]))

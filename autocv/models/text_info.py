@@ -32,12 +32,10 @@ class TextInfo:
         """Creates a TextInfo object from a dictionary-like object.
 
         Args:
-        ----
             row (Dict[str, Any]): A dictionary-like object with the following keys:
                               "left", "top", "width", "height", "confidence", "text".
 
         Returns:
-        -------
             TextInfo: A TextInfo object with the specified attributes.
         """
         rectangle = Rectangle.from_row(row)

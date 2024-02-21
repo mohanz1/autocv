@@ -56,7 +56,6 @@ class ColorPicker:
         """Creates a color picker instance.
 
         Args:
-        ----
             hwnd (int): The handle of the window to pick colors from.
             master (Tk): The Tk instance to create the color picker on.
         """
@@ -80,7 +79,6 @@ class ColorPicker:
         """Sets the position and size of the color picker window.
 
         Args:
-        ----
             cursor_pos (Tuple[int, int], optional): The current position of the cursor, if available. Defaults to None.
         """
         if not self.master_screen or not self.master_screen.winfo_exists():
@@ -157,13 +155,11 @@ class ColorPicker:
         """Draws the cursor coordinates onto the given image.
 
         Args:
-        ----
             img (Image.Image): The image to draw on.
             x (int): The x-coordinate of the cursor.
             y (int): The y-coordinate of the cursor.
 
         Returns:
-        -------
             Image.Image: The updated image.
         """
         draw = ImageDraw.Draw(img)
@@ -187,7 +183,6 @@ class ColorPicker:
         """Draw the center rectangle on the color picker canvas.
 
         Args:
-        ----
             cropped_image: The cropped image around the current mouse position.
         """
         average_color_row = np.nanmean(cropped_image, axis=0)
@@ -213,7 +208,6 @@ class ColorPicker:
         """Get the color of the pixel at the given coordinates (x,y).
 
         Args:
-        ----
             x (int): The x coordinate of the pixel.
             y (int): The y coordinate of the pixel.
         """

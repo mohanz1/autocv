@@ -26,16 +26,17 @@ stubs = ["opencv-stubs", "types_pywin32", "types-Pillow", "pandas-stubs"]
 [tool.poetry.dev-dependencies]
 mypy                        = "~1.8"
 opencv-stubs                = "~0.0"
-pandas-stubs                = "~2.1"
-ruff                        = "~0.1"
+pandas-stubs                = "~2.2"
+ruff                        = "~0.2"
 types-Pillow                = "~10.2"
 types_pywin32               = "~306"
 
 [tool.ruff]
 line-length = 120
-ignore-init-module-imports = true
 target-version = "py310"
 
+[tool.ruff.lint]
+ignore-init-module-imports = true
 select = [
     "F",  # pyflakes
     "E",  # pycodestyle error
@@ -136,4 +137,5 @@ warn_unused_ignores = true
 exclude = [
     "venv",
     "data",
+    "source",
 ]

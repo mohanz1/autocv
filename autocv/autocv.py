@@ -50,7 +50,6 @@ class AutoCV(Input):
         """Initializes an instance of the AutoCV class with a specified window handle (hwnd).
 
         Args:
-        ----
             hwnd (Optional[int]): The window handle to use for the AutoCV instance. Defaults to None.
         """
         super().__init__(hwnd)
@@ -61,7 +60,6 @@ class AutoCV(Input):
         """Gets the handle for the specified window.
 
         Returns:
-        -------
             int: The handle for the specified window.
         """
         return self.hwnd
@@ -71,7 +69,6 @@ class AutoCV(Input):
         """Retrieves the size of the window.
 
         Returns:
-        -------
             A tuple representing the width and height of the window in pixels.
         """
         left, top, right, bottom = win32gui.GetWindowRect(self.hwnd)
@@ -83,14 +80,13 @@ class AutoCV(Input):
         """Replaces the `GetCursorPos` function in the `user32.dll` module of the target process.
 
         Returns:
-        -------
             True if the function was successfully patched, False otherwise.
         """
         # Get the process ID of the target process.
         process_id = win32process.GetWindowThreadProcessId(self._get_topmost_hwnd())[1]
 
         # Open a handle to the target process.
-        process_handle = win32api.OpenProcess(win32con.PROCESS_ALL_ACCESS, __bInherit=False, __pid=process_id)  # type: ignore[call-arg]
+        process_handle = win32api.OpenProcess(win32con.PROCESS_ALL_ACCESS, bInherit=False, pid=process_id)  # type: ignore[call-arg]
 
         module_handle = win32api.GetModuleHandle("user32.dll")
         function_address = win32api.GetProcAddress(module_handle, "GetCursorPos")  # type: ignore[arg-type]
@@ -116,7 +112,6 @@ class AutoCV(Input):
         """Sets up an image picker interface and returns the selected image as a NumPy array.
 
         Returns:
-        -------
             Optional[np.ndarray]: The selected image as a NumPy array, or None if no image was selected.
         """
         self._instance_logger.debug("Setting up image picker.")
@@ -133,7 +128,6 @@ class AutoCV(Input):
         """Sets up a color picker interface and returns the selected color and its location.
 
         Returns:
-        -------
             ColorWithPoint: The selected color and its location.
         """
         self._instance_logger.debug("Setting up color picker.")
@@ -154,7 +148,6 @@ class AutoCV(Input):
         """Displays the backbuffer image of the window.
 
         Args:
-        ----
             live (bool): Whether to show a live refreshing view. Defaults to False.
         """
         self._instance_logger.debug("Showing backbuffer.")

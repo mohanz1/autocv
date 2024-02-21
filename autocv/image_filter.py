@@ -31,7 +31,6 @@ class ImageFilter:
         """Initialize the HSV filter with an input image.
 
         Args:
-        ----
             image: The input image to be filtered.
         """
         self.image = image
@@ -128,7 +127,6 @@ class ImageFilter:
         """Get the image with filters applied.
 
         Returns:
-        -------
             The filtered image.
         """
         # Update filter settings

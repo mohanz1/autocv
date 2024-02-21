@@ -32,7 +32,6 @@ class WindowCapture:
         """Initialize the WindowCapture object.
 
         Args:
-        ----
             hwnd: The handle to the window to capture. If None, it will need to be set later.
         """
         self.hwnd = hwnd or -1
@@ -42,7 +41,6 @@ class WindowCapture:
         """Adds window title and ID to the array.
 
         Args:
-        ----
             hwnd (int): The window handle.
             top_windows (List[Tuple[int, str]]): The list of top windows with window handle and title.
         """
@@ -55,7 +53,6 @@ class WindowCapture:
         """Adds window class name and ID to the array.
 
         Args:
-        ----
             hwnd (int): The window handle.
             child_windows (List[Tuple[int, str]]): The list of child windows with window handle and class name.
         """
@@ -67,7 +64,6 @@ class WindowCapture:
         """Returns a list of all visible windows with their corresponding IDs.
 
         Returns:
-        -------
             List[Tuple[int, str]]: A list of tuples containing the window handle (HWND) and the window title (str).
         """
         top_windows: list[tuple[int, str]] = []
@@ -78,11 +74,9 @@ class WindowCapture:
         """Returns the window ID of the first visible window whose title contains the specified string.
 
         Args:
-        ----
             title (str): A string to search for in the window titles.
 
         Returns:
-        -------
             Optional[int]: The window ID of the first visible window whose title contains the specified string,
                          or None if no matching window is found.
         """
@@ -95,7 +89,6 @@ class WindowCapture:
         """Returns a list of all child windows for the current window.
 
         Returns:
-        -------
             List[Tuple[int, str]]: A list of tuples, each containing a child window's ID and class name.
         """
         child_windows: list[tuple[int, str]] = []
@@ -106,12 +99,10 @@ class WindowCapture:
         """Sets the current window to the first visible window whose title contains the specified string.
 
         Args:
-        ----
             title (str): A string to search for in the window titles.
             case_insensitive (bool): Whether to use case sensitive when searching.
 
         Returns:
-        -------
             bool: True if a matching window is found and the current window is set to it, False otherwise.
         """
         top_windows = self.get_windows_with_hwnds()
@@ -132,11 +123,9 @@ class WindowCapture:
         """Sets the current window to the first child window whose class name contains the specified string.
 
         Args:
-        ----
             class_name (str): A string representing the class name to search for in child windows.
 
         Returns:
-        -------
             bool: True if a child window was found and the current window was set to it. False otherwise.
         """
         child_windows: list[tuple[int, str]] = []

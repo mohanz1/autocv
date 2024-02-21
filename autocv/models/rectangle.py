@@ -31,7 +31,6 @@ class Rectangle(NamedTuple):
     """A class to represent a rectangle.
 
     Attributes:
-    ----------
     - left (int): The x-coordinate of the left edge of the rectangle.
     - top (int): The y-coordinate of the top edge of the rectangle.
     - width (int): The width of the rectangle.
@@ -48,7 +47,6 @@ class Rectangle(NamedTuple):
         """Calculate the right edge of the rectangle.
 
         Returns:
-        -------
             int: The x-coordinate of the right edge of the rectangle.
         """
         return self.left + self.width
@@ -58,7 +56,6 @@ class Rectangle(NamedTuple):
         """Calculate the bottom edge of the rectangle.
 
         Returns:
-        -------
             int: The y-coordinate of the bottom edge of the rectangle.
         """
         return self.top + self.height
@@ -68,7 +65,6 @@ class Rectangle(NamedTuple):
         """Create a Rectangle object from a NumPy array.
 
         Args:
-            cls (Rectangle): The class on which this method is called.
             data (npt.NDArray[np.uintp]): A NumPy array containing the rectangle's left, top, width, and height.
 
         Returns:
@@ -80,7 +76,6 @@ class Rectangle(NamedTuple):
         """Returns the area of the rectangle.
 
         Returns:
-        -------
             int: The area of the rectangle.
         """
         return self.width * self.height
@@ -89,11 +84,9 @@ class Rectangle(NamedTuple):
         """Get the overlap between this rectangle and another rectangle.
 
         Args:
-        ----
             other (Tuple[int, int, int, int]): The rectangle to get the overlap with.
 
         Returns:
-        -------
             Optional[autocv.models.Rectangle]: A new rectangle representing the overlap, or None if there is no overlap.
         """
         left = max(self.left, other[0])
@@ -108,7 +101,6 @@ class Rectangle(NamedTuple):
         """Get the center point of the rectangle.
 
         Returns:
-        -------
             autocv.models.point: The center point of the rectangle.
         """
         return Point(self.left + self.width // 2, self.top + self.height // 2)
@@ -117,7 +109,6 @@ class Rectangle(NamedTuple):
         """Get a random point of the rectangle.
 
         Returns:
-        -------
             autocv.models.point: The random point of the rectangle.
         """
         return Point(
@@ -130,12 +121,10 @@ class Rectangle(NamedTuple):
         """Creates a Rectangle object from a dictionary-like object.
 
         Args:
-        ----
             row (Dict[str, int]): A dictionary-like object with the following keys:
                               "left", "top", "width", "height".
 
         Returns:
-        -------
             Rectangle: A Rectangle object with the specified attributes.
         """
         return cls(row["left"], row["top"], row["width"], row["height"])
@@ -145,12 +134,10 @@ class Rectangle(NamedTuple):
         """Create a new rectangle from its dimensions.
 
         Args:
-        ----
             dimensions (Sequence[int]): A sequence of integers containing the left, top, width, and height of the
                 rectangle.
 
         Returns:
-        -------
             autocv.models.Rectnangle: A new rectangle.
         """
         if len(dimensions) != MAX_SIDES:
@@ -163,12 +150,10 @@ class Rectangle(NamedTuple):
         """Create a new rectangle from its coordinates.
 
         Args:
-        ----
             coordinates (Sequence[int]): A sequence of integers containing the x1, y1, x2, and y2 coordinates of the
                 rectangle.
 
         Returns:
-        -------
             autocv.models.Rectangle: A new rectangle.
         """
         if len(coordinates) != MAX_SIDES:

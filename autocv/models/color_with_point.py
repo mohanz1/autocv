@@ -43,15 +43,12 @@ class ColorWithPoint:
         """Constructs a ColorWithPoint instance from a sequence of integers.
 
         Args:
-        ----
             sequence (Sequence[int]): A sequence of 5 integers in the order x, y, red, green, blue.
 
         Raises:
-        ------
             InvalidLength: If the length of the sequence is not 5.
 
         Returns:
-        -------
             ColorWithPoint: A ColorWithPoint instance.
         """
         if len(sequence) != COLOR_WITH_POINT_LENGTH:
@@ -67,12 +64,10 @@ class ColorWithPoint:
         """Constructs a ColorWithPoint instance from a numpy ndarray and a sequence of integers.
 
         Args:
-        ----
             data (npt.NDArray[np.uint8]): A numpy ndarray of 3 integers representing the red, green, and blue values.
             sequence (Sequence[int]): A sequence of 2 integers representing the x and y coordinates.
 
         Returns:
-        -------
             A ColorWithPoint instance.
         """
         return cls(Color(*data), Point(sequence[0], sequence[1]))

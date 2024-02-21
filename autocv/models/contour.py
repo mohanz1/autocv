@@ -59,11 +59,9 @@ class Contour(Sequence[Sequence[tuple[int, int]]]):
         """Create a new Contour instance from a given numpy ndarray.
 
         Args:
-        ----
             data (npt.NDArray[np.uintp]): The ndarray to use for creating the Contour.
 
         Returns:
-        -------
             autocv.models.Contour: A new Contour instance created from the given ndarray.
         """
         return cls(data)
@@ -72,7 +70,6 @@ class Contour(Sequence[Sequence[tuple[int, int]]]):
         """Compute the area of the contour.
 
         Returns:
-        -------
             float: A float representing the area of the contour.
         """
         return float(cv.contourArea(self.data))
@@ -81,7 +78,6 @@ class Contour(Sequence[Sequence[tuple[int, int]]]):
         """Compute the perimeter of the contour.
 
         Returns:
-        -------
             float: A float representing the perimeter of the contour.
         """
         return float(cv.arcLength(self.data, closed=True))
@@ -90,7 +86,6 @@ class Contour(Sequence[Sequence[tuple[int, int]]]):
         """Compute the centroid of the contour.
 
         Returns:
-        -------
             autocv.models.Point: A Point representing the (x, y) coordinates of the centroid of the contour.
         """
         m = cv.moments(self.data)
@@ -102,7 +97,6 @@ class Contour(Sequence[Sequence[tuple[int, int]]]):
         """Compute the centroid of the contour.
 
         Returns:
-        -------
             autocv.models.Point: A Point representing the (x, y) coordinates of the centroid of the contour.
         """
         return self.centroid()
@@ -111,12 +105,10 @@ class Contour(Sequence[Sequence[tuple[int, int]]]):
         """Check whether a given point lies within the contour.
 
         Args:
-        ----
             x (int): The x-coordinate of the point.
             y (int): The y-coordinate of the point.
 
         Returns:
-        -------
             bool: True if the point lies inside the contour, False otherwise.
         """
         return bool(cv.pointPolygonTest(self.data, (x, y), measureDist=False) >= 0)
@@ -125,7 +117,6 @@ class Contour(Sequence[Sequence[tuple[int, int]]]):
         """Get a random point inside the contour.
 
         Returns:
-        -------
             autocv.models.Point: A Point object representing the random point.
         """
         (cx, cy), radius = cv.minEnclosingCircle(self.data)
@@ -138,7 +129,6 @@ class Contour(Sequence[Sequence[tuple[int, int]]]):
         """Convert the contour to a list of points.
 
         Returns:
-        -------
             Sequence[autocv.models.Point]: A list of Point objects representing the points in the contour.
         """
         return tuple(starmap(Point, self.data.squeeze()))
@@ -147,7 +137,6 @@ class Contour(Sequence[Sequence[tuple[int, int]]]):
         """Returns a Rectangle object representing the minimum bounding box that encloses the contour.
 
         Returns:
-        -------
             Rectangle: A Rectangle object representing the minimum bounding box that encloses the contour.
         """
         return Rectangle(*cv.boundingRect(self.data))
@@ -156,7 +145,6 @@ class Contour(Sequence[Sequence[tuple[int, int]]]):
         """Returns a Circle object representing the minimum bounding circle that encloses the contour.
 
         Returns:
-        -------
             Circle: A Circle object representing the minimum bounding box that encloses the contour.
         """
         (x, y), radius = cv.minEnclosingCircle(self.data)

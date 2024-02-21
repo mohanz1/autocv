@@ -19,13 +19,12 @@ from .point import Point
 
 
 class Circle(NamedTuple):
-    """A class to represent a rectangle.
+    """A class to represent a circle.
 
     Attributes:
-    ----------
-    - x (int): The x-coordinate of the center of the circle.
-    - y (int): The y-coordinate of the center of the circle.
-    - radius (int): The radius of the circle.
+        x (int): The x-coordinate of the center of the circle.
+        y (int): The y-coordinate of the center of the circle.
+        radius (int): The radius of the circle.
     """
 
     x: int
@@ -36,8 +35,7 @@ class Circle(NamedTuple):
         """Get the center point of the circle.
 
         Returns:
-        -------
-            autocv.models.point: The center point of the circle.
+            autocv.models.Point: The center point of the circle.
         """
         return Point(self.x, self.y)
 
@@ -45,8 +43,7 @@ class Circle(NamedTuple):
         """Get a random point of the circle.
 
         Returns:
-        -------
-            autocv.models.point: The random point of the circle.
+            autocv.models.Point: The random point of the circle.
         """
         alpha = 2 * math.pi * random.random()
 

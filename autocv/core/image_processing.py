@@ -32,7 +32,6 @@ def filter_colors(
     """Filter out all colors from the image that are not in the specified list of colors with a given tolerance.
 
     Args:
-    ----
         opencv_image (npt.NDArray[np.uint8]): The image to filter.
         colors (Union[Tuple[int, int, int], Sequence[Tuple[int, int, int]]]): A sequence of RGB tuples or a sequence of
             sequences containing RGB tuples.
@@ -41,7 +40,6 @@ def filter_colors(
             non-matching pixels are set to black.
 
     Returns:
-    -------
         npt.NDArray[np.uint8]: The mask of the filtered image.
     """
     # Convert color_values to numpy array

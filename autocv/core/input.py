@@ -49,7 +49,6 @@ class Input(Vision):
         """Returns the last point to which the mouse cursor was moved using the move_mouse() method.
 
         Returns:
-        -------
             Tuple[int, int]: A tuple containing the (x, y) coordinates of the last point to which the mouse cursor was
                 moved.
         """
@@ -60,7 +59,6 @@ class Input(Vision):
         """Gets topmost handle for the specified window.
 
         Returns:
-        -------
             int: The handle for the specified window.
         """
         parent_hwnd: int = win32gui.GetAncestor(self.hwnd, win32con.GA_ROOT)
@@ -72,12 +70,10 @@ class Input(Vision):
         """Makes a valid `lParam` value for `WM_NCHITTEST` and `WM_MOUSEMOVE` messages.
 
         Args:
-        ----
             x (int): The x-coordinate of the point.
             y (int): The y-coordinate of the point.
 
         Returns:
-        -------
             int: The `lParam` value.
         """
         return (y << 16) | (x & 0xFFFF)
@@ -91,14 +87,12 @@ class Input(Vision):
         cursor to the target point.
 
         Args:
-        ----
             x (int): The x-coordinate of the target point.
             y (int): The y-coordinate of the target point.
             human_like (bool): Whether to teleport the mouse or move it more human-like. Defaults to human-like.
             ghost_mouse (bool): Whether to move the ghost mouse or physical mouse. Defaults to ghost mouse.
 
         Returns:
-        -------
             None.
         """
         if not human_like:
@@ -204,13 +198,11 @@ class Input(Vision):
         cursor to the target point.
 
         Args:
-        ----
             x (int): An integer representing the x-coordinate of the target point.
             y (int): An integer representing the y-coordinate of the target point.
             ghost_mouse (bool): Whether to move the ghost mouse or physical mouse. Defaults to ghost mouse.
 
         Returns:
-        -------
             None.
         """
         # Convert the target point from client coordinates to screen coordinates.
@@ -240,12 +232,10 @@ class Input(Vision):
         """Clicks the mouse button at the last moved point.
 
         Args:
-        ----
             button (int): An integer representing the mouse button to press. 1 for left button, 2 for right button,
                 3 for middle button. Default is 1.
 
         Returns:
-        -------
             None.
         """
         # Convert the last moved point from client coordinates to screen coordinates.
@@ -290,12 +280,10 @@ class Input(Vision):
         """Simulates the pressing of a virtual key code in the active window.
 
         Args:
-        ----
             vk_code (int): The virtual key code to simulate the press of. This value can be obtained from the
                 Microsoft website.
 
         Returns:
-        -------
             None
         """
         scan_code = win32api.MapVirtualKey(vk_code, 0)  # type: ignore[no-untyped-call]
@@ -310,12 +298,10 @@ class Input(Vision):
         """Simulates the releasing of a virtual key code in the active window.
 
         Args:
-        ----
             vk_code (int): The virtual key code to simulate the release of. This value can be obtained from the
                 Microsoft website.
 
         Returns:
-        -------
             None
         """
         # Set the transition state bit in the lparam value for the key up message
@@ -332,11 +318,9 @@ class Input(Vision):
         """Sends a virtual key code to the active window.
 
         Args:
-        ----
             vk_code (int): The virtual key code to send. This value can be obtained from the Microsoft website.
 
         Returns:
-        -------
             None
         """
         self.press_vk_key(vk_code)
@@ -348,11 +332,9 @@ class Input(Vision):
         """Sends a series of keyboard input to the active window.
 
         Args:
-        ----
             characters (str): The characters to send.
 
         Returns:
-        -------
             None
         """
         win32api.SendMessage(self.hwnd, win32con.WM_ACTIVATE, 1, self.hwnd)  # type: ignore[arg-type]
