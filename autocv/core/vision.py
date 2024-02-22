@@ -41,7 +41,7 @@ FuncT = TypeVar("FuncT", bound=Callable[..., Any])
 def check_valid_hwnd(func: FuncT) -> FuncT:
     """Decorator that checks if the `hwnd` attribute is set before calling the decorated method.
 
-    If `hwnd` is `None`, raises an `InvalidHandle` exception.
+    If `hwnd` is `None`, raises an `InvalidHandleError` exception.
 
     Args:
         func (FuncT): The function to decorate.
@@ -54,7 +54,7 @@ def check_valid_hwnd(func: FuncT) -> FuncT:
     def wrapper(self: WindowCapture, *args: Any, **kwargs: Any) -> Any:
         """Wrapper function that checks if the `hwnd` attribute is set before calling the decorated method.
 
-        If `hwnd` is `None`, raises an `InvalidHandle` exception.
+        If `hwnd` is `None`, raises an `InvalidHandleError` exception.
 
         Args:
             self (Any): The instance of the decorated class.
@@ -62,7 +62,7 @@ def check_valid_hwnd(func: FuncT) -> FuncT:
             **kwargs (Any): Keyword arguments passed to the decorated function.
 
         Raises:
-            InvalidHandle: If `hwnd` is `-1`.
+            InvalidHandleError: If `hwnd` is `-1`.
 
         Returns:
             Any: The return value of the decorated function.
@@ -77,7 +77,7 @@ def check_valid_hwnd(func: FuncT) -> FuncT:
 def check_valid_image(func: FuncT) -> FuncT:
     """Decorator that checks if the `opencv_image` attribute is set before calling the decorated method.
 
-    If `opencv_image` is None, raises an `InvalidImage` exception.
+    If `opencv_image` is None, raises an `InvalidImageError` exception.
 
     Args:
         func (FuncT): The function being decorated.
@@ -90,7 +90,7 @@ def check_valid_image(func: FuncT) -> FuncT:
     def wrapper(self: Vision, *args: Any, **kwargs: Any) -> Any:
         """Wrapper function that checks if the `opencv_image` attribute is set before calling the decorated method.
 
-        If `opencv_image` is `None`, raises an `InvalidImage` exception.
+        If `opencv_image` is `None`, raises an `InvalidImageError` exception.
 
         Args:
             self (Any): The instance of the decorated class.
@@ -98,7 +98,7 @@ def check_valid_image(func: FuncT) -> FuncT:
             **kwargs (Any): Keyword arguments passed to the decorated function.
 
         Raises:
-            InvalidImage: If `opencv_image` is `None`.
+            InvalidImageError: If `opencv_image` is `None`.
 
         Returns:
             Any: The return value of the decorated function.
@@ -152,7 +152,7 @@ class Vision(WindowCapture):
             set_backbuffer (bool | None): If True, set the captured image as the window's backbuffer.
 
         Raises:
-            InvalidHandle: If the window handle is not valid.
+            InvalidHandleError: If the window handle is not valid.
 
         Returns:
             npt.NDArray[np.uint8] | None: The captured image as a NumPy array with shape (height, width, 3), or None if
@@ -215,7 +215,7 @@ class Vision(WindowCapture):
                 image will be used. Defaults to None.
 
         Raises:
-            InvalidImage: If the image data is invalid.
+            InvalidImageError: If the image data is invalid.
 
         Returns:
             int: The number of pixels that have changed between the two images.
@@ -373,7 +373,7 @@ class Vision(WindowCapture):
             Sequence[TextInfo]: A list of TextInfo objects for the acceptable text in the image.
 
         Raises:
-            autocv.exceptions.InvalidImage: If the input image is invalid or None.
+            InvalidImageError: If the input image is invalid or None.
         """
         image = self._crop_image(rect)
         sorted_text = self._get_grouped_text(image, colors, tolerance)
@@ -400,7 +400,7 @@ class Vision(WindowCapture):
         colors: tuple[int, int, int] | Sequence[tuple[int, int, int]] | None = None,
         tolerance: int = 0,
         confidence: float | None = 0.8,
-    ) -> Sequence[TextInfo]:
+    ) -> list[TextInfo]:
         """Extracts text from the image using Tesseract OCR.
 
         Args:
@@ -416,10 +416,10 @@ class Vision(WindowCapture):
                 between 0 and 1. Defaults to 0.8.
 
         Returns:
-            List[TextInfo]: A list of TextInfo objects for the acceptable text in the image.
+            list[TextInfo]: A list of TextInfo objects for the acceptable text in the image.
 
         Raises:
-            autocv.exceptions.InvalidImage: If the input image is invalid or None.
+            InvalidImageError: If the input image is invalid or None.
             ValueError: If the `search_text` argument is empty or None.
         """
         image = self._crop_image(rect)
@@ -450,7 +450,7 @@ class Vision(WindowCapture):
             Color: The color of the pixel.
 
         Raises:
-            autocv.exceptions.InvalidImage: If the input image is invalid or None.
+            InvalidImageError: If the input image is invalid or None.
             IndexError: If the coordinates are out of bounds.
         """
         x, y = point
@@ -484,7 +484,7 @@ class Vision(WindowCapture):
             the given color within the specified tolerance.
 
         Raises:
-            autocv.exceptions.InvalidImage: If the input image is invalid or None.
+            InvalidImageError: If the input image is invalid or None.
         """
         image = self._crop_image(rect)
         mask = filter_colors(image, color, tolerance)
@@ -989,7 +989,7 @@ class Vision(WindowCapture):
             ShapeList[Contour]: A ShapeList representing the contours of the regions that match the given color.
 
         Raises:
-            autocv.exceptions.InvalidImage: If the input image is invalid or None.
+            InvalidImageError: If the input image is invalid or None.
         """
         image = self._crop_image(rect)
 
@@ -1028,7 +1028,7 @@ class Vision(WindowCapture):
             None
 
         Raises:
-            autocv.exceptions.InvalidImage: If the input image is invalid or None.
+            InvalidImageError: If the input image is invalid or None.
         """
         if not isinstance(points, ShapeList):
             center_of_bitmap = Point(self.opencv_image.shape[1] // 2, self.opencv_image.shape[0] // 2)
@@ -1053,7 +1053,7 @@ class Vision(WindowCapture):
             None
 
         Raises:
-            autocv.exceptions.InvalidImage: If the input image is invalid or None.
+            InvalidImageError: If the input image is invalid or None.
         """
         if not isinstance(contours, ShapeList):
             center_of_bitmap = Point(self.opencv_image.shape[1] // 2, self.opencv_image.shape[0] // 2)
@@ -1124,7 +1124,7 @@ class Vision(WindowCapture):
             None
 
         Raises:
-            autocv.exceptions.InvalidImage: If the input image is invalid or None.
+            InvalidImageError: If the input image is invalid or None.
         """
         grey_image = filter_colors(self.opencv_image, colors, tolerance, keep_original_colors=keep_original_colors)
         self.opencv_image = cast(npt.NDArray[np.uint8], cv.cvtColor(grey_image, cv.COLOR_GRAY2BGR))

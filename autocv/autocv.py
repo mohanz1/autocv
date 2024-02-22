@@ -50,7 +50,7 @@ class AutoCV(Input):
         """Initializes an instance of the AutoCV class with a specified window handle (hwnd).
 
         Args:
-            hwnd (Optional[int]): The window handle to use for the AutoCV instance. Defaults to None.
+            hwnd (int): The window handle to use for the AutoCV instance. Defaults to -1.
         """
         super().__init__(hwnd)
         self._instance_logger = logging.getLogger(__name__).getChild(self.__class__.__name__).getChild(str(id(self)))
@@ -69,7 +69,7 @@ class AutoCV(Input):
         """Retrieves the size of the window.
 
         Returns:
-            A tuple representing the width and height of the window in pixels.
+            tuple[int, int]: A tuple representing the width and height of the window in pixels.
         """
         left, top, right, bottom = win32gui.GetWindowRect(self.hwnd)
         width = right - left
@@ -80,7 +80,7 @@ class AutoCV(Input):
         """Replaces the `GetCursorPos` function in the `user32.dll` module of the target process.
 
         Returns:
-            True if the function was successfully patched, False otherwise.
+            bool: True if the function was successfully patched, False otherwise.
         """
         # Get the process ID of the target process.
         process_id = win32process.GetWindowThreadProcessId(self._get_topmost_hwnd())[1]
@@ -112,7 +112,8 @@ class AutoCV(Input):
         """Sets up an image picker interface and returns the selected image as a NumPy array.
 
         Returns:
-            Optional[np.ndarray]: The selected image as a NumPy array, or None if no image was selected.
+            tuple[npt.NDArray[np.uint8] | None, Rectangle | None]: The selected image as a NumPy array, or None if no
+                image was selected.
         """
         self._instance_logger.debug("Setting up image picker.")
         root = Tk()
@@ -140,7 +141,11 @@ class AutoCV(Input):
 
     @check_valid_image
     def image_filter(self: Self) -> FilterSettings:
-        """A class for applying an HSV filter, Canny edge detection, erode, and dilate operations to an image."""
+        """A class for applying an HSV filter, Canny edge detection, erode, and dilate operations to an image.
+
+        Returns:
+            FilterSettings: The resulting FilterSettings object.
+        """
         return ImageFilter(self.opencv_image).filter_settings
 
     @check_valid_image
@@ -149,6 +154,9 @@ class AutoCV(Input):
 
         Args:
             live (bool): Whether to show a live refreshing view. Defaults to False.
+
+        Returns:
+            None
         """
         self._instance_logger.debug("Showing backbuffer.")
         cv.imshow("AutoCV Backbuffer", self.opencv_image)

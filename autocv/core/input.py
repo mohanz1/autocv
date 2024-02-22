@@ -49,7 +49,7 @@ class Input(Vision):
         """Returns the last point to which the mouse cursor was moved using the move_mouse() method.
 
         Returns:
-            Tuple[int, int]: A tuple containing the (x, y) coordinates of the last point to which the mouse cursor was
+            tuple[int, int]: A tuple containing the (x, y) coordinates of the last point to which the mouse cursor was
                 moved.
         """
         return self._last_moved_point
@@ -93,7 +93,7 @@ class Input(Vision):
             ghost_mouse (bool): Whether to move the ghost mouse or physical mouse. Defaults to ghost mouse.
 
         Returns:
-            None.
+            None
         """
         if not human_like:
             return self._move_mouse(x, y, ghost_mouse=ghost_mouse)
@@ -203,7 +203,7 @@ class Input(Vision):
             ghost_mouse (bool): Whether to move the ghost mouse or physical mouse. Defaults to ghost mouse.
 
         Returns:
-            None.
+            None
         """
         # Convert the target point from client coordinates to screen coordinates.
         screen_point = win32gui.ClientToScreen(self.hwnd, (x, y))
@@ -236,7 +236,7 @@ class Input(Vision):
                 for middle button. Default is 1.
 
         Returns:
-            None.
+            None
         """
         # Convert the last moved point from client coordinates to screen coordinates.
         screen_point = win32gui.ClientToScreen(self.hwnd, self._last_moved_point)
@@ -280,8 +280,8 @@ class Input(Vision):
         """Simulates the pressing of a virtual key code in the active window.
 
         Args:
-            vk_code (int): The virtual key code to simulate the press of. This value can be obtained from the
-                Microsoft website.
+            vk_code (int): The virtual key code to simulate the press of. This value can be obtained from the Microsoft
+                website.
 
         Returns:
             None

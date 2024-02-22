@@ -55,3 +55,8 @@ TextInfo
 
 .. autoclass:: autocv.models.text_info.TextInfo
    :members:
+
+Exceptions
+----------
+.. automodule:: autocv.models.exceptions
+   :members:

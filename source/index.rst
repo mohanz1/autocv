@@ -16,9 +16,10 @@ AutoCV is an innovative computer vision library that simplifies image processing
    :maxdepth: 2
    :caption: Contents:
 
-   autocv.core
+   autocv.autocv
    autocv.core.window_capture
    autocv.core.vision
+   autocv.core.input
    autocv.models
    autocv.utils
 
@@ -30,7 +31,7 @@ Features
 * Easy-to-use interface
 * Comprehensive image processing functions
 * High performance with real-time capabilities
-* Extensive documentation and examples
+* Extensive documentation
 
 
 
@@ -41,7 +42,7 @@ To get started with AutoCV, install the package using pip:
 
 .. code-block:: bash
 
-   $ pip install autocv
+   pip install autocv
 
 
 
