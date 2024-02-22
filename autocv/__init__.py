@@ -17,7 +17,7 @@ Modules:
 import ctypes
 import platform
 
-__all__ = ("AutoCV",)
+__all__ = ("AutoCV", "find_first", "get_first")
 
 if platform.system() != "Windows":
     raise RuntimeError("Only Windows platform is currently supported.")  # noqa: TRY003
@@ -28,3 +28,4 @@ else:
     ctypes.windll.user32.SetProcessDPIAware()
 
 from .autocv import AutoCV
+from .utils import find_first, get_first
