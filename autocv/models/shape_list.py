@@ -70,12 +70,6 @@ class ShapeList(Sequence[T]):
         data (npt.NDArray[np.uintp] | Sequence[npt.NDArray[np.uintp]]): The shape data as an array-like structure.
             Can be an ndarray or a sequence of ndarrays.
         center_of_bitmap (Point): The center point of the bitmap, used for calculating distances in certain orderings.
-
-    Methods:
-        __len__() -> int: Returns the number of shapes in the list.
-        __getitem__(index: int | slice) -> T | Sequence[T]: Retrieves a shape or a sequence of shapes from the list by
-            index.
-        order_by(by: OrderBy) -> Self: Orders the shapes in the list according to a specified criterion.
     """
 
     shape_cls: type[T]

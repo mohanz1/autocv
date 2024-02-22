@@ -19,7 +19,6 @@ AutoCV is an innovative computer vision library that simplifies image processing
    autocv.core
    autocv.models
    autocv.utils
-   search
 
 
 
@@ -45,7 +44,7 @@ To get started with AutoCV, install the package using pip:
 
 
 Prerequisites
------------
+-------------
 
 - Autocv requires Python 3.10+
 
@@ -85,11 +84,3 @@ Example
    #  move and click the mouse to a random point in the contour
    autocv.move_mouse(*contour.random_point())
    autocv.click_mouse()
-
-
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`search`

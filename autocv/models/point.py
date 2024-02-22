@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 class Point(NamedTuple):
     """A class representing a point in 2D space.
 
-    Args:
+    Attributes:
         x: The x-coordinate of the point.
         y: The y-coordinate of the point.
     """
@@ -44,7 +44,7 @@ class Point(NamedTuple):
         """Calculate the center of the point, which is simply the point itself.
 
         Returns:
-            autocv.models.Point: The center of the point.
+            Point: The center of the point.
         """
         return self
 
@@ -52,7 +52,7 @@ class Point(NamedTuple):
         """Calculate a random point, which is simply the point itself.
 
         Returns:
-            autocv.models.Point: The center of the point.
+            Point: The center of the point.
         """
         return self
 
@@ -64,7 +64,7 @@ class Point(NamedTuple):
             data (npt.NDArray[np.uintp]): A numpy array of shape (2,) containing the x and y coordinates.
 
         Returns:
-            autocv.models.Point: A Point object with the specified coordinates.
+            Point: A Point object with the specified coordinates.
         """
         return cls(int(data[0]), int(data[1]))
 

@@ -35,7 +35,7 @@ class Circle(NamedTuple):
         """Get the center point of the circle.
 
         Returns:
-            autocv.models.Point: The center point of the circle.
+            Point: The center point of the circle.
         """
         return Point(self.x, self.y)
 
@@ -43,7 +43,7 @@ class Circle(NamedTuple):
         """Get a random point of the circle.
 
         Returns:
-            autocv.models.Point: The random point of the circle.
+            Point: The random point of the circle.
         """
         alpha = 2 * math.pi * random.random()
 

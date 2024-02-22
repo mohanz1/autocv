@@ -2,7 +2,6 @@
 
 # For the full list of built-in configuration values, see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
-
 import sys
 from pathlib import Path
 
@@ -14,38 +13,41 @@ copyright = "2024, Zach"  # noqa: A001
 author = "Zach"
 release = "1.0.0"
 
+sys.path.insert(0, str(Path(__file__).parents[1].resolve()))
+
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-sys.path.insert(0, str(Path("../").resolve()))
+extensions = ["sphinx.ext.autodoc", "sphinx.ext.napoleon"]
+html_theme = "furo"
 
-extensions = [
-    "sphinx.ext.autodoc",
-    "sphinx.ext.napoleon",
-    "sphinx_immaterial",
-]
-html_theme = "sphinx_immaterial"
-
+autodoc_member_order = "bysource"
 toc_object_entries_show_parents = "hide"
+
+# Links used for cross-referencing stuff in other documentation
+intersphinx_mapping = {
+    "py": ("https://docs.python.org/3", None),
+}
 
 
 templates_path = ["_templates"]
-exclude_patterns = []
+
+source_suffix = ".rst"
+
+# The master toctree document.
+master_doc = "index"
+
+# List of patterns, relative to source directory, that match files and
+# directories to ignore when looking for source files.
+exclude_patterns = ["build"]
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
-
 html_theme_options = {
-    # Set the repo location to get a badge with stats
-    "repo_url": "https://github.com/mohanz1/autocv",
-    "repo_name": "autocv",
-    "palette": {"scheme": "slate"},
-    "toc_title": "AutoCV",
-    "version_dropdown": True,
-    "version_info": [
-        {"version": "1.0", "title": "1.0", "aliases": ["latest"]},
-    ],
+    "source_repository": "https://github.com/mohanz1/autocv",
+    "source_branch": "main",
+    "source_directory": "source/",
 }
 
 html_static_path = ["_static"]

@@ -31,10 +31,10 @@ class Rectangle(NamedTuple):
     """A class to represent a rectangle.
 
     Attributes:
-    - left (int): The x-coordinate of the left edge of the rectangle.
-    - top (int): The y-coordinate of the top edge of the rectangle.
-    - width (int): The width of the rectangle.
-    - height (int): The height of the rectangle.
+        left (int): The x-coordinate of the left edge of the rectangle.
+        top (int): The y-coordinate of the top edge of the rectangle.
+        width (int): The width of the rectangle.
+        height (int): The height of the rectangle.
     """
 
     left: int
@@ -87,7 +87,7 @@ class Rectangle(NamedTuple):
             other (Tuple[int, int, int, int]): The rectangle to get the overlap with.
 
         Returns:
-            Optional[autocv.models.Rectangle]: A new rectangle representing the overlap, or None if there is no overlap.
+            Optional[Rectangle]: A new rectangle representing the overlap, or None if there is no overlap.
         """
         left = max(self.left, other[0])
         top = max(self.top, other[1])
@@ -101,7 +101,7 @@ class Rectangle(NamedTuple):
         """Get the center point of the rectangle.
 
         Returns:
-            autocv.models.point: The center point of the rectangle.
+            Point: The center point of the rectangle.
         """
         return Point(self.left + self.width // 2, self.top + self.height // 2)
 
@@ -109,7 +109,7 @@ class Rectangle(NamedTuple):
         """Get a random point of the rectangle.
 
         Returns:
-            autocv.models.point: The random point of the rectangle.
+            Point: The random point of the rectangle.
         """
         return Point(
             random.randint(self.left, self.left + self.width),
@@ -121,8 +121,7 @@ class Rectangle(NamedTuple):
         """Creates a Rectangle object from a dictionary-like object.
 
         Args:
-            row (Dict[str, int]): A dictionary-like object with the following keys:
-                              "left", "top", "width", "height".
+            row (Dict[str, int]): A dictionary-like object with the following keys: "left", "top", "width", "height".
 
         Returns:
             Rectangle: A Rectangle object with the specified attributes.
@@ -138,7 +137,7 @@ class Rectangle(NamedTuple):
                 rectangle.
 
         Returns:
-            autocv.models.Rectnangle: A new rectangle.
+            Rectnangle: A new rectangle.
         """
         if len(dimensions) != MAX_SIDES:
             raise InvalidLengthError(MAX_SIDES, len(dimensions))
@@ -154,7 +153,7 @@ class Rectangle(NamedTuple):
                 rectangle.
 
         Returns:
-            autocv.models.Rectangle: A new rectangle.
+            Rectangle: A new rectangle.
         """
         if len(coordinates) != MAX_SIDES:
             raise InvalidLengthError(MAX_SIDES, len(coordinates))

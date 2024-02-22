@@ -62,7 +62,7 @@ class Contour(Sequence[Sequence[tuple[int, int]]]):
             data (npt.NDArray[np.uintp]): The ndarray to use for creating the Contour.
 
         Returns:
-            autocv.models.Contour: A new Contour instance created from the given ndarray.
+            Contour: A new Contour instance created from the given ndarray.
         """
         return cls(data)
 
@@ -86,7 +86,7 @@ class Contour(Sequence[Sequence[tuple[int, int]]]):
         """Compute the centroid of the contour.
 
         Returns:
-            autocv.models.Point: A Point representing the (x, y) coordinates of the centroid of the contour.
+            Point: A Point representing the (x, y) coordinates of the centroid of the contour.
         """
         m = cv.moments(self.data)
         cx = int(m["m10"] / m["m00"])
@@ -97,7 +97,7 @@ class Contour(Sequence[Sequence[tuple[int, int]]]):
         """Compute the centroid of the contour.
 
         Returns:
-            autocv.models.Point: A Point representing the (x, y) coordinates of the centroid of the contour.
+            Point: A Point representing the (x, y) coordinates of the centroid of the contour.
         """
         return self.centroid()
 
@@ -117,7 +117,7 @@ class Contour(Sequence[Sequence[tuple[int, int]]]):
         """Get a random point inside the contour.
 
         Returns:
-            autocv.models.Point: A Point object representing the random point.
+            Point: A Point object representing the random point.
         """
         (cx, cy), radius = cv.minEnclosingCircle(self.data)
         while True:
@@ -129,7 +129,7 @@ class Contour(Sequence[Sequence[tuple[int, int]]]):
         """Convert the contour to a list of points.
 
         Returns:
-            Sequence[autocv.models.Point]: A list of Point objects representing the points in the contour.
+            Sequence[Point]: A list of Point objects representing the points in the contour.
         """
         return tuple(starmap(Point, self.data.squeeze()))
 

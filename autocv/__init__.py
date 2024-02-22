@@ -5,13 +5,13 @@ all designed to facilitate the creation of automation scripts and applications t
 AutoCV class serves as the main interface for these functionalities.
 
 Note:
-    - The package is specifically designed for the Windows platform and may not function correctly on other operating
-    systems.
-    - DPI awareness is set according to the detected Windows version to ensure consistent behavior across different
-    screen resolutions and scalings.
+    The package is specifically designed for the Windows platform and may not function correctly on other operating
+        systems.
+    DPI awareness is set according to the detected Windows version to ensure consistent behavior across different
+        screen resolutions and scalings.
 
 Modules:
-    - autocv: Contains the AutoCV class, providing high-level methods for automation and computer vision tasks.
+    autocv: Contains the AutoCV class, providing high-level methods for automation and computer vision tasks.
 """
 
 import ctypes

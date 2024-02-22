@@ -21,6 +21,11 @@ class TextInfo:
     """A dataclass representing information about text detected in an image.
 
     Inherits from Rectangle class to store the bounding box coordinates of the text.
+
+    Attributes:
+        text (str): The extracted text from the image.
+        confidence (float): The confidence level of the found text. Ranged between 0 and 1.
+        rectangle (Rectangle): The bounding box of the found text.
     """
 
     text: str

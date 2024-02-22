@@ -1,9 +1,4 @@
-"""This module provides utility functions for searching sequences and iterables.
-
-It includes:
-- find_first: For finding the first element in a sequence that satisfies a given predicate.
-- get_first: For finding the first element in an iterable that matches specified attribute values.
-"""
+"""This module provides utility functions for searching sequences and iterables."""
 
 from __future__ import annotations
 
@@ -27,8 +22,8 @@ def find_first(predicate: Callable[[T], bool], seq: Sequence[T]) -> T | None:
         seq (Sequence[T]): A sequence of elements to search.
 
     Returns:
-        Optional[T]: The first element of the sequence that satisfies the predicate,
-            or None if no such element is found.
+        Optional[T]: The first element of the sequence that satisfies the predicate, or None if no such element is
+            found.
     """
     for element in seq:
         if predicate(element):

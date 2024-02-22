@@ -1,21 +1,10 @@
-autocv.utils package
-====================
+Utility Functions
+=================
 
-Submodules
-----------
-
-autocv.utils.filtering module
------------------------------
+Filtering
+---------
 
 .. automodule:: autocv.utils.filtering
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-Module contents
----------------
-
-.. automodule:: autocv.utils
    :members:
    :undoc-members:
    :show-inheritance:

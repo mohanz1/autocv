@@ -29,7 +29,12 @@ SLOTS_DATACLASS = {"slots": True} if "slots" in dataclass.__kwdefaults__ else {}
 
 @dataclass(frozen=True, **SLOTS_DATACLASS)
 class ColorWithPoint:
-    """Represents a color and its associated point in 2D space."""
+    """Represents a color and its associated point in 2D space.
+
+    Attributes:
+        color (Color): The color of the object.
+        point (Point): The point (x, y) of the object.
+    """
 
     color: Color
     point: Point

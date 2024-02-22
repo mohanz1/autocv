@@ -14,74 +14,44 @@ Color
 .. autoclass:: autocv.models.color.Color
    :members: is_color_within_color_and_tolerance, invert, to_decimal, to_hex
 
-autocv.models.color\_with\_point module
----------------------------------------
+ColorWithPoint
+--------------
 
-.. automodule:: autocv.models.color_with_point
+.. autoclass:: autocv.models.color_with_point.ColorWithPoint
+   :members: point, color
+
+Contour
+-------
+
+.. autoclass:: autocv.models.contour.Contour
+   :members: area, perimeter, centroid, center, is_point_inside_contour, random_point, to_points, get_bounding_rect, get_bounding_circle
+
+FilterSettings
+--------------
+
+.. autoclass:: autocv.models.filter_settings.FilterSettings
    :members:
-   :undoc-members:
-   :show-inheritance:
 
-autocv.models.contour module
-----------------------------
+Point
+-----
 
-.. automodule:: autocv.models.contour
+.. autoclass:: autocv.models.point.Point
+   :members: center, random_point, distance_to
+
+Rectangle
+---------
+
+.. autoclass:: autocv.models.rectangle.Rectangle
+   :members: right, bottom, area, get_overlap, center, random_point
+
+ShapeList
+---------
+
+.. autoclass:: autocv.models.shape_list.ShapeList
    :members:
-   :undoc-members:
-   :show-inheritance:
 
-autocv.models.exceptions module
--------------------------------
+TextInfo
+--------
 
-.. automodule:: autocv.models.exceptions
+.. autoclass:: autocv.models.text_info.TextInfo
    :members:
-   :undoc-members:
-   :show-inheritance:
-
-autocv.models.filter\_settings module
--------------------------------------
-
-.. automodule:: autocv.models.filter_settings
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-autocv.models.point module
---------------------------
-
-.. automodule:: autocv.models.point
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-autocv.models.rectangle module
-------------------------------
-
-.. automodule:: autocv.models.rectangle
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-autocv.models.shape\_list module
---------------------------------
-
-.. automodule:: autocv.models.shape_list
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-autocv.models.text\_info module
--------------------------------
-
-.. automodule:: autocv.models.text_info
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-Module contents
----------------
-
-.. automodule:: autocv.models
-   :members:
-   :undoc-members:
-   :show-inheritance:
