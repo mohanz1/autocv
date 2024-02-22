@@ -17,6 +17,8 @@ AutoCV is an innovative computer vision library that simplifies image processing
    :caption: Contents:
 
    autocv.core
+   autocv.core.window_capture
+   autocv.core.vision
    autocv.models
    autocv.utils
 

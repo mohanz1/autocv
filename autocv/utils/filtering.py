@@ -22,8 +22,7 @@ def find_first(predicate: Callable[[T], bool], seq: Sequence[T]) -> T | None:
         seq (Sequence[T]): A sequence of elements to search.
 
     Returns:
-        Optional[T]: The first element of the sequence that satisfies the predicate, or None if no such element is
-            found.
+        T | None: The first element of the sequence that satisfies the predicate, or None if no such element is found.
     """
     for element in seq:
         if predicate(element):
@@ -41,8 +40,8 @@ def get_first(iterable: Iterable[T], **kwargs: str | float) -> T | None:
             attribute of an object in the "foo" attribute.
 
     Returns:
-        Optional[T]: The first element of the iterable that has the specified attribute(s) with the specified value(s),
-            or None if no such element is found.
+        T | None: The first element of the iterable that has the specified attribute(s) with the specified value(s), or
+            None if no such element is found.
     """
     _all = all
     attrget = attrgetter

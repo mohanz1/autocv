@@ -67,8 +67,8 @@ class ShapeList(Sequence[T]):
 
     Attributes:
         shape_cls (type[T]): The class type of the shapes in the list, such as Point, Rectangle, or Contour.
-        data (npt.NDArray[np.uintp] | Sequence[npt.NDArray[np.uintp]]): The shape data as an array-like structure.
-            Can be an ndarray or a sequence of ndarrays.
+        data (npt.NDArray[np.uintp] | Sequence[npt.NDArray[np.uintp]] | Sequence[Sequence[int]]): The shape data as an
+            array-like structure. Can be an ndarray or a sequence of ndarrays.
         center_of_bitmap (Point): The center point of the bitmap, used for calculating distances in certain orderings.
     """
 

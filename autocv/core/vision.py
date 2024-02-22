@@ -113,11 +113,11 @@ def check_valid_image(func: FuncT) -> FuncT:
 class Vision(WindowCapture):
     """Class for performing image processing and optical character recognition (OCR)."""
 
-    def __init__(self: Self, hwnd: int | None = None) -> None:
+    def __init__(self: Self, hwnd: int = -1) -> None:
         """Initializes a Vision object.
 
         Args:
-            hwnd (int, optional): The window handle of the window to capture. Defaults to None.
+            hwnd (int | None): The window handle of the window to capture. Defaults to None.
 
         Returns:
             None
@@ -134,7 +134,7 @@ class Vision(WindowCapture):
         """Sets the image buffer to the provided numpy array or PIL Image object.
 
         Args:
-            image (Union[npt.NDArray[np.uint8], Image.Image]): The Object to set as the image back buffer.
+            image (npt.NDArray[np.uint8] | Image.Image]): The object to set as the image back buffer.
 
         Returns:
             None
@@ -149,14 +149,14 @@ class Vision(WindowCapture):
         """Captures the current window image and converts it to an OpenCV format.
 
         Args:
-            set_backbuffer (Optional[bool]): If True, set the captured image as the window's backbuffer.
+            set_backbuffer (bool | None): If True, set the captured image as the window's backbuffer.
 
         Raises:
             InvalidHandle: If the window handle is not valid.
 
         Returns:
-            Optional[npt.NDArray[np.uint8]]: The captured image as a NumPy array with shape (height, width, 3),
-                or None if set_backbuffer is True.
+            npt.NDArray[np.uint8] | None: The captured image as a NumPy array with shape (height, width, 3), or None if
+                set_backbuffer is True.
         """
         # Get window dimensions
         left, top, right, bottom = win32gui.GetWindowRect(self.hwnd)
@@ -211,8 +211,8 @@ class Vision(WindowCapture):
         """Calculates the number of pixels that have changed between the current image and a later version of the image.
 
         Args:
-            area (Optional[Optional[Tuple[int, int, int, int]]]): The region of the image to consider. If not specified,
-                the entire image will be used. Defaults to None.
+            area (tuple[int, int, int, int] | None): The region of the image to consider. If not specified, the entire
+                image will be used. Defaults to None.
 
         Raises:
             InvalidImage: If the image data is invalid.
@@ -247,8 +247,8 @@ class Vision(WindowCapture):
 
         Args:
             image (npt.NDArray[np.uint8]): The input image to search.
-            colors (Optional[Union[Tuple[int, int, int], Sequence[Tuple[int, int, int]]]]): A sequence of RGB tuples or
-                a sequence of sequences containing RGB tuples.
+            colors (tuple[int, int, int] | Sequence[tuple[int, int, int]] | None): A sequence of RGB tuples or a
+                sequence of sequences containing RGB tuples.
             tolerance (int): The maximum difference allowed between each channel of the given color and the pixel color.
 
         Returns:
@@ -328,11 +328,11 @@ class Vision(WindowCapture):
         """Crop the current OpenCV image.
 
         Args:
-            rect (Optional[Tuple[int, int, int, int]]): A tuple specifying a rectangular region in the image to crop.
-                The tuple contains the coordinates of the top-left corner (x, y) and the width and height of the
-                rectangle (w, h) in the format (x, y, w, h). If not provided, the whole image is returned.
-            image (Optional[npt.NDArray[np.uint8]]): An optional input image to crop. If not provided, the current
-                OpenCV image is used.
+            rect (tuple[int, int, int, int] | None): A tuple specifying a rectangular region in the image to crop. The
+                tuple contains the coordinates of the top-left corner (x, y) and the width and height of the rectangle
+                (w, h) in the format (x, y, w, h). If not provided, the whole image is returned.
+            image (npt.NDArray[np.uint8] | None): An optional input image to crop. If not provided, the current OpenCV
+                image is used.
 
         Returns:
             npt.NDArray[np.uint8]: A numpy array of unsigned integers of shape (height, width, channels), representing
@@ -354,18 +354,19 @@ class Vision(WindowCapture):
         rect: tuple[int, int, int, int] | None = None,
         colors: tuple[int, int, int] | Sequence[tuple[int, int, int]] | None = None,
         tolerance: int = 0,
-        confidence: float = 0.8,
+        confidence: float | None = 0.8,
     ) -> Sequence[TextInfo]:
         """Extracts text from the image using Tesseract OCR with confidence greater than or equal to the confidence arg.
 
         Args:
-            rect (Optional[Tuple[int, int, int, int]]): A tuple specifying a rectangular region in the image to search.
-                The tuple contains the coordinates of the top-left corner (x, y) and the width and height of the
-                rectangle (w, h) in the format (x, y, w, h). If not provided, the whole image is searched.
-            colors (Optional[Union[Tuple[int, int, int], Sequence[Tuple[int, int, int]]]]): A sequence of RGB tuples or
-                a sequence of sequences containing RGB tuples.
-            tolerance (int): The maximum difference allowed between each channel of the given color and the pixel color.
-            confidence (float): The minimum confidence level for text to be included in the output. Must be a
+            rect (tuple[int, int, int, int] | None): A tuple specifying a rectangular region in the image to search. The
+                tuple contains the coordinates of the top-left corner (x, y) and the width and height of the rectangle
+                (w, h) in the format (x, y, w, h). If not provided, the whole image is searched.
+            colors (tuple[int, int, int] | Sequence[tuple[int, int, int]]): A sequence of RGB tuples or a sequence of
+                sequences containing RGB tuples.
+            tolerance (int): The maximum difference allowed between each channel of the given color and the pixel
+                color.
+            confidence (float | None): The minimum confidence level for text to be included in the output. Must be a
                 value between 0 and 1. Defaults to 0.8.
 
         Returns:
@@ -398,20 +399,21 @@ class Vision(WindowCapture):
         rect: tuple[int, int, int, int] | None = None,
         colors: tuple[int, int, int] | Sequence[tuple[int, int, int]] | None = None,
         tolerance: int = 0,
-        confidence: float = 0.8,
+        confidence: float | None = 0.8,
     ) -> Sequence[TextInfo]:
         """Extracts text from the image using Tesseract OCR.
 
         Args:
             search_text (str): The text to search for in the image.
-            rect (Optional[Tuple[int, int, int, int]]): A tuple specifying a rectangular region in the image to search.
-                The tuple contains the coordinates of the top-left corner (x, y) and the width and height of the
-                rectangle (w, h) in the format (x, y, w, h). If not provided, the whole image is searched.
-            colors (Optional[Union[Tuple[int, int, int], Sequence[Tuple[int, int, int]]]]): A sequence of RGB tuples or
-                a sequence of sequences containing RGB tuples.
-            tolerance (int): The maximum difference allowed between each channel of the given color and the pixel color.
-            confidence (float, optional): The minimum confidence level for text to be included in the output. Must be a
-                value between 0 and 1. Defaults to 0.8.
+            rect (tuple[int, int, int, int] | None): A tuple specifying a rectangular region in the image to search. The
+                tuple contains the coordinates of the top-left corner (x, y) and the width and height of the rectangle
+                (w, h) in the format (x, y, w, h). If not provided, the whole image is searched.
+            colors (tuple[int, int, int] | Sequence[tuple[int, int, int]] | None): A sequence of RGB tuples or a
+                sequence of sequences containing RGB tuples.
+            tolerance (int): The maximum difference allowed between each channel of the given color and the pixel
+                color.
+            confidence (float): The minimum confidence level for text to be included in the output. Must be a value
+                between 0 and 1. Defaults to 0.8.
 
         Returns:
             List[TextInfo]: A list of TextInfo objects for the acceptable text in the image.
@@ -442,7 +444,7 @@ class Vision(WindowCapture):
         """Returns the color of a pixel in the image at the specified coordinates.
 
         Args:
-            point (Tuple[int, int]): The a tuple containing the x and y coordinate of the pixel.
+            point (tuple[int, int]): The a tuple containing the x and y coordinate of the pixel.
 
         Returns:
             Color: The color of the pixel.
@@ -470,11 +472,12 @@ class Vision(WindowCapture):
         """Finds all x, y coordinates in a given OpenCV image that match the given color and tolerance.
 
         Args:
-            color (Tuple[int, int, int]): The color to search for, in RGB format.
-            rect (Optional[Tuple[int, int, int, int]]): A tuple specifying a rectangular region in the image to search.
-                The tuple contains the coordinates of the top-left corner (x, y) and the width and height of the
-                rectangle (w, h) in the format (x, y, w, h). If not provided, the whole image is searched.
-            tolerance (int): The maximum difference allowed between each channel of the given color and the pixel color.
+            color (tuple[int, int, int]): The color to search for, in RGB format.
+            rect (tuple[int, int, int, int] | None): A tuple specifying a rectangular region in the image to search. The
+                tuple contains the coordinates of the top-left corner (x, y) and the width and height of the rectangle
+                (w, h) in the format (x, y, w, h). If not provided, the whole image is searched.
+            tolerance (int): The maximum difference allowed between each channel of the given color and the pixel
+                color.
 
         Returns:
             ShapeList[Point]: A ShapeList instance containing the x, y coordinates of all pixels in the image that match
@@ -501,9 +504,9 @@ class Vision(WindowCapture):
         """Get the average color of an image within a specified rectangular region.
 
         Args:
-            rect (Optional[Tuple[int, int, int, int]]): A tuple specifying a rectangular region in the image to search.
-                The tuple contains the coordinates of the top-left corner (x, y) and the width and height of the
-                rectangle (w, h) in the format (x, y, w, h). If not provided, the whole image is searched.
+            rect (tuple[int, int, int, int] | None): A tuple specifying a rectangular region in the image to search. The
+                tuple contains the coordinates of the top-left corner (x, y) and the width and height of the rectangle
+                (w, h) in the format (x, y, w, h). If not provided, the whole image is searched.
 
         Returns:
             Color: The average color within the specified region.
@@ -520,9 +523,9 @@ class Vision(WindowCapture):
 
         Args:
             image (npt.NDArray[np.uint8]): The input image to calculate the average color from.
-            rect (Optional[Tuple[int, int, int, int]]): A tuple specifying a rectangular region in the image to search.
-                The tuple contains the coordinates of the top-left corner (x, y) and the width and height of the
-                rectangle (w, h) in the format (x, y, w, h). If not provided, the whole image is searched.
+            rect (tuple[int, int, int, int] | None): A tuple specifying a rectangular region in the image to search. The
+                tuple contains the coordinates of the top-left corner (x, y) and the width and height of the rectangle
+                (w, h) in the format (x, y, w, h). If not provided, the whole image is searched.
 
         Returns:
             Color: The average color within the specified region.
@@ -548,12 +551,12 @@ class Vision(WindowCapture):
         """Returns the most common color in the given image.
 
         Args:
-            rect (Optional[Tuple[int, int, int, int]]): A tuple containing the x, y coordinates and the width and height
-                of the area to analyze.
-            index (int): The index of the desired popular color (1 for the most common, 2 for the second most common,
-                and so on).
-            ignore_colors (Optional[Union[Tuple[int, int, int], Sequence[Tuple[int, int, int]]]]): A sequence of RGB
-                tuples or a sequence of sequences containing RGB tuples.
+            rect (tuple[int, int, int, int] | None): A tuple containing the x, y coordinates and the width and height of
+                the area to analyze.
+            index (int): The index of the desired popular color (1 for the most common, 2 for the second most
+                common, and so on).
+            ignore_colors (tuple[int, int, int] | Sequence[tuple[int, int, int]] | None): A sequence of RGB tuples or a
+                sequence of sequences containing RGB tuples.
 
         Returns:
           Color: Most common color.
@@ -594,8 +597,8 @@ class Vision(WindowCapture):
         """Returns all colors in a given image or area of an image with the respective counts.
 
         Args:
-            rect (Optional[Tuple[int, int, int, int]]): A tuple containing the x, y coordinates and the width and height
-                of the area to analyze.
+            rect (tuple[int, int, int, int] | None): A tuple containing the x, y coordinates and the width and height of
+                the area to analyze.
 
 
         Returns:
@@ -619,8 +622,8 @@ class Vision(WindowCapture):
         """Returns the dominant color in the given image.
 
         Args:
-          rect (Optional[Tuple[int, int, int, int]]): A tuple containing the x, y coordinates and the width and height
-            of the area to analyze.
+          rect (tuple[int, int, int, int] | None): A tuple containing the x, y coordinates and the width and height of
+            the area to analyze.
 
         Returns:
           Color: Dominant color.
@@ -643,10 +646,10 @@ class Vision(WindowCapture):
         """Returns the dominant color in the given image.
 
         Args:
-          image (np.ndarray): Input image (in BGR format).
+          image (npt.NDArray[np.uint8]): Input image (in BGR format).
 
         Returns:
-          np.ndarray: Dominant color in the image (in BGR format).
+          npt.NDArray[np.uint8]: Dominant color in the image (in BGR format).
         """
         # Reshape the image to a 2D array (height*width, channels)
         reshaped_image = image.reshape(-1, 3)
@@ -666,12 +669,16 @@ class Vision(WindowCapture):
         """Finds the best color and tolerance to maximize the colors in a given area of the image.
 
         Args:
-            rect: A tuple containing the x, y coordinates and the width and height of the area to analyze.
-            initial_tolerance: The initial tolerance value to use when searching for the best color match.
-            tolerance_step: The step size to use when decreasing the tolerance value during the search.
+            rect (tuple[int, int, int, int]): A tuple containing the x, y coordinates and the width and height of the
+                area to analyze.
+            initial_tolerance (int): The initial tolerance value to use when searching for the best color match.
+                Defaults to 100.
+            tolerance_step (int): The step size to use when decreasing the tolerance value during the search. Defaults
+                to 1.
 
         Returns:
-            A tuple containing the RGB values of the best color match and the tolerance value used to obtain that match.
+            tuple[Color, int]: A tuple containing the RGB values of the best color match and the tolerance value used to
+                obtain that match.
         """
         cropped_image = self._crop_image(rect)
         dominant_color = self._get_dominant_color(cropped_image)
@@ -690,10 +697,10 @@ class Vision(WindowCapture):
         """Find the best color match with the given tolerance and step settings.
 
         Args:
-            cropped_image: The image region to analyze.
-            dominant_color: The dominant color of the cropped image as RGB tuple.
-            initial_tolerance: Starting tolerance for color matching.
-            tolerance_step: Step size to decrement tolerance.
+            cropped_image (npt.NDArray[np.uint8]): The image region to analyze.
+            dominant_color (tuple[int, int, int]): The dominant color of the cropped image as RGB tuple.
+            initial_tolerance (int): Starting tolerance for color matching.
+            tolerance_step (int): Step size to decrement tolerance.
 
         Returns:
             A tuple of the best matching Color and the tolerance used to find it.
@@ -727,11 +734,12 @@ class Vision(WindowCapture):
         """Calculate the lower and upper bounds for a color based on the given tolerance.
 
         Args:
-            dominant_color: The dominant color as an RGB tuple.
-            tolerance: The tolerance value for calculating bounds.
+            dominant_color (tuple[int, int, int]): The dominant color as an RGB tuple.
+            tolerance (int): The tolerance value for calculating bounds.
 
         Returns:
-            A tuple containing the lower and upper bounds as numpy arrays.
+            tuple[npt.NDArray[np.uint8], npt.NDArray[np.uint8]]: A tuple containing the lower and upper bounds as numpy
+                arrays.
         """
         lower_bound = np.array(
             [
@@ -758,12 +766,13 @@ class Vision(WindowCapture):
         """Count the number of pixels within the color range for inner and outer regions.
 
         Args:
-            cropped_image: The cropped section of the image for analysis.
-            lower_bound: The lower bound of the color range.
-            upper_bound: The upper bound of the color range.
+            cropped_image (npt.NDArray[np.uint8]): The cropped section of the image for analysis.
+            lower_bound (npt.NDArray[np.uint8]): The lower bound of the color range.
+            upper_bound (npt.NDArray[np.uint8]): The upper bound of the color range.
 
         Returns:
-            A tuple containing the number of pixels within the color range for the inner and outer regions.
+            tuple[int, int]: A tuple containing the number of pixels within the color range for the inner and outer
+                regions.
         """
         mask = cv.inRange(cropped_image, lower_bound, upper_bound)
         pixel_count = np.sum(mask == MAX_COLOR_VALUE)
@@ -815,13 +824,13 @@ class Vision(WindowCapture):
         """Find a subimage in a larger image given a confidence level and optional color tolerance.
 
         Args:
-            sub_image (Union[npt.NDArray[np.uint8], Image.Image]): The subimage to search for.
-            rect (Optional[Tuple[int, int, int, int]]): A tuple specifying a rectangular region in the image to search.
-                The tuple contains the coordinates of the top-left corner (x, y) and the width and height of the
-                rectangle (w, h) in the format (x, y, w, h). If not provided, the whole image is searched.
-            confidence (Optional[float]): The confidence level to use for the template matching. Defaults to 0.95.
-            median_tolerance (Optional[int]): The maximum difference allowed between each channel of the average color
-                of the subimage and the average color of the matched region in the main image. If not provided, no color
+            sub_image (npt.NDArray[np.uint8] | Image.Image): The subimage to search for.
+            rect (tuple[int, int, int, int] | None): A tuple specifying a rectangular region in the image to search. The
+                tuple contains the coordinates of the top-left corner (x, y) and the width and height of the rectangle
+                (w, h) in the format (x, y, w, h). If not provided, the whole image is searched.
+            confidence (float): The confidence level to use for the template matching. Defaults to 0.95.
+            median_tolerance (int | None): The maximum difference allowed between each channel of the average color of
+                the subimage and the average color of the matched region in the main image. If not provided, no color
                 tolerance check is performed.
 
         Returns:
@@ -842,10 +851,12 @@ class Vision(WindowCapture):
         """Prepare the sub-image for template matching by ensuring correct format and creating a mask if needed.
 
         Args:
-            sub_image: The image to prepare, which can be a numpy array or an Image object.
+            sub_image (npt.NDArray[np.uint8] | Image.Image): The image to prepare, which can be a numpy array or an
+                Image object.
 
         Returns:
-            A tuple of the prepared sub-image and the mask (if applicable, otherwise None).
+            tuple[npt.NDArray[np.uint8], npt.NDArray[np.uint8] | None]: A tuple of the prepared sub-image and the mask
+                (if applicable, otherwise None).
         """
         if isinstance(sub_image, Image.Image):
             sub_image = np.array(sub_image.convert("RGBA"))
@@ -865,11 +876,12 @@ class Vision(WindowCapture):
         """Convert main and sub images to grayscale for template matching.
 
         Args:
-            main_image: The main image where the sub-image will be searched for.
-            sub_image_bgr: The sub-image to be searched in the main image.
+            main_image (npt.NDArray[np.uint8]): The main image where the sub-image will be searched for.
+            sub_image_bgr (npt.NDArray[np.uint8]): The sub-image to be searched in the main image.
 
         Returns:
-            A tuple of the main and sub-images converted to grayscale.
+            tuple[npt.NDArray[np.uint8], npt.NDArray[np.uint8]]: A tuple of the main and sub-images converted to
+                grayscale.
         """
         main_image_gray = cv.cvtColor(main_image, cv.COLOR_BGR2GRAY)
         sub_image_gray = cv.cvtColor(sub_image_bgr, cv.COLOR_BGR2GRAY)
@@ -885,10 +897,10 @@ class Vision(WindowCapture):
         """Perform template matching using the grayscale images and mask.
 
         Args:
-            main_image_gray: The grayscale version of the main image.
-            sub_image_gray: The grayscale version of the sub-image.
-            mask: The mask for the sub-image (if applicable).
-            confidence: The confidence level to use for matching.
+            main_image_gray (npt.NDArray[np.uint8]): The grayscale version of the main image.
+            sub_image_gray (npt.NDArray[np.uint8]): The grayscale version of the sub-image.
+            mask (npt.NDArray[np.uint8] | None): The mask for the sub-image (if applicable).
+            confidence (float): The confidence level to use for matching.
 
         Returns:
             A numpy array of matching results.
@@ -908,15 +920,17 @@ class Vision(WindowCapture):
         """Process the template matching results to extract matching rectangles.
 
         Args:
-            res: The result from the template matching.
-            main_image: The main image where the sub-image was searched for.
-            sub_image_bgr: The BGR version of the sub-image.
-            mask: The mask for the sub-image (if applicable).
-            rect: The rectangle specifying the area in the main image where the sub-image was searched.
-            median_tolerance: The tolerance for color differences.
+            res (npt.NDArray[np.uint8]): The result from the template matching.
+            main_image (npt.NDArray[np.uint8]): The main image where the sub-image was searched for.
+            sub_image_bgr (npt.NDArray[np.uint8]): The BGR version of the sub-image.
+            mask (npt.NDArray[np.uint8] | None): The mask for the sub-image (if applicable).
+            rect (tuple[int, int, int, int] | None): The rectangle specifying the area in the main image where the
+                sub-image was searched.
+            median_tolerance (int | None): The tolerance for color differences.
 
         Returns:
-            A list of tuples representing the found rectangles in the format (x, y, width, height).
+            list[tuple[int, int, int, int]]: A list of tuples representing the found rectangles in the format
+                (x, y, width, height).
         """
         rects = []
         w, h = sub_image_bgr.shape[1::-1]
@@ -941,10 +955,10 @@ class Vision(WindowCapture):
         """Group similar rectangles and convert them to a ShapeList for easier manipulation.
 
         Args:
-            rects: The list of rectangles to group and convert.
+            rects (list[tuple[int, int, int, int]]): The list of rectangles to group and convert.
 
         Returns:
-            A ShapeList of Rectangles after grouping similar ones.
+            ShapeList[Rectangle]: A ShapeList of Rectangles after grouping similar ones.
         """
         rects = np.repeat(np.array(rects), 2, axis=0)
         rects, _ = cv.groupRectangles(rects, groupThreshold=1, eps=0.1)  # type: ignore[arg-type]
@@ -963,13 +977,13 @@ class Vision(WindowCapture):
         """Find contours of the regions in the image that match a given color.
 
         Args:
-            color (Tuple[int, int, int]): The target color as a sequence of (R,G,B) values.
-            rect (Optional[Tuple[int, int, int, int]]): A tuple specifying a rectangular region in the image to search.
-                The tuple contains the coordinates of the top-left corner (x, y) and the width and height of the
-                rectangle (w, h) in the format (x, y, w, h). If not provided, the whole image is searched.
+            color (tuple[int, int, int]): The target color as a sequence of (R,G,B) values.
+            rect (tuple[int, int, int, int] | None): A tuple specifying a rectangular region in the image to search. The
+                tuple contains the coordinates of the top-left corner (x, y) and the width and height of the rectangle
+                (w, h) in the format (x, y, w, h). If not provided, the whole image is searched.
             tolerance (int): The tolerance value for color match.
             min_area (int): The minimum area of a contour to be included in the result.
-            vertices (int): The number of vertices to look for.
+            vertices (int | None): The number of vertices to look for.
 
         Returns:
             ShapeList[Contour]: A ShapeList representing the contours of the regions that match the given color.
@@ -1006,9 +1020,9 @@ class Vision(WindowCapture):
         """Draw points on the image with the specified color.
 
         Args:
-            points (Sequence[Tuple[int, int]]): The points to be drawn.
-            color (Tuple[int, int, int]): The color to use for drawing the points, specified as a tuple of
-                (R,G,B) values. Default is red (255, 0, 0).
+            points (Sequence[tuple[int, int]]): The points to be drawn.
+            color (tuple[int, int, int]): The color to use for drawing the points, specified as a tuple of (R,G,B)
+                values. Default is red (255, 0, 0).
 
         Returns:
             None
@@ -1031,8 +1045,8 @@ class Vision(WindowCapture):
         """Draw a contour on the image with the specified color.
 
         Args:
-            contours (Sequence[Sequence[Sequence[Tuple[int, int]]]]): The contours to be drawn.
-            color (Tuple[int, int, int]): The color to use for drawing the contours, specified as a tuple of
+            contours (Sequence[Sequence[Sequence[tuple[int, int]]]]): The contours to be drawn.
+            color (tuple[int, int, int]): The color to use for drawing the contours, specified as a tuple of
                 (R,G,B) values. Default is red (255, 0, 0).
 
         Returns:
@@ -1056,10 +1070,10 @@ class Vision(WindowCapture):
         """Draws a rectangle onto the backbuffer.
 
         Args:
-            circle (Tuple[int, int, int]): A tuple specifying an x, y, radius in the image.
-                The tuple contains the coordinates of the top-left corner (x, y) and the width and height of the
-                rectangle (w, h) in the format (x, y, w, h).
-            color (Tuple[int, int, int]): The color of the rectangle. Defaults to red (255, 0, 0).
+            circle (tuple[int, int, int]): A tuple specifying an x, y, radius in the image. The tuple contains the
+                coordinates of the top-left corner (x, y) and the width and height of the rectangle (w, h) in the format
+                (x, y, w, h).
+            color (tuple[int, int, int]): The color of the rectangle. Defaults to red (255, 0, 0).
         """
         # Convert the top-left and bottom-right coordinates to OpenCV format
         x, y, r = circle
@@ -1076,10 +1090,10 @@ class Vision(WindowCapture):
         """Draws a rectangle onto the backbuffer.
 
         Args:
-            rect (Tuple[int, int, int, int]): A tuple specifying a rectangular region.
-                The tuple contains the coordinates of the top-left corner (x, y) and the width and height of the
-                rectangle (w, h) in the format (x, y, w, h).
-            color (Tuple[int, int, int]): The color of the rectangle. Defaults to red (255, 0, 0).
+            rect (tuple[int, int, int, int]): A tuple specifying a rectangular region. The tuple contains the
+                coordinates of the top-left corner (x, y) and the width and height of the rectangle (w, h) in the format
+                (x, y, w, h).
+            color (tuple[int, int, int]): The color of the rectangle. Defaults to red (255, 0, 0).
         """
         # Convert the top-left and bottom-right coordinates to OpenCV format
         x, y, w, h = rect
@@ -1100,8 +1114,8 @@ class Vision(WindowCapture):
         Updates the backbuffer image of the window with the filtered image.
 
         Args:
-            colors (Union[Tuple[int, int, int], Sequence[Tuple[int, int, int]]]): A sequence of RGB tuples or a sequence
-                of sequences containing RGB tuples.
+            colors (Utuple[int, int, int] | Sequence[tuple[int, int, int]]): A sequence of RGB tuples or a sequence of
+                sequences containing RGB tuples.
             tolerance (int): The color tolerance in the range of 0-255.
             keep_original_colors (bool): If True, the returned value will be a copy of the input image where all
                 non-matching pixels are set to black.

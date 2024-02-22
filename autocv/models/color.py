@@ -45,8 +45,8 @@ class Color(NamedTuple):
         """Check if this color is within the specified color and tolerance.
 
         Args:
-            color (Tuple[int, int, int]): The color to compare against.
-            tolerance (int, optional): The maximum difference allowed for each channel. Defaults to 0.
+            color (tuple[int, int, int]): The color to compare against.
+            tolerance (int): The maximum difference allowed for each channel. Defaults to 0.
 
         Returns:
             bool: True if this color is within the specified color and tolerance, False otherwise.
@@ -66,8 +66,8 @@ class Color(NamedTuple):
         """Return the inverse of the color.
 
         Args:
-            color (Optional[Union[Color, Tuple[int, int, int]]]): An optional color or sequence of integers representing
-                the color to be inverted. If not provided, the color instance on which the method is called is used.
+            color (Color | tuple[int, int, int] | None): An optional color or sequence of integers representing the
+                color to be inverted. If not provided, the color instance on which the method is called is used.
 
         Returns:
             Color: A new Color instance representing the inverted color.
@@ -80,7 +80,7 @@ class Color(NamedTuple):
         """Return the decimal representation of the color.
 
         Args:
-            color (Union[Color, Tuple[int, int, int]]): A color or sequence of integers representing the color to be
+            color (Color | tuple[int, int, int]): A color or sequence of integers representing the color to be
                 converted.
 
         Returns:
@@ -95,7 +95,7 @@ class Color(NamedTuple):
         """Return the hexadecimal representation of the color.
 
         Args:
-            color (Union[Color, Tuple[int, int, int]]): A color or sequence of integers representing the color to be
+            color (Color | tuple[int, int, int]): A color or sequence of integers representing the color to be
                 converted.
 
         Returns:

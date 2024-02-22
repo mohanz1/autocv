@@ -35,11 +35,11 @@ class Input(Vision):
     GRAVITY: Final[float] = 8 + random() / 2
     WIND: Final[float] = 4 + random() / 2
 
-    def __init__(self: Self, hwnd: int | None = None) -> None:
+    def __init__(self: Self, hwnd: int = -1) -> None:
         """Initializes an Input object by setting up the internal state and inheriting from the Vision class.
 
         Args:
-            hwnd (int | None): The window handle to which the input should be directed. If None, input will need to be
+            hwnd (int): The window handle to which the input should be directed. If None, input will need to be
                 directed manually later.
         """
         super().__init__(hwnd)
@@ -232,8 +232,8 @@ class Input(Vision):
         """Clicks the mouse button at the last moved point.
 
         Args:
-            button (int): An integer representing the mouse button to press. 1 for left button, 2 for right button,
-                3 for middle button. Default is 1.
+            button (int): An integer representing the mouse button to press. 1 for left button, 2 for right button, 3
+                for middle button. Default is 1.
 
         Returns:
             None.

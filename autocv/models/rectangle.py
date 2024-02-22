@@ -84,10 +84,10 @@ class Rectangle(NamedTuple):
         """Get the overlap between this rectangle and another rectangle.
 
         Args:
-            other (Tuple[int, int, int, int]): The rectangle to get the overlap with.
+            other (tuple[int, int, int, int]): The rectangle to get the overlap with.
 
         Returns:
-            Optional[Rectangle]: A new rectangle representing the overlap, or None if there is no overlap.
+            Rectangle | None: A new rectangle representing the overlap, or None if there is no overlap.
         """
         left = max(self.left, other[0])
         top = max(self.top, other[1])
@@ -121,7 +121,7 @@ class Rectangle(NamedTuple):
         """Creates a Rectangle object from a dictionary-like object.
 
         Args:
-            row (Dict[str, int]): A dictionary-like object with the following keys: "left", "top", "width", "height".
+            row (dict[str, int]): A dictionary-like object with the following keys: "left", "top", "width", "height".
 
         Returns:
             Rectangle: A Rectangle object with the specified attributes.

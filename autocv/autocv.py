@@ -46,7 +46,7 @@ class AutoCV(Input):
     current window, and extracting text and color information from the current image buffer.
     """
 
-    def __init__(self: Self, hwnd: int | None = None) -> None:
+    def __init__(self: Self, hwnd: int = -1) -> None:
         """Initializes an instance of the AutoCV class with a specified window handle (hwnd).
 
         Args:

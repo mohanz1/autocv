@@ -19,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).parents[1].resolve()))
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = ["sphinx.ext.autodoc", "sphinx.ext.napoleon"]
+extensions = ["sphinx.ext.autodoc", "sphinx.ext.napoleon", "sphinx.ext.intersphinx"]
 html_theme = "furo"
 
 autodoc_member_order = "bysource"
@@ -27,7 +27,9 @@ toc_object_entries_show_parents = "hide"
 
 # Links used for cross-referencing stuff in other documentation
 intersphinx_mapping = {
-    "py": ("https://docs.python.org/3", None),
+    "python": ("https://docs.python.org/3", None),
+    "numpy": ("https://numpy.org/doc/stable/", None),
+    "pillow": ("https://pillow.readthedocs.io/en/stable/", None),
 }
 
 

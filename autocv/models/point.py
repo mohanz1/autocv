@@ -33,7 +33,7 @@ class Point(NamedTuple):
         """Calculate the vector difference between this point and another point.
 
         Args:
-            other: The other Point instance.
+            other (tuple[int, int]): The other Point instance.
 
         Returns:
             A new Point instance representing the vector difference between the two points.
@@ -72,7 +72,7 @@ class Point(NamedTuple):
         """Calculate the Euclidean distance between this point and another point.
 
         Args:
-            other (Tuple[int, int]): A Point instance or a sequence of two integers representing the x and y coordinates
+            other (tuple[int, int]): A Point instance or a sequence of two integers representing the x and y coordinates
                 of another point.
 
         Returns:
