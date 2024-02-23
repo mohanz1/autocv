@@ -9,14 +9,27 @@ jobs:
   docs:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Poetry
+        run: pipx install poetry
+        shell: bash
+
+      - name: Setup python
+        uses: actions/setup-python@v5
+        with:
+          cache: "poetry"
+          cache-dependency-path: poetry.lock
+
       - name: Install dependencies
         run: |
-          pip install sphinx sphinx_rtd_theme myst_parser
+          poetry install --only docs --no-interaction --no-root
+
       - name: Sphinx build
         run: |
-          sphinx-build doc _build
+          sphinx-build -b html -j auto -a -T -W --keep-going docs _build
+
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}

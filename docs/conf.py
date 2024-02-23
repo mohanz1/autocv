@@ -46,8 +46,8 @@ source_suffix = ".rst"
 # The master toctree document.
 master_doc = "index"
 
-# List of patterns, relative to source directory, that match files and
-# directories to ignore when looking for source files.
+# List of patterns, relative to docs directory, that match files and
+# directories to ignore when looking for docs files.
 exclude_patterns = ["build"]
 
 # -- Options for HTML output -------------------------------------------------
@@ -55,7 +55,7 @@ exclude_patterns = ["build"]
 html_theme_options = {
     "source_repository": "https://github.com/mohanz1/autocv",
     "source_branch": "main",
-    "source_directory": "source/",
+    "source_directory": "docsdocs/",
 }
 
 html_static_path = ["_static"]
