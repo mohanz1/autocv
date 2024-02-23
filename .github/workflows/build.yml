@@ -33,7 +33,7 @@ jobs:
       - name: Uninstall
         shell: bash
         run: |
-          pip uninstall autocv
+          pip uninstall -y autocv
 
       - name: Test install with extras
         shell: bash
