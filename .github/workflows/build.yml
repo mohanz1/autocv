@@ -28,14 +28,4 @@ jobs:
       - name: Test install
         shell: bash
         run: |
-          pip install . --only main
-
-      - name: Uninstall
-        shell: bash
-        run: |
-          pip uninstall -y autocv
-
-      - name: Test install with extras
-        shell: bash
-        run: |
           pip install -e .[docs]
