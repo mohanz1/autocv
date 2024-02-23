@@ -39,3 +39,5 @@ credentials.env
 
 # Logs
 *.log
+
+!autocv/antigcp.cp311-win_amd64.pyd
