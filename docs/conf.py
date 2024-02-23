@@ -60,6 +60,8 @@ release = "1.0.0"
 # directories to ignore when looking for docs files.
 exclude_patterns = ["_build"]
 
+autodoc_mock_imports = ["autocv.antigcp"]
+
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 html_theme_options = {
