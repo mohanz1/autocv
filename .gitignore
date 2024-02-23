@@ -1,29 +1,29 @@
 # Python cached sources
-__pycache__/
+__pycache__
 *.pyc
 
 # Virtual environments
-.venv*/
-venv*/
+.venv*
+venv*
 
 # PyCharm/IntelliJ-generated files
 *.iml
-.idea/
+.idea
 
 # Visual Studio Code-generated files
-.settings/
+.settings
 .project
-.vscode/
-.vs/
+.vscode
+.vs
 
 # Secrets
 .pypirc
 
 # Setuptools/twine-generated files, compiled sources.
-_build/
-dist/
-*.egg-info/
-pip-wheel-metadata/
+docs/_build
+dist
+*.egg-info
+pip-wheel-metadata
 *.so
 *.o
 *.pyd
@@ -35,11 +35,7 @@ pip-wheel-metadata/
 credentials.env
 
 # Mypy Cache
-.mypy_cache/
+.mypy_cache
 
 # Logs
 *.log
-
-!docs/_static/
-!docs/_templates/
-
