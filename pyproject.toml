@@ -20,8 +20,14 @@ pillow                      = "~10.2"
 pytesseract                 = "~0.3"
 pywin32                     = "~306"
 
+furo                = { version = "~2024.1", optional = true }
+sphinx              = { version = "~7.2", optional = true }
+sphinx-copybutton   = { version = "~0.5", optional = true }
+
 [tool.poetry.extras]
-stubs = ["opencv-stubs", "types_pywin32", "types-Pillow", "pandas-stubs"]
+docs    = ["furo", "sphinx", "sphinx-copybutton"]
+lint    = ["mypy", "ruff"]
+stubs   = ["opencv-stubs", "pandas-stubs", "types-Pillow", "types_pywin32"]
 
 [tool.poetry.dev-dependencies]
 mypy                        = "~1.8"
