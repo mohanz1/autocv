@@ -10,7 +10,7 @@ concurrency:
 
 jobs:
   lint:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     defaults:
       run:
         shell: bash
@@ -27,6 +27,7 @@ jobs:
         id: setup-python
         uses: actions/setup-python@v5
         with:
+          python-version: ${{ matrix.python-version }}
           cache: poetry
           cache-dependency-path: poetry.lock
 

@@ -31,4 +31,4 @@ jobs:
       - name: Install dependencies
         shell: bash
         run: |
-          pip install -e .[docs,dev]
+          pip install -e .[docs]
