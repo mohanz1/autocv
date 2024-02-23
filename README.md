@@ -1,6 +1,6 @@
 # AutoCV
 ![Supported Python versions](https://img.shields.io/badge/python-3.10%20|%203.11%20|%203.12-blue.svg)
-![CI](https://github.com/mohanz1/autocv/actions/workflows/ci.yml/badge.svg?branch=main&event=push)
+![CI](https://github.com/mohanz1/autocv/actions/workflows/build.yml/badge.svg?branch=main&event=push)
 ![Mypy Checked](https://img.shields.io/badge/mypy-checked-green.svg)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
