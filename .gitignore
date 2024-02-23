@@ -39,3 +39,7 @@ credentials.env
 
 # Logs
 *.log
+
+!docs/_static/
+!docs/_templates/
+
