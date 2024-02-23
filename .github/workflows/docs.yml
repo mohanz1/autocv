@@ -1,4 +1,4 @@
-name: documentation
+name: docs
 
 on: [push, pull_request, workflow_dispatch]
 
@@ -14,7 +14,6 @@ jobs:
 
       - name: Install Poetry
         run: pipx install poetry
-        shell: bash
 
       - name: Setup python
         uses: actions/setup-python@v5
