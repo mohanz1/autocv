@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "autocv"
-version = "0.1.0"
+version = "1.0.0"
 description = "Computer vision library."
 authors = ["Zach <Zach#2679>"]
 readme = "README.md"

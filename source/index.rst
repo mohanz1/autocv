@@ -56,11 +56,33 @@ Prerequisites
 - *Note:* In some rare cases, you might need to additionally install `tessconfigs` and `configs` from `tesseract-ocr/tessconfigs <https://github.com/tesseract-ocr/tessconfigs>`_ if the OS specific package doesn't include them.
 
 
+Reading the Documentation
+-------------------------
+
+The class structure and inheritance within the documentation is organized as follows:
+
+- ``AutoCV``
+
+  - Inherits from:
+
+    - ``Input``
+
+      - Which in turn inherits from:
+
+        - ``Vision``
+
+          - Which finally inherits from:
+
+            - ``WindowCapture``
+
+This means that the ``AutoCV`` class has access to all methods and properties of the classes it inherits from. The documentation is structured to reflect this hierarchy, grouping functions by their respective class to facilitate easier reading and understanding.
+
+
 
 Example
 -------
 
-.. code-block:: python
+.. code:: python
 
    from autocv import AutoCV
 

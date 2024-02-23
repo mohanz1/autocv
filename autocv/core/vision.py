@@ -175,7 +175,7 @@ class Vision(WindowCapture):
         bmp_dc.BitBlt((0, 0), (width, height), mem_dc, (0, 0), win32con.SRCCOPY)
 
         # Convert raw data into a format OpenCV can read
-        signed_ints_array = bitmap.GetBitmapBits(asString=True)  # type: ignore[call-overload]
+        signed_ints_array = bitmap.GetBitmapBits(True)  # noqa:FBT003
         img = np.fromstring(signed_ints_array, dtype="uint8")  # type: ignore[call-overload]
         img.shape = (height, width, 4)
 
@@ -336,7 +336,7 @@ class Vision(WindowCapture):
 
         Returns:
             npt.NDArray[np.uint8]: A numpy array of unsigned integers of shape (height, width, channels), representing
-            an image in the OpenCV format.
+                an image in the OpenCV format.
         """
         image = image if image is not None else self.opencv_image
 
@@ -437,7 +437,7 @@ class Vision(WindowCapture):
             acceptable_text.loc[:, ["left", "top"]] += rect[0:2]
 
         # Return TextInfo objects for the acceptable text in the image
-        return cast(Sequence[TextInfo], acceptable_text.apply(TextInfo.from_row, axis=1).tolist())  # type: ignore[call-overload]
+        return cast(list[TextInfo], acceptable_text.apply(TextInfo.from_row, axis=1).tolist())  # type: ignore[call-overload]
 
     @check_valid_image
     def get_color(self: Self, point: tuple[int, int]) -> Color:

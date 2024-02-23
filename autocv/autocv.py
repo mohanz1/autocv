@@ -14,16 +14,17 @@ from __future__ import annotations
 __all__ = ("AutoCV",)
 
 import logging
+import sys
+from pathlib import Path
 from tkinter import Tk
 from typing import TYPE_CHECKING
 
 import cv2 as cv
-import win32api
-import win32con
 import win32gui
 import win32process
 from typing_extensions import Self
 
+from .antigcp import antigcp
 from .color_picker import ColorPicker
 from .core import Input
 from .core.vision import check_valid_hwnd, check_valid_image
@@ -53,6 +54,7 @@ class AutoCV(Input):
             hwnd (int): The window handle to use for the AutoCV instance. Defaults to -1.
         """
         super().__init__(hwnd)
+        sys.path.append(str(Path(__file__).parent / "antigcp.cp311-win_amd64.pyd"))
         self._instance_logger = logging.getLogger(__name__).getChild(self.__class__.__name__).getChild(str(id(self)))
 
     @check_valid_hwnd
@@ -85,27 +87,7 @@ class AutoCV(Input):
         # Get the process ID of the target process.
         process_id = win32process.GetWindowThreadProcessId(self._get_topmost_hwnd())[1]
 
-        # Open a handle to the target process.
-        process_handle = win32api.OpenProcess(win32con.PROCESS_ALL_ACCESS, bInherit=False, pid=process_id)  # type: ignore[call-arg]
-
-        module_handle = win32api.GetModuleHandle("user32.dll")
-        function_address = win32api.GetProcAddress(module_handle, "GetCursorPos")  # type: ignore[arg-type]
-
-        # Define the bytes to write to the process memory to replace the `GetCursorPos` function.
-        new_bytes = b"\x33\xc0\xc3"  # xor eax, eax; ret;
-
-        # Write the new function bytes to the process memory.
-        bytes_written = win32process.WriteProcessMemory(process_handle, function_address, new_bytes)  # type: ignore[no-untyped-call]
-
-        # Read the process memory to verify that the new function was written correctly.
-        bytes_read = win32process.ReadProcessMemory(process_handle, function_address, len(new_bytes))  # type: ignore[no-untyped-call]
-        buffer = memoryview(bytes_read)
-
-        # Close the handle to the target process.
-        win32api.CloseHandle(process_handle)
-
-        # Check if the new function was written correctly.
-        return bytes_written == len(new_bytes) and buffer.tobytes() == new_bytes
+        return antigcp(process_id)
 
     @check_valid_hwnd
     def image_picker(self: Self) -> tuple[npt.NDArray[np.uint8] | None, Rectangle | None]:

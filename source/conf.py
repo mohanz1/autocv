@@ -24,7 +24,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.intersphinx",
     "sphinx.ext.viewcode",
-    "sphinx_copybutton"
+    "sphinx_copybutton",
 ]
 html_theme = "furo"
 
