@@ -28,7 +28,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          poetry install --only docs --no-interaction --no-root
+          poetry install --with docs --no-interaction --no-root
 
       - name: Sphinx build
         run: |
