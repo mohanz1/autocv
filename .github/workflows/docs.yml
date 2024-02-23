@@ -28,7 +28,7 @@ jobs:
 
       - name: Sphinx build
         run: |
-          sphinx-build -b html -j auto -a -T -W --keep-going docs _build
+          poetry run sphinx-build -b html -j auto -a -T -W --keep-going docs _build
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
