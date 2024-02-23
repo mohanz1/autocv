@@ -13,7 +13,7 @@ copyright = "2024, Zach"  # noqa: A001
 author = "Zach"
 release = "1.0.0"
 
-sys.path.insert(0, str(Path(__file__).parents[1].resolve()))
+sys.path.insert(0, str(Path(__file__).parent.resolve()))
 
 
 # -- General configuration ---------------------------------------------------
@@ -48,14 +48,14 @@ master_doc = "index"
 
 # List of patterns, relative to docs directory, that match files and
 # directories to ignore when looking for docs files.
-exclude_patterns = ["build"]
+exclude_patterns = ["_build"]
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 html_theme_options = {
     "source_repository": "https://github.com/mohanz1/autocv",
     "source_branch": "main",
-    "source_directory": "docsdocs/",
+    "source_directory": "docs/",
 }
 
 html_static_path = ["_static"]
