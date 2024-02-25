@@ -6,6 +6,7 @@ settings configurations for image processing filters.
 """
 
 __all__ = [
+    "Circle",
     "Color",
     "ColorWithPoint",
     "Contour",
@@ -20,6 +21,7 @@ __all__ = [
     "TextInfo",
 ]
 
+from .circle import Circle
 from .color import Color
 from .color_with_point import ColorWithPoint
 from .contour import Contour
