@@ -290,8 +290,10 @@ class Input(Vision):
         # Create the lparam value for the key down message
         l_param = (scan_code << 16) | 1
 
+        win32api.SendMessage(self.hwnd, win32con.WM_ACTIVATE, 1, self.hwnd)  # type: ignore[arg-type]
         win32api.SendMessage(self.hwnd, win32con.WM_KEYDOWN, vk_code, l_param)  # type: ignore[arg-type]
         win32api.SendMessage(self.hwnd, win32con.WM_CHAR, chr(vk_code), l_param)
+        win32api.SendMessage(self.hwnd, win32con.WM_ACTIVATE, 0, self.hwnd)  # type: ignore[arg-type]
 
     @check_valid_hwnd
     def release_vk_key(self: Self, vk_code: int) -> None:
@@ -311,7 +313,9 @@ class Input(Vision):
         l_param = (scan_code << 16) | 1
         l_param |= 0xC0000000
 
+        win32api.SendMessage(self.hwnd, win32con.WM_ACTIVATE, 1, self.hwnd)  # type: ignore[arg-type]
         win32api.SendMessage(self.hwnd, win32con.WM_KEYUP, vk_code, l_param)  # type: ignore[arg-type]
+        win32api.SendMessage(self.hwnd, win32con.WM_ACTIVATE, 0, self.hwnd)  # type: ignore[arg-type]
 
     @check_valid_hwnd
     def send_vk_key(self: Self, vk_code: int) -> None:
