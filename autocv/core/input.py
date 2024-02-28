@@ -331,9 +331,8 @@ class Input(Vision):
         time.sleep(randint(3, 5) / 1_000)
         self.release_vk_key(vk_code)
 
-    @staticmethod
     @check_valid_hwnd
-    def get_async_key_state(vk_code: int) -> bool:
+    def get_async_key_state(self: Self, vk_code: int) -> bool:  # noqa: PLR6301
         """Retrieves the status of the specified key.
 
         Args:
