@@ -331,6 +331,19 @@ class Input(Vision):
         time.sleep(randint(3, 5) / 1_000)
         self.release_vk_key(vk_code)
 
+    @staticmethod
+    @check_valid_hwnd
+    def get_async_key_state(vk_code: int) -> bool:
+        """Retrieves the status of the specified key.
+
+        Args:
+            vk_code (int): Specifies one of 256 possible virtual-key codes.
+
+        Returns:
+            bool: Specifies whether the key was pressed since the last call to GetAsyncKeyState.
+        """
+        return bool(win32api.GetAsyncKeyState(vk_code))  # type: ignore[no-untyped-call]
+
     @check_valid_hwnd
     def send_keys(self: Self, characters: str) -> None:
         """Sends a series of keyboard input to the active window.
