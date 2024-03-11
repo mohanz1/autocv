@@ -9,6 +9,10 @@ updates:
       - mohanz1
     rebase-strategy: auto
     target-branch: main
+    groups:
+      dependencies:
+        patterns:
+          - "*"
 
   # Python packages
   - package-ecosystem: pip
@@ -19,3 +23,7 @@ updates:
       - mohanz1
     rebase-strategy: auto
     target-branch: main
+    groups:
+      dependencies:
+        patterns:
+          - "*"
