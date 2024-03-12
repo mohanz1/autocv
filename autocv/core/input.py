@@ -228,12 +228,14 @@ class Input(Vision):
         self._last_moved_point = x, y
 
     @check_valid_hwnd
-    def click_mouse(self: Self, button: int = 1) -> None:
+    def click_mouse(self: Self, button: int = 1, *, send_message: bool = False) -> None:
         """Clicks the mouse button at the last moved point.
 
         Args:
             button (int): An integer representing the mouse button to press. 1 for left button, 2 for right button, 3
                 for middle button. Default is 1.
+            send_message (bool): by default, click_mouse will use Windows' PostMessage function to click. In some apps,
+                SendMessage is needed instead. In these cases you set send_message=True.
 
         Returns:
             None
@@ -268,12 +270,21 @@ class Input(Vision):
         win32gui.SendMessage(top_hwnd, win32con.WM_MOUSEACTIVATE, top_hwnd, lparam_button)
         win32api.SendMessage(self.hwnd, win32con.WM_SETCURSOR, self.hwnd, lparam_button)  # type: ignore[arg-type]
 
-        # Simulate the button press at the target point.
-        win32gui.PostMessage(self.hwnd, button_to_press, button, screen_lparam)
-        time.sleep(randint(10, 50) / 1_000)
+        if send_message:
+            last_moved_point_lparam = win32api.MAKELONG(*self._last_moved_point)  # type: ignore[no-untyped-call]
+            # Simulate the button press at the target point.
+            win32gui.SendMessage(self.hwnd, button_to_press, button, last_moved_point_lparam)
+            time.sleep(randint(10, 50) / 1_000)
 
-        # Release the button at the target point.
-        win32gui.PostMessage(self.hwnd, button_to_press + 1, 0, screen_lparam)
+            # Release the button at the target point.
+            win32gui.SendMessage(self.hwnd, button_to_press + 1, 0, last_moved_point_lparam)
+        else:
+            # Simulate the button press at the target point.
+            win32gui.PostMessage(self.hwnd, button_to_press, button, screen_lparam)
+            time.sleep(randint(10, 50) / 1_000)
+
+            # Release the button at the target point.
+            win32gui.PostMessage(self.hwnd, button_to_press + 1, 0, screen_lparam)
 
     @check_valid_hwnd
     def press_vk_key(self: Self, vk_code: int) -> None:
