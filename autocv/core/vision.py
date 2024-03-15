@@ -1127,4 +1127,4 @@ class Vision(WindowCapture):
             InvalidImageError: If the input image is invalid or None.
         """
         grey_image = filter_colors(self.opencv_image, colors, tolerance, keep_original_colors=keep_original_colors)
-        self.opencv_image = cast(npt.NDArray[np.uint8], cv.cvtColor(grey_image, cv.COLOR_GRAY2BGR))
+        self.opencv_image = cast(npt.NDArray[np.uint8], grey_image)
