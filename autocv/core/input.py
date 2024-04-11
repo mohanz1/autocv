@@ -366,7 +366,7 @@ class Input(Vision):
         """
         win32api.SendMessage(self.hwnd, win32con.WM_ACTIVATE, 1, self.hwnd)  # type: ignore[arg-type]
         for c in characters:
-            vk = win32api.VkKeyScan(c)  # type: ignore[no-untyped-call, call-arg]
+            vk = win32api.VkKeyScan(c)
             scan_code = win32api.MapVirtualKey(ord(c.upper()), 0)  # type: ignore[no-untyped-call]
 
             # Create the lparam value for the key down message
