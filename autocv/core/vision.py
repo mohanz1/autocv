@@ -285,7 +285,7 @@ class Vision(WindowCapture):
 
         text["text"] = text["text"].astype(str)
         text = text[text.text.str.strip() != ""]
-        text["conf"] = text["conf"] / 100
+        text["conf"] /= 100
 
         # Group text data by block and extract relevant columns
         grouped_text = (
