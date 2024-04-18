@@ -38,7 +38,7 @@ optional = true
 
 [tool.poetry.group.docs.dependencies]
 furo                = "~2024.1"
-sphinx              = "~7.2"
+sphinx              = "~7.3"
 sphinx-copybutton   = "~0.5"
 
 [tool.ruff]
