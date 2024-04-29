@@ -37,7 +37,7 @@ types_pywin32               = "~306"
 optional = true
 
 [tool.poetry.group.docs.dependencies]
-furo                = "~2024.1"
+furo                = "~2024.4"
 sphinx              = "~7.3"
 sphinx-copybutton   = "~0.5"
 
