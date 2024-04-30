@@ -3,10 +3,6 @@ name: Lint
 on:
   push:
   pull_request:
-  workflow_run:
-    workflows: [ Build ]
-    types:
-      - completed
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -14,7 +10,6 @@ concurrency:
 
 jobs:
   lint:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     strategy:
       # Allows for matrix sub-jobs to fail without cancelling the rest
       fail-fast: false
