@@ -1,8 +1,12 @@
-name: lint
+name: Lint
 
 on:
   push:
   pull_request:
+  workflow_run:
+    workflows: [ Build ]
+    types:
+      - completed
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -10,6 +14,7 @@ concurrency:
 
 jobs:
   lint:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     strategy:
       # Allows for matrix sub-jobs to fail without cancelling the rest
       fail-fast: false
@@ -54,20 +59,3 @@ jobs:
 
       - name: Ensure Pipx Paths
         run: pipx ensurepath
-
-  ci-done:
-    needs: [lint]
-    if: always() && !cancelled()
-
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Set status based on required jobs
-        env:
-          RESULTS: ${{ join(needs.*.result, ' ') }}
-        run: |
-          for result in $RESULTS; do
-            if [ "$result" != "success" ]; then
-              exit 1
-            fi
-          done

@@ -5,8 +5,6 @@ updates:
     directory: /
     schedule:
       interval: daily
-    reviewers:
-      - mohanz1
     rebase-strategy: auto
     target-branch: main
     groups:
@@ -19,8 +17,6 @@ updates:
     directory: /
     schedule:
       interval: daily
-    reviewers:
-      - mohanz1
     rebase-strategy: auto
     target-branch: main
     groups:
