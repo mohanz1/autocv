@@ -15,7 +15,7 @@ AutoCV is an innovative computer vision library that simplifies image processing
 * Easy-to-use interface
 * Comprehensive image processing functions
 * High performance with real-time capabilities
-* Extensive documentation
+* [Extensive documentation](https://mohanz1.github.io/autocv/)
 
 
 
