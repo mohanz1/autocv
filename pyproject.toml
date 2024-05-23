@@ -14,7 +14,7 @@ readme = "README.md"
 python = ">=3.10,<3.13"
 
 numpy                       = "~1.26"
-opencv-python               = "~4.9"
+opencv-python               = "~4.8"
 pandas                      = "~2.2"
 pillow                      = "~10.3"
 pytesseract                 = "~0.3"
