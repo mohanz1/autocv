@@ -14,16 +14,14 @@ from __future__ import annotations
 __all__ = ("AutoCV",)
 
 import logging
-import typing
-
 import sys
+import typing
 from pathlib import Path
 from tkinter import Tk
 from typing import TYPE_CHECKING
 
 import cv2 as cv
 import win32gui
-import win32process
 from typing_extensions import Self
 
 from .color_picker import ColorPicker
@@ -64,11 +62,11 @@ class AutoCV(Input):
         if pyd_dir.exists():
             sys.path.append(str(pyd_dir))
             try:
-                import antigcp
+                import antigcp  # noqa: PLC0415
 
                 self._antigcp = antigcp
             except ImportError as e:
-                raise ImportError(
+                raise ImportError(  # noqa: TRY003
                     f"Failed to import the module from {pyd_dir}. Ensure the correct .pyd file exists."
                 ) from e
         else:
@@ -103,7 +101,6 @@ class AutoCV(Input):
         Returns:
             bool: True if the function was successfully patched, False otherwise.
         """
-
         return typing.cast(bool, self._antigcp.antigcp(self._get_topmost_hwnd()))
 
     @check_valid_hwnd
