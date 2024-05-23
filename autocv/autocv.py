@@ -14,6 +14,8 @@ from __future__ import annotations
 __all__ = ("AutoCV",)
 
 import logging
+import typing
+
 import sys
 from pathlib import Path
 from tkinter import Tk
@@ -102,7 +104,7 @@ class AutoCV(Input):
             bool: True if the function was successfully patched, False otherwise.
         """
 
-        return self._antigcp.antigcp(self._get_topmost_hwnd())
+        return typing.cast(bool, self._antigcp.antigcp(self._get_topmost_hwnd()))
 
     @check_valid_hwnd
     def image_picker(self: Self) -> tuple[npt.NDArray[np.uint8] | None, Rectangle | None]:
