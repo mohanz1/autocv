@@ -1,0 +1,51 @@
+# Python cached sources
+__pycache__
+*.pyc
+
+# Virtual environments
+.venv*
+venv*
+
+# PyCharm/IntelliJ-generated files
+*.iml
+.idea
+
+# Visual Studio Code-generated files
+.settings
+.project
+.vscode
+.vs
+
+# Secrets
+.pypirc
+
+# Setuptools/twine-generated files, compiled sources.
+docs/_build
+dist
+*.egg-info
+pip-wheel-metadata
+*.so
+*.o
+*.pyd
+
+# Container logs
+**.container.log
+
+# Docker secrets
+credentials.env
+
+# Mypy Cache
+.mypy_cache
+
+# Logs
+*.log
+
+!autocv/build/python310/antigcp.pyd
+!autocv/build/python311/antigcp.pyd
+!autocv/build/python312/antigcp.pyd
+
+# Compiling antigcp functions
+autocv/antigcp.c
+autocv/antigcp.py
+autocv/Dockerfile
+autocv/setup.py

@@ -1,0 +1,25 @@
+version: 2
+updates:
+  # Github actions
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: daily
+    rebase-strategy: auto
+    target-branch: main
+    groups:
+      dependencies:
+        patterns:
+          - "*"
+
+  # Python packages
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: daily
+    rebase-strategy: auto
+    target-branch: main
+    groups:
+      dependencies:
+        patterns:
+          - "*"
