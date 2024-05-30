@@ -114,11 +114,11 @@ class ShapeList(Sequence[T]):
         """
         return self[0]
 
-    def first_or_none(self: Self) -> T:
-        """Return the first shape in the ShapeList, or None .
+    def first_or_none(self: Self) -> T | None:
+        """Return the first shape in the ShapeList, or none if there are none.
 
         Returns:
-            T: The first shape in the list.
+            T | None: The first shape in the list or None if there are none.
         """
         return self[0] if len(self) else None
 
