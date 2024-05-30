@@ -114,6 +114,14 @@ class ShapeList(Sequence[T]):
         """
         return self[0]
 
+    def first_or_none(self: Self) -> T:
+        """Return the first shape in the ShapeList, or None .
+
+        Returns:
+            T: The first shape in the list.
+        """
+        return self[0] if len(self) else None
+
     def order_by(self: Self, by: OrderBy) -> ShapeList[T]:
         """Order the shapes in the list according to the given algorithm. Orders in place.
 
