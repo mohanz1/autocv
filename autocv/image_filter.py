@@ -148,12 +148,12 @@ class ImageFilter:
         )
         hsv_filtered = cv.bitwise_and(self.hsv_image, self.hsv_image, mask=hsv_mask)
         hsv_filtered[..., 1] = np.clip(
-            hsv_filtered[..., 1] + self.filter_settings.s_add - self.filter_settings.s_subtract,  # type: ignore[operator]
+            hsv_filtered[..., 1] + self.filter_settings.s_add - self.filter_settings.s_subtract,
             0,
             255,
         )
         hsv_filtered[..., 2] = np.clip(
-            hsv_filtered[..., 2] + self.filter_settings.v_add - self.filter_settings.v_subtract,  # type: ignore[operator]
+            hsv_filtered[..., 2] + self.filter_settings.v_add - self.filter_settings.v_subtract,
             0,
             255,
         )

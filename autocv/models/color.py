@@ -28,7 +28,7 @@ class Color(NamedTuple):
     g: int
     b: int
 
-    def __array__(self: Self, dtype: npt.DTypeLike = np.int16) -> npt.NDArray[np.int16]:  # noqa: PLW3201
+    def __array__(self: Self, dtype: npt.DTypeLike = np.int16) -> npt.NDArray[np.int16]:
         """Return a numpy array of the red, green, and blue components.
 
         Args:

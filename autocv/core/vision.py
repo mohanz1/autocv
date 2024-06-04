@@ -295,7 +295,7 @@ class Vision(WindowCapture):
                 "left": "min",
                 "top": "min",
                 "height": "max",
-                "conf": "median",
+                "conf": "max",
                 "text": " ".join,
             })
             .rename(columns={"conf": "confidence", "text": "text"})
@@ -906,7 +906,7 @@ class Vision(WindowCapture):
             A numpy array of matching results.
         """
         res = cv.matchTemplate(main_image_gray, sub_image_gray, cv.TM_CCORR_NORMED, mask=mask)
-        return np.logical_and(res >= confidence, np.logical_not(np.isinf(res)))  # type: ignore[operator, no-any-return]
+        return np.logical_and(res >= confidence, np.logical_not(np.isinf(res)))
 
     def _process_matching_results(
         self: Self,

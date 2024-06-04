@@ -113,7 +113,7 @@ class Input(Vision):
         )
         return None
 
-    def _wind_mouse(  # noqa: PLR0913, PLR0917
+    def _wind_mouse(  # noqa: PLR0913
         self: Self,
         xs: float,
         ys: float,
@@ -343,7 +343,7 @@ class Input(Vision):
         self.release_vk_key(vk_code)
 
     @check_valid_hwnd
-    def get_async_key_state(self: Self, vk_code: int) -> bool:  # noqa: PLR6301
+    def get_async_key_state(self: Self, vk_code: int) -> bool:
         """Retrieves the status of the specified key.
 
         Args:
