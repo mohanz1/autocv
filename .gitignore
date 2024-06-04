@@ -49,3 +49,6 @@ autocv/antigcp.c
 autocv/antigcp.py
 autocv/Dockerfile
 autocv/setup.py
+
+# my test file
+test.py
