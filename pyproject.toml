@@ -16,7 +16,7 @@ python = ">=3.10,<3.13"
 numpy                       = "~2.0"
 opencv-python               = "~4.10"
 pandas                      = "~2.2"
-pillow                      = "~10.3"
+pillow                      = "~10.4"
 pytesseract                 = "~0.3"
 pywin32                     = "~306"
 
