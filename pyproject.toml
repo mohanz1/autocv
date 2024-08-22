@@ -13,7 +13,7 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = ">=3.10,<3.13"
 
-numpy                       = "~2.0"
+numpy                       = "~2.1"
 opencv-python               = "~4.10"
 pandas                      = "~2.2"
 pillow                      = "~10.4"
@@ -29,7 +29,7 @@ stubs   = ["opencv-stubs", "pandas-stubs", "types-Pillow", "types_pywin32"]
 mypy                        = "~1.11"
 opencv-stubs                = "~0.0"
 pandas-stubs                = "~2.2"
-ruff                        = "~0.5"
+ruff                        = "~0.6"
 types-Pillow                = "~10.2"
 types_pywin32               = "~306"
 
