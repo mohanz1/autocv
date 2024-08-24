@@ -343,7 +343,6 @@ class Input(Vision):
         self.release_vk_key(vk_code)
 
     @staticmethod
-    @check_valid_hwnd
     def get_async_key_state(vk_code: int) -> bool:
         """Retrieves the status of the specified key.
 
