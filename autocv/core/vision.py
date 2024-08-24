@@ -128,7 +128,7 @@ class Vision(WindowCapture):
 
         # Define the path to the tessdata directory and set up Tesseract configuration
         absolute_directory = pathlib.Path(__file__).parents[1] / "data" / "traineddata"
-        self._config = rf'--tessdata-dir "{absolute_directory}" --oem 1 --psm 11 -l runescape'
+        self._config = rf'--tessdata-dir {absolute_directory} --oem 1 --psm 11'
 
     def set_backbuffer(self: Self, image: npt.NDArray[np.uint8] | Image.Image) -> None:
         """Sets the image buffer to the provided numpy array or PIL Image object.
@@ -273,7 +273,8 @@ class Vision(WindowCapture):
         # Extract text from the thresholded image using Tesseract OCR
         text: pd.DataFrame = pytesseract.image_to_data(
             img,
-            config=self._config,
+            "runescape",
+            self._config,
             output_type=pytesseract.Output.DATAFRAME,
         )
 
