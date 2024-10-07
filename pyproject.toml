@@ -18,7 +18,7 @@ opencv-python               = "~4.10"
 pandas                      = "~2.2"
 pillow                      = "~10.4"
 pytesseract                 = "~0.3"
-pywin32                     = "~306"
+pywin32                     = "~307"
 
 [tool.poetry.extras]
 docs    = ["furo", "sphinx", "sphinx-copybutton"]
