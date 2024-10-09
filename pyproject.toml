@@ -18,7 +18,7 @@ opencv-python               = "~4.10"
 pandas                      = "~2.2"
 pillow                      = "~10.4"
 pytesseract                 = "~0.3"
-pywin32                     = "~306"
+pywin32                     = "~307"
 
 [tool.poetry.extras]
 docs    = ["furo", "sphinx", "sphinx-copybutton"]
@@ -31,7 +31,7 @@ opencv-stubs                = "~0.0"
 pandas-stubs                = "~2.2"
 ruff                        = "~0.6"
 types-Pillow                = "~10.2"
-types_pywin32               = "~306"
+types_pywin32               = "~307"
 
 [tool.poetry.group.docs]
 optional = true
