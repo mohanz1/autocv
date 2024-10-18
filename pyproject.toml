@@ -148,4 +148,6 @@ exclude = [
     "venv",
     "data",
     "source",
+    "test.py",
+    "setup.py"
 ]

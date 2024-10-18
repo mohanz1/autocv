@@ -1010,7 +1010,7 @@ class Vision(WindowCapture):
 
         center_of_bitmap = Point(self.opencv_image.shape[1] // 2, self.opencv_image.shape[0] // 2)
 
-        return ShapeList(Contour, contours, center_of_bitmap)  # type: ignore[type-abstract]
+        return ShapeList(Contour, contours, center_of_bitmap)  # type: ignore[type-abstract, arg-type]
 
     @check_valid_image
     def draw_points(
