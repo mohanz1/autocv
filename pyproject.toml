@@ -26,7 +26,7 @@ lint    = ["mypy", "ruff"]
 stubs   = ["opencv-stubs", "pandas-stubs", "types-Pillow", "types_pywin32"]
 
 [tool.poetry.group.dev.dependencies]
-mypy                        = "~1.12"
+mypy                        = "~1.13"
 opencv-stubs                = "~0.0"
 pandas-stubs                = "~2.2"
 ruff                        = "~0.7"
