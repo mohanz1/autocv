@@ -89,6 +89,7 @@ class Vision(WindowCapture):
 
         # Define the path to the tessdata directory and set up Tesseract configuration
         absolute_directory = pathlib.Path(__file__).parents[1] / "data" / "traineddata"
+        # noinspection PyArgumentList
         self.api = PyTessBaseAPI(path=str(absolute_directory), lang="runescape", psm=PSM.SPARSE_TEXT, oem=OEM.LSTM_ONLY)
         self._config = rf"--tessdata-dir {absolute_directory} --oem 1 --psm 11"
 
