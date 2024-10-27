@@ -15,7 +15,6 @@ import win32gui
 from typing_extensions import Self
 
 from .core import Vision
-from .models import Rectangle
 
 if TYPE_CHECKING:
     import numpy as np

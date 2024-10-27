@@ -9,6 +9,7 @@ from __future__ import annotations
 __all__ = ("Vision", "check_valid_hwnd", "check_valid_image")
 
 import functools
+import io
 import logging
 import pathlib
 from collections.abc import Callable, Sequence
@@ -17,15 +18,15 @@ from typing import Any, TypeVar, cast
 import cv2 as cv
 import numpy as np
 import numpy.typing as npt
-import pandas as pd
-import pytesseract  # type: ignore[import-untyped]
+import polars as pl
 import win32con
 import win32gui
 import win32ui
 from PIL import Image
+from tesserocr import PyTessBaseAPI, PSM, OEM
 from typing_extensions import Self
 
-from autocv.models import Color, Contour, InvalidHandleError, InvalidImageError, Point, Rectangle, ShapeList, TextInfo
+from autocv.models import InvalidHandleError, InvalidImageError
 
 from .image_processing import filter_colors
 from .window_capture import WindowCapture
@@ -128,6 +129,7 @@ class Vision(WindowCapture):
 
         # Define the path to the tessdata directory and set up Tesseract configuration
         absolute_directory = pathlib.Path(__file__).parents[1] / "data" / "traineddata"
+        self.api = PyTessBaseAPI(path=str(absolute_directory), lang="runescape", psm=PSM.SPARSE_TEXT, oem=OEM.LSTM_ONLY)
         self._config = rf"--tessdata-dir {absolute_directory} --oem 1 --psm 11"
 
     def set_backbuffer(self: Self, image: npt.NDArray[np.uint8] | Image.Image) -> None:
@@ -238,9 +240,10 @@ class Vision(WindowCapture):
     def _get_grouped_text(
         self: Self,
         image: npt.NDArray[np.uint8],
+        rect: tuple[int, int, int, int],
         colors: tuple[int, int, int] | Sequence[tuple[int, int, int]] | None = None,
         tolerance: int = 0,
-    ) -> pd.DataFrame:
+    ) -> pl.LazyFrame:
         """Applies pre-processing to the image and extracts text from the image using Tesseract OCR.
 
         Groups the text data by block and returns a DataFrame with the extracted text and relevant columns.
@@ -252,7 +255,7 @@ class Vision(WindowCapture):
             tolerance (int): The maximum difference allowed between each channel of the given color and the pixel color.
 
         Returns:
-            pd.DataFrame:
+            pl.DataFrame:
                 A DataFrame with the extracted text and relevant columns.
         """
         if colors:
@@ -271,53 +274,64 @@ class Vision(WindowCapture):
         img = cv.bitwise_not(img)
 
         # Extract text from the thresholded image using Tesseract OCR
-        text: pd.DataFrame = pytesseract.image_to_data(
-            img,
-            "runescape",
-            self._config,
-            output_type=pytesseract.Output.DATAFRAME,
+        self.api.SetImage(Image.fromarray(img))
+        if rect:
+            self.api.SetRectangle(*rect)
+        text_data = self.api.GetTSVText(0)
+        self.api.Clear()
+
+        text = pl.scan_csv(
+            io.StringIO(text_data),
+            has_header=False,
+            separator="\t",
+            quote_char=None,
+            new_columns=[
+                "level",
+                "page_num",
+                "block_num",
+                "par_num",
+                "line_num",
+                "word_num",
+                "left",
+                "top",
+                "width",
+                "height",
+                "conf",
+                "text",
+            ],
         )
 
         # Filter out invalid text data and text with low confidence
-        text = text[(text.conf > 0) & (text.conf < 100)]
+        text = text.filter((pl.col("conf") > 0) & (pl.col("conf") < 100))
 
-        if text.empty:
-            return text
-
-        text["text"] = text["text"].astype(str)
-        text = text[text.text.str.strip() != ""]
-        text["conf"] /= 100
+        # Ensure 'text' column is string and remove empty strings
+        text = text.with_columns([
+            pl.col("text").cast(pl.Utf8),
+            (pl.col("conf") / 100).alias("conf"),
+        ])
+        text = text.filter(pl.col("text").str.strip_chars() != "")
 
         # Group text data by block and extract relevant columns
-        grouped_text = (
-            text.groupby("block_num", as_index=False)
-            .agg({
-                "word_num": "max",
-                "left": "min",
-                "top": "min",
-                "height": "max",
-                "conf": "max",
-                "text": " ".join,
-            })
-            .rename(columns={"conf": "confidence", "text": "text"})
-        )
-
-        # Extract the last word from each group of words and calculate the width of the group
-        last_word_per_group = pd.merge(
-            grouped_text[["word_num", "block_num", "left"]],
-            text[["word_num", "block_num", "left", "width"]],
-            on=["block_num", "word_num"],
-        )
-        last_word_per_group["width"] = last_word_per_group.eval("left_y - left_x + width")
-
-        # Merge the width data with the grouped text data
-        grouped_text = pd.merge(grouped_text, last_word_per_group[["block_num", "width"]], on="block_num")
+        grouped_text = text.group_by("block_num").agg([
+            pl.col("word_num").max().alias("word_num"),
+            pl.col("left").min().alias("left"),
+            pl.col("top").min().alias("top"),
+            pl.col("height").max().alias("height"),
+            pl.col("conf").max().alias("confidence"),
+            pl.col("text").str.concat(" ").alias("text"),
+            ((pl.col("left") + pl.col("width")).max() - pl.col("left").min()).alias("width"),
+        ])
 
         # Sort values in descending order based on confidence
-        sorted_text = grouped_text.sort_values("confidence", ascending=False)
+        sorted_text = grouped_text.sort("confidence", descending=True)
 
         # Convert coordinates back to original size
-        sorted_text[["top", "left", "height", "width"]] //= 2
+        sorted_text = sorted_text.with_columns([
+            (pl.col("top") // 2).alias("top"),
+            (pl.col("left") // 2).alias("left"),
+            (pl.col("height") // 2).alias("height"),
+            (pl.col("width") // 2).alias("width"),
+        ])
 
         return sorted_text
 
@@ -356,7 +370,7 @@ class Vision(WindowCapture):
         colors: tuple[int, int, int] | Sequence[tuple[int, int, int]] | None = None,
         tolerance: int = 0,
         confidence: float | None = 0.8,
-    ) -> Sequence[TextInfo]:
+    ) -> list[dict[str, str | int | float]]:
         """Extracts text from the image using Tesseract OCR with confidence greater than or equal to the confidence arg.
 
         Args:
@@ -376,69 +390,18 @@ class Vision(WindowCapture):
         Raises:
             InvalidImageError: If the input image is invalid or None.
         """
-        image = self._crop_image(rect)
-        sorted_text = self._get_grouped_text(image, colors, tolerance)
-
-        if sorted_text.empty:
-            return []
+        # image = self._crop_image(rect)
+        sorted_text = self._get_grouped_text(self.opencv_image, rect, colors, tolerance)
 
         # Filter out text with low confidence and format the output data
-        acceptable_text = sorted_text[sorted_text["confidence"] >= confidence][
-            ["text", "left", "top", "width", "height", "confidence"]
-        ]
+        acceptable_text = sorted_text.filter(pl.col("confidence") >= confidence)
+
+        acceptable_text = acceptable_text.select("text", "left", "top", "width", "height", "confidence")
 
         if rect:
-            acceptable_text.loc[:, ["left", "top"]] += rect[0:2]
+            acceptable_text = acceptable_text.with_columns(pl.col("left") + rect[0], pl.col("top") + rect[1])
 
-        # Return `TextInfo` objects for the acceptable text in the image
-        return cast(Sequence[TextInfo], acceptable_text.apply(TextInfo.from_row, axis=1).tolist())  # type: ignore[call-overload]
-
-    @check_valid_image
-    def find_text(
-        self: Self,
-        search_text: str,
-        rect: tuple[int, int, int, int] | None = None,
-        colors: tuple[int, int, int] | Sequence[tuple[int, int, int]] | None = None,
-        tolerance: int = 0,
-        confidence: float | None = 0.8,
-    ) -> list[TextInfo]:
-        """Extracts text from the image using Tesseract OCR.
-
-        Args:
-            search_text (str): The text to search for in the image.
-            rect (tuple[int, int, int, int] | None): A tuple specifying a rectangular region in the image to search. The
-                tuple contains the coordinates of the top-left corner (x, y) and the width and height of the rectangle
-                (w, h) in the format (x, y, w, h). If not provided, the whole image is searched.
-            colors (tuple[int, int, int] | Sequence[tuple[int, int, int]] | None): A sequence of RGB tuples or a
-                sequence of sequences containing RGB tuples.
-            tolerance (int): The maximum difference allowed between each channel of the given color and the pixel
-                color.
-            confidence (float): The minimum confidence level for text to be included in the output. Must be a value
-                between 0 and 1. Defaults to 0.8.
-
-        Returns:
-            list[TextInfo]: A list of TextInfo objects for the acceptable text in the image.
-
-        Raises:
-            InvalidImageError: If the input image is invalid or None.
-            ValueError: If the `search_text` argument is empty or None.
-        """
-        image = self._crop_image(rect)
-        sorted_text = self._get_grouped_text(image, colors, tolerance)
-
-        if sorted_text.empty:
-            return []
-
-        # Filter out text with low confidence and format the output data
-        acceptable_text = sorted_text[
-            (sorted_text["confidence"] >= confidence) & (sorted_text["text"].str.contains(search_text, regex=False))
-        ][["text", "left", "top", "width", "height", "confidence"]]
-
-        if rect:
-            acceptable_text.loc[:, ["left", "top"]] += rect[0:2]
-
-        # Return TextInfo objects for the acceptable text in the image
-        return cast(list[TextInfo], acceptable_text.apply(TextInfo.from_row, axis=1).tolist())  # type: ignore[call-overload]
+        return acceptable_text.collect().to_dicts()
 
     @check_valid_image
     def get_color(self: Self, point: tuple[int, int]) -> Color:
@@ -1016,7 +979,7 @@ class Vision(WindowCapture):
     def draw_points(
         self: Self,
         points: Sequence[tuple[int, int]],
-        color: tuple[int, int, int] = Color(MAX_COLOR_VALUE, 0, 0),
+        color: tuple[int, int, int] = (MAX_COLOR_VALUE, 0, 0),
     ) -> None:
         """Draw points on the image with the specified color.
 
@@ -1041,7 +1004,7 @@ class Vision(WindowCapture):
     def draw_contours(
         self: Self,
         contours: Sequence[Sequence[Sequence[tuple[int, int]]]],
-        color: tuple[int, int, int] = Color(MAX_COLOR_VALUE, 0, 0),
+        color: tuple[int, int, int] = (MAX_COLOR_VALUE, 0, 0),
     ) -> None:
         """Draw a contour on the image with the specified color.
 
@@ -1066,7 +1029,7 @@ class Vision(WindowCapture):
     def draw_circle(
         self: Self,
         circle: tuple[int, int, int],
-        color: tuple[int, int, int] = Color(MAX_COLOR_VALUE, 0, 0),
+        color: tuple[int, int, int] = (MAX_COLOR_VALUE, 0, 0),
     ) -> None:
         """Draws a rectangle onto the backbuffer.
 
@@ -1086,7 +1049,7 @@ class Vision(WindowCapture):
     def draw_rectangle(
         self: Self,
         rect: tuple[int, int, int, int],
-        color: tuple[int, int, int] = Color(MAX_COLOR_VALUE, 0, 0),
+        color: tuple[int, int, int] = (MAX_COLOR_VALUE, 0, 0),
     ) -> None:
         """Draws a rectangle onto the backbuffer.
 

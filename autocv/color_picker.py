@@ -27,7 +27,6 @@ from PIL.ImageTk import PhotoImage
 from typing_extensions import Self
 
 from .core import Vision
-from .models import Color, ColorWithPoint, Point
 
 PIXELS = 1
 ZOOM = 40
