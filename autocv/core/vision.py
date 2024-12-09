@@ -56,7 +56,7 @@ def check_valid_hwnd(
             raise InvalidHandleError(self.hwnd)
         return func(self, *args, **kwargs)
 
-    return cast(Callable[Concatenate[SelfWindowCapture, P], R], wrapper)
+    return cast("Callable[Concatenate[SelfWindowCapture, P], R]", wrapper)
 
 
 def check_valid_image(func: Callable[Concatenate[SelfVision, P], R]) -> Callable[Concatenate[SelfVision, P], R]:
@@ -68,7 +68,7 @@ def check_valid_image(func: Callable[Concatenate[SelfVision, P], R]) -> Callable
             raise InvalidImageError
         return func(self, *args, **kwargs)
 
-    return cast(Callable[Concatenate[SelfVision, P], R], wrapper)
+    return cast("Callable[Concatenate[SelfVision, P], R]", wrapper)
 
 
 class Vision(WindowCapture):
@@ -103,9 +103,9 @@ class Vision(WindowCapture):
             None
         """
         if isinstance(image, Image.Image):
-            self.opencv_image = cast(npt.NDArray[np.uint8], cv.cvtColor(np.array(image), cv.COLOR_RGB2BGR))
+            self.opencv_image = cast("npt.NDArray[np.uint8]", cv.cvtColor(np.array(image), cv.COLOR_RGB2BGR))
         else:
-            self.opencv_image = cast(npt.NDArray[np.uint8], image)
+            self.opencv_image = cast("npt.NDArray[np.uint8]", image)
 
     @check_valid_hwnd
     def refresh(self: Self, *, set_backbuffer: bool = True) -> npt.NDArray[np.uint8] | None:
@@ -383,7 +383,7 @@ class Vision(WindowCapture):
             raise IndexError
 
         # Get the color of the pixel at the specified coordinates
-        return cast(tuple[int, int, int], tuple(*np.flip(self.opencv_image[y, x])))
+        return cast("tuple[int, int, int]", tuple(*np.flip(self.opencv_image[y, x])))
 
     @check_valid_image
     def find_color(
@@ -417,7 +417,7 @@ class Vision(WindowCapture):
         if rect:
             points = np.add(points, rect[0:2])
 
-        return cast(list[tuple[int, int]], points.tolist())
+        return cast("list[tuple[int, int]]", points.tolist())
 
     @check_valid_image
     def get_average_color(self: Self, rect: tuple[int, int, int, int] | None = None) -> tuple[int, int, int]:
@@ -432,7 +432,7 @@ class Vision(WindowCapture):
             tuple[int, int, int]: The average color within the specified region.
 
         """
-        return cast(tuple[int, int, int], tuple(*self._get_average_color(self.opencv_image, rect)))
+        return cast("tuple[int, int, int]", tuple(*self._get_average_color(self.opencv_image, rect)))
 
     def _get_average_color(
         self: Self,
@@ -507,7 +507,7 @@ class Vision(WindowCapture):
         desired_index = min(index - 1, len(sorted_indices) - 1)
         most_common_color = unique[sorted_indices[desired_index]][::-1]
 
-        return cast(tuple[int, int, int], tuple(*most_common_color))
+        return cast("tuple[int, int, int]", tuple(*most_common_color))
 
     @check_valid_image
     def get_all_colors_with_counts(
@@ -559,7 +559,7 @@ class Vision(WindowCapture):
         # Calculate the median value for each channel
         median_color = median_color[::-1].tolist()
 
-        return cast(tuple[int, int, int], tuple(*median_color))
+        return cast("tuple[int, int, int]", tuple(*median_color))
 
     @staticmethod
     def _get_dominant_color(image: npt.NDArray[np.uint8]) -> npt.NDArray[np.uint8]:
@@ -577,7 +577,7 @@ class Vision(WindowCapture):
         # Calculate the median value for each channel
         median_color = np.median(reshaped_image, axis=0).astype(np.uint8)
 
-        return cast(npt.NDArray[np.uint8], median_color)
+        return cast("npt.NDArray[np.uint8]", median_color)
 
     @check_valid_image
     def maximize_color_match(
@@ -787,7 +787,7 @@ class Vision(WindowCapture):
         else:
             sub_image_bgr = cv.cvtColor(sub_image, cv.COLOR_RGB2BGR)
             mask = None
-        return cast(npt.NDArray[np.uint8], sub_image_bgr), cast(npt.NDArray[np.uint8], mask)
+        return cast("npt.NDArray[np.uint8]", sub_image_bgr), cast("npt.NDArray[np.uint8]", mask)
 
     @staticmethod
     def _convert_to_grayscale(
@@ -805,7 +805,7 @@ class Vision(WindowCapture):
         """
         main_image_gray = cv.cvtColor(main_image, cv.COLOR_BGR2GRAY)
         sub_image_gray = cv.cvtColor(sub_image_bgr, cv.COLOR_BGR2GRAY)
-        return cast(npt.NDArray[np.uint8], main_image_gray), cast(npt.NDArray[np.uint8], sub_image_gray)
+        return cast("npt.NDArray[np.uint8]", main_image_gray), cast("npt.NDArray[np.uint8]", sub_image_gray)
 
     @staticmethod
     def _perform_template_matching(
@@ -885,7 +885,7 @@ class Vision(WindowCapture):
         """
         rects = np.repeat(np.array(rects), 2, axis=0)
         rects, _ = cv.groupRectangles(rects, groupThreshold=1, eps=0.1)  # type: ignore[arg-type]
-        return cast(list[tuple[int, int, int, int]], rects)
+        return cast("list[tuple[int, int, int, int]]", rects)
 
     @check_valid_image
     def find_contours(
@@ -929,7 +929,7 @@ class Vision(WindowCapture):
                 if vertices == len(cv.approxPolyDP(c, 0.01 * cv.arcLength(c, closed=True), closed=True))
             ]
 
-        return cast(list[npt.NDArray[np.uintp]], contours)
+        return cast("list[npt.NDArray[np.uintp]]", contours)
 
     @check_valid_image
     def draw_points(
@@ -1041,4 +1041,4 @@ class Vision(WindowCapture):
             InvalidImageError: If the input image is invalid or None.
         """
         grey_image = filter_colors(self.opencv_image, colors, tolerance, keep_original_colors=keep_original_colors)
-        self.opencv_image = cast(npt.NDArray[np.uint8], grey_image)
+        self.opencv_image = cast("npt.NDArray[np.uint8]", grey_image)

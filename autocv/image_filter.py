@@ -191,4 +191,4 @@ class ImageFilter:
             edges = cv.dilate(edges, dilate_kernel)
 
         # Return
-        return cast(npt.NDArray[np.uint8], edges)
+        return cast("npt.NDArray[np.uint8]", edges)

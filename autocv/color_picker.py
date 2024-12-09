@@ -220,6 +220,6 @@ class ColorPicker:
         else:
             # Get the color of the pixel at (x,y) and create a ColorWithPoint instance
             color = np.flip(self.vision.opencv_image[y, x])
-            self.result = cast(tuple[tuple[int, int, int], tuple[int, int]], (color, (x, y)))
+            self.result = cast("tuple[tuple[int, int, int], tuple[int, int]]", (color, (x, y)))
         self.master_screen.destroy()
         self.master_screen.quit()

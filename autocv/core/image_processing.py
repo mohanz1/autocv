@@ -78,4 +78,4 @@ def filter_colors(
         filtered_image = np.zeros_like(opencv_image)
         filtered_image[mask > 0] = opencv_image[mask > 0]
         return filtered_image
-    return cast(npt.NDArray[np.uint8], mask)
+    return cast("npt.NDArray[np.uint8]", mask)

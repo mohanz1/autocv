@@ -101,7 +101,7 @@ class AutoCV(Input):
         Returns:
             bool: True if the function was successfully patched, False otherwise.
         """
-        return typing.cast(bool, self._antigcp.antigcp(self._get_topmost_hwnd()))
+        return typing.cast("bool", self._antigcp.antigcp(self._get_topmost_hwnd()))
 
     @check_valid_hwnd
     def image_picker(self: Self) -> tuple[npt.NDArray[np.uint8] | None, tuple[int, int, int, int] | None]:
