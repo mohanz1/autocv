@@ -536,9 +536,9 @@ class Vision(WindowCapture):
         sorted_counts = counts[sorted_indices]
 
         return [
-            ((int(bgr[2]), int(bgr[1]), int(bgr[0])), int(c))
+            ((int(bgr[2]), int(bgr[1]), int(bgr[0])), int(c))  # type: ignore[index]
             for bgr, c in zip(sorted_unique, sorted_counts, strict=False)
-        ]  # type: ignore[index]
+        ]
 
     @check_valid_image
     def get_median_color(self: Self, rect: tuple[int, int, int, int] | None = None) -> tuple[int, int, int]:
