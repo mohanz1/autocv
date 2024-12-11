@@ -499,7 +499,7 @@ class Vision(WindowCapture):
             ignore_mask = np.isin(reshaped_image, color_values).any(axis=1)
 
             # Apply the mask to reshaped_image
-            reshaped_image = reshaped_image[~ignore_mask]
+            reshaped_image = reshaped_image[~ignore_mask]  # type: ignore[assignment]
 
         unique, counts = np.unique(reshaped_image, axis=0, return_counts=True)
 
@@ -507,7 +507,7 @@ class Vision(WindowCapture):
         desired_index = min(index - 1, len(sorted_indices) - 1)
         most_common_color = unique[sorted_indices[desired_index]][::-1]
 
-        return cast("tuple[int, int, int]", tuple(*most_common_color))
+        return cast("tuple[int, int, int]", tuple(int(x) for x in most_common_color))
 
     @check_valid_image
     def get_all_colors_with_counts(
@@ -535,7 +535,10 @@ class Vision(WindowCapture):
         sorted_unique = unique[sorted_indices]
         sorted_counts = counts[sorted_indices]
 
-        return [((r, g, b), count) for (b, g, r), count in zip(sorted_unique, sorted_counts, strict=False)]
+        return [
+            ((int(bgr[2]), int(bgr[1]), int(bgr[0])), int(c))
+            for bgr, c in zip(sorted_unique, sorted_counts, strict=False)
+        ]  # type: ignore[index]
 
     @check_valid_image
     def get_median_color(self: Self, rect: tuple[int, int, int, int] | None = None) -> tuple[int, int, int]:
@@ -601,9 +604,9 @@ class Vision(WindowCapture):
                 obtain that match.
         """
         cropped_image = self._crop_image(rect)
-        dominant_color = self._get_dominant_color(cropped_image)
+        dominant_color = cast("tuple[int, int, int]", tuple(self._get_dominant_color(cropped_image)))
         best_color, best_tolerance = self._find_best_color_match(
-            cropped_image, dominant_color.tolist(), initial_tolerance, tolerance_step
+            cropped_image, dominant_color, initial_tolerance, tolerance_step
         )
         return best_color, best_tolerance
 

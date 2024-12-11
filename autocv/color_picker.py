@@ -169,7 +169,7 @@ class ColorPicker:
         except IndexError:
             color = np.zeros(3, dtype=np.uint8)
 
-        inverse_average_color = (255 - color).tolist()
+        inverse_average_color = cast("list[int]", (255 - color).tolist())
         inverse_average_color = (
             f"#{inverse_average_color[0]:02x}{inverse_average_color[1]:02x}{inverse_average_color[2]:02x}"
         )
