@@ -34,7 +34,7 @@ if TYPE_CHECKING:
     import numpy as np
     import numpy.typing as npt
 
-    from .models import ColorWithPoint, FilterSettings, Rectangle
+    from .models import FilterSettings
 
 
 class AutoCV(Input):
@@ -101,10 +101,10 @@ class AutoCV(Input):
         Returns:
             bool: True if the function was successfully patched, False otherwise.
         """
-        return typing.cast(bool, self._antigcp.antigcp(self._get_topmost_hwnd()))
+        return typing.cast("bool", self._antigcp.antigcp(self._get_topmost_hwnd()))
 
     @check_valid_hwnd
-    def image_picker(self: Self) -> tuple[npt.NDArray[np.uint8] | None, Rectangle | None]:
+    def image_picker(self: Self) -> tuple[npt.NDArray[np.uint8] | None, tuple[int, int, int, int] | None]:
         """Sets up an image picker interface and returns the selected image as a NumPy array.
 
         Returns:
@@ -121,7 +121,7 @@ class AutoCV(Input):
         return image, rect
 
     @check_valid_hwnd
-    def color_picker(self: Self) -> ColorWithPoint | None:
+    def color_picker(self: Self) -> tuple[tuple[int, int, int], tuple[int, int]] | None:
         """Sets up a color picker interface and returns the selected color and its location.
 
         Returns:

@@ -43,7 +43,7 @@ def get_first(iterable: Iterable[T], **kwargs: str | float) -> T | None:
         T | None: The first element of the iterable that has the specified attribute(s) with the specified value(s), or
             None if no such element is found.
     """
-    _all = all
+    all_ = all
     attrget = attrgetter
 
     # Special case the single element call
@@ -58,6 +58,6 @@ def get_first(iterable: Iterable[T], **kwargs: str | float) -> T | None:
     converted = [(attrget(attr.replace("__", ".")), value) for attr, value in kwargs.items()]
 
     for elem in iterable:
-        if _all(pred(elem) == value for pred, value in converted):
+        if all_(pred(elem) == value for pred, value in converted):
             return elem
     return None

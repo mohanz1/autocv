@@ -15,6 +15,7 @@ __all__ = ("ColorPicker",)
 
 from pathlib import Path
 from tkinter import NW, Canvas, Tk, Toplevel
+from typing import cast
 
 import cv2 as cv
 import numpy as np
@@ -27,7 +28,6 @@ from PIL.ImageTk import PhotoImage
 from typing_extensions import Self
 
 from .core import Vision
-from .models import Color, ColorWithPoint, Point
 
 PIXELS = 1
 ZOOM = 40
@@ -63,7 +63,7 @@ class ColorPicker:
         self.master = master
         self.size = (PIXELS * 2 + 1) * ZOOM
         self.snip_surface: Canvas
-        self.result: ColorWithPoint
+        self.result: tuple[tuple[int, int, int], tuple[int, int]]
         self.prev_state = win32api.GetKeyState(win32con.VK_LBUTTON)  # type: ignore[no-untyped-call]
         self.vision = Vision(self.hwnd)
 
@@ -169,7 +169,10 @@ class ColorPicker:
         except IndexError:
             color = np.zeros(3, dtype=np.uint8)
 
-        inverse_average_color = Color.to_hex((255 - color).tolist())
+        inverse_average_color = cast("list[int]", (255 - color).tolist())
+        inverse_average_color = (
+            f"#{inverse_average_color[0]:02x}{inverse_average_color[1]:02x}{inverse_average_color[2]:02x}"
+        )
         draw.text(
             (img.width // 2, img.height - ZOOM // 2),
             f"{x},{y}",
@@ -192,7 +195,7 @@ class ColorPicker:
             average_color = np.zeros(3, dtype=np.uint8)
 
         inverse_average_color = 255 - average_color
-        hex_color = Color.to_hex(inverse_average_color)
+        hex_color = f"#{inverse_average_color[0]:02x}{inverse_average_color[1]:02x}{inverse_average_color[2]:02x}"
         size = PIXELS * ZOOM
         self.snip_surface.create_rectangle(
             size,
@@ -213,10 +216,10 @@ class ColorPicker:
         """
         # Check if the coordinates are within the bounds of the image
         if x < 0 or x > self.vision.opencv_image.shape[1] or y < 0 or y > self.vision.opencv_image.shape[0]:
-            self.result = ColorWithPoint(Color(-1, -1, -1), Point(-1, -1))
+            self.result = ((-1, -1, -1), (-1, -1))
         else:
             # Get the color of the pixel at (x,y) and create a ColorWithPoint instance
             color = np.flip(self.vision.opencv_image[y, x])
-            self.result = ColorWithPoint.from_ndarray_sequence(color, (x, y))
+            self.result = cast("tuple[tuple[int, int, int], tuple[int, int]]", (color, (x, y)))
         self.master_screen.destroy()
         self.master_screen.quit()

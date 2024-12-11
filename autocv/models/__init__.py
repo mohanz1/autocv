@@ -6,32 +6,15 @@ settings configurations for image processing filters.
 """
 
 __all__ = [
-    "Circle",
-    "Color",
-    "ColorWithPoint",
-    "Contour",
     "FilterSettings",
     "InvalidHandleError",
     "InvalidImageError",
     "InvalidLengthError",
-    "OrderBy",
-    "Point",
-    "Rectangle",
-    "ShapeList",
-    "TextInfo",
 ]
 
-from .circle import Circle
-from .color import Color
-from .color_with_point import ColorWithPoint
-from .contour import Contour
 from .exceptions import (
     InvalidHandleError,
     InvalidImageError,
     InvalidLengthError,
 )
 from .filter_settings import FilterSettings
-from .point import Point
-from .rectangle import Rectangle
-from .shape_list import OrderBy, ShapeList
-from .text_info import TextInfo

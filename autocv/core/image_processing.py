@@ -9,22 +9,18 @@ from __future__ import annotations
 __all__ = ("filter_colors",)
 
 import logging
-from typing import TYPE_CHECKING, cast
+from typing import cast
 
 import cv2 as cv
 import numpy as np
 import numpy.typing as npt
-
-if TYPE_CHECKING:
-    from collections.abc import Sequence
-
 
 logger = logging.getLogger(__name__)
 
 
 def filter_colors(
     opencv_image: npt.NDArray[np.uint8],
-    colors: tuple[int, int, int] | Sequence[tuple[int, int, int]],
+    colors: tuple[int, int, int] | list[tuple[int, int, int]],
     tolerance: int = 0,
     *,
     keep_original_colors: bool = False,
@@ -33,8 +29,8 @@ def filter_colors(
 
     Args:
         opencv_image (npt.NDArray[np.uint8]): The image to filter.
-        colors (Union[Tuple[int, int, int], Sequence[Tuple[int, int, int]]]): A sequence of RGB tuples or a sequence of
-            sequences containing RGB tuples.
+        colors (Union[Sequence[int, int, int], Sequence[Sequence[int, int, int]]]): A sequence of RGB tuples or a
+            sequence of sequences containing RGB tuples.
         tolerance (int): The color tolerance in the range of 0-255.
         keep_original_colors (bool): If True, the returned value will be a copy of the input image where all
             non-matching pixels are set to black.
@@ -82,4 +78,4 @@ def filter_colors(
         filtered_image = np.zeros_like(opencv_image)
         filtered_image[mask > 0] = opencv_image[mask > 0]
         return filtered_image
-    return cast(npt.NDArray[np.uint8], mask)
+    return cast("npt.NDArray[np.uint8]", mask)
