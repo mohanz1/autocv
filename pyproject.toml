@@ -19,19 +19,6 @@ polars                      = "~1.17"
 pillow                      = "~11.0"
 pytesseract                 = "~0.3"
 pywin32                     = "~308"
-
-[tool.poetry.extras]
-docs    = ["furo", "sphinx", "sphinx-copybutton"]
-lint    = ["mypy", "ruff"]
-stubs   = ["opencv-stubs", "pandas-stubs", "types-Pillow", "types_pywin32"]
-
-[tool.poetry.group.dev.dependencies]
-mypy                        = "~1.13"
-opencv-stubs                = "~0.0"
-ruff                        = "~0.8"
-types-Pillow                = "~10.2"
-types_pywin32               = "~308"
-
 tesserocr = [
     # For Python 3.10 on 64-bit Windows
     { python = "~3.10", url = "https://github.com/simonflueckiger/tesserocr-windows_build/releases/download/tesserocr-v2.7.1-tesseract-5.4.1/tesserocr-2.7.1-cp310-cp310-win_amd64.whl", markers = "sys_platform == 'win32' and platform_machine == 'AMD64'" },
@@ -46,6 +33,18 @@ tesserocr = [
     # For Python 3.12 on 32-bit Windows
     { python = "~3.12", url = "https://github.com/simonflueckiger/tesserocr-windows_build/releases/download/tesserocr-v2.7.1-tesseract-5.4.1/tesserocr-2.7.1-cp312-cp312-win32.whl", markers = "sys_platform == 'win32' and platform_machine == 'x86'" },
 ]
+
+[tool.poetry.extras]
+docs    = ["furo", "sphinx", "sphinx-copybutton"]
+lint    = ["mypy", "ruff"]
+stubs   = ["opencv-stubs", "pandas-stubs", "types-Pillow", "types_pywin32"]
+
+[tool.poetry.group.dev.dependencies]
+mypy                        = "~1.13"
+opencv-stubs                = "~0.0"
+ruff                        = "~0.8"
+types-Pillow                = "~10.2"
+types_pywin32               = "~308"
 
 
 [tool.poetry.group.docs]
