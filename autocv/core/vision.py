@@ -271,7 +271,7 @@ class Vision(WindowCapture):
             pl.col("text").cast(pl.Utf8),
             (pl.col("conf") / 100).alias("conf"),
         ])
-        text = text.filter(pl.col("text").str.strip_chars())
+        text = text.filter(pl.col("text").str.strip_chars().str.len_chars() > 0)
 
         # Group text data by block and extract relevant columns
         grouped_text = text.group_by("block_num").agg([
@@ -330,7 +330,7 @@ class Vision(WindowCapture):
         colors: tuple[int, int, int] | list[tuple[int, int, int]] | None = None,
         tolerance: int = 0,
         confidence: float | None = 0.8,
-    ) -> list[dict[str, str | int | float]]:
+    ) -> list[dict[str, str | int | float | list[int]]]:
         """Extracts text from the image using Tesseract OCR with confidence greater than or equal to the confidence arg.
 
         Args:
@@ -345,7 +345,8 @@ class Vision(WindowCapture):
                 value between 0 and 1. Defaults to 0.8.
 
         Returns:
-            list[dict[str, str | int | float]]: A list of TextInfo objects for the acceptable text in the image.
+            list[dict[str, str | int | float | list[int]]]: A list of TextInfo objects for the acceptable text in the
+                image.
 
         Raises:
             InvalidImageError: If the input image is invalid or None.
@@ -360,7 +361,12 @@ class Vision(WindowCapture):
         if rect:
             acceptable_text = acceptable_text.with_columns(pl.col("left") + rect[0], pl.col("top") + rect[1])
 
-        return acceptable_text.collect().to_dicts()
+        df = acceptable_text.with_columns(pl.concat_list(["left", "top", "width", "height"]).alias("rect"))
+
+        # 4. Keep only text, rect, confidence
+        df = df.select(["text", "rect", "confidence"])
+
+        return df.collect().to_dicts()
 
     @check_valid_image
     def get_color(self: Self, point: tuple[int, int]) -> tuple[int, int, int]:
