@@ -6,14 +6,12 @@ libraries to provide comprehensive image analysis and text extraction functional
 
 from __future__ import annotations
 
-__all__ = ("Vision", "check_valid_hwnd", "check_valid_image")
+__all__ = ("Vision",)
 
-import functools
 import io
 import logging
 import pathlib
-from collections.abc import Callable
-from typing import Any, Concatenate, ParamSpec, TypeVar, cast
+from typing import cast
 
 import cv2 as cv
 import numpy as np
@@ -26,8 +24,7 @@ from PIL import Image
 from tesserocr import OEM, PSM, PyTessBaseAPI  # type: ignore[import-untyped]
 from typing_extensions import Self
 
-from autocv.models import InvalidHandleError, InvalidImageError
-
+from .decorators import check_valid_hwnd, check_valid_image
 from .image_processing import filter_colors
 from .window_capture import WindowCapture
 
@@ -36,39 +33,6 @@ GRESCALE_CHANNELS = 3
 MAX_COLOR_VALUE = 255
 
 logger = logging.getLogger(__name__)
-FuncT = TypeVar("FuncT", bound=Callable[..., Any])
-# Define a type variable for the return type
-R = TypeVar("R")
-# Define a parameter specification variable for the function parameters
-P = ParamSpec("P")
-SelfWindowCapture = TypeVar("SelfWindowCapture", bound="WindowCapture")
-SelfVision = TypeVar("SelfVision", bound="Vision")
-
-
-def check_valid_hwnd(
-    func: Callable[Concatenate[SelfWindowCapture, P], R],
-) -> Callable[Concatenate[SelfWindowCapture, P], R]:
-    """Decorator that checks if the `hwnd` attribute is set before calling the decorated method."""
-
-    @functools.wraps(func)
-    def wrapper(self: SelfWindowCapture, *args: P.args, **kwargs: P.kwargs) -> R:
-        if self.hwnd == -1:
-            raise InvalidHandleError(self.hwnd)
-        return func(self, *args, **kwargs)
-
-    return cast("Callable[Concatenate[SelfWindowCapture, P], R]", wrapper)
-
-
-def check_valid_image(func: Callable[Concatenate[SelfVision, P], R]) -> Callable[Concatenate[SelfVision, P], R]:
-    """Decorator that checks if the `opencv_image` attribute is set before calling the decorated method."""
-
-    @functools.wraps(func)
-    def wrapper(self: SelfVision, *args: P.args, **kwargs: P.kwargs) -> R:
-        if self.opencv_image.size == 0:
-            raise InvalidImageError
-        return func(self, *args, **kwargs)
-
-    return cast("Callable[Concatenate[SelfVision, P], R]", wrapper)
 
 
 class Vision(WindowCapture):

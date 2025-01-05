@@ -13,9 +13,10 @@ Modules:
 - WindowCapture: Class for capturing window images.
 """
 
-__all__ = ("Input", "Vision", "WindowCapture", "filter_colors")
+__all__ = ("Input", "Vision", "WindowCapture", "check_valid_hwnd", "check_valid_image", "filter_colors")
 
 
+from .decorators import check_valid_hwnd, check_valid_image
 from .image_processing import filter_colors
 from .input import Input
 from .vision import Vision

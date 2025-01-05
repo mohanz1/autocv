@@ -19,7 +19,8 @@ import win32con
 import win32gui
 from typing_extensions import Self
 
-from .vision import Vision, check_valid_hwnd
+from . import check_valid_hwnd
+from .vision import Vision
 
 logger = logging.getLogger(__name__)
 
