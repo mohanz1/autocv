@@ -37,7 +37,7 @@ tesserocr = [
     # For Python 3.13 on 32-bit Windows
     { python = "~3.13", url = "https://github.com/simonflueckiger/tesserocr-windows_build/releases/download/tesserocr-v2.7.1-tesseract-5.4.1/tesserocr-2.7.1-cp313-cp313-win32.whl", markers = "sys_platform == 'win32' and platform_machine == 'x86'" },
 ]
-typing-extensions           = { version = "~4.12", python = "<3.11" }
+typing-extensions           = "~4.12"
 
 
 [tool.poetry.extras]
