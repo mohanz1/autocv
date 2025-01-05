@@ -1,6 +1,6 @@
 """This package provides utilities for sequence and iterable filtering."""
 
-__all__ = ("find_first", "get_first")
+__all__ = ("find_first", "get_center", "get_first")
 
 from .filtering import find_first, get_first
 from .geometry import get_center

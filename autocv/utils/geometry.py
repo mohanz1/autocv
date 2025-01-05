@@ -1,15 +1,16 @@
+"""This module provides utility functions for working with shapes."""
+
 from __future__ import annotations
 
-__all__ = "get_center"
+__all__ = ("get_center",)
 
+import cv2 as cv
 import numpy as np
 import numpy.typing as npt
-import cv2 as cv
 
 
 def get_center(shape: tuple[int, int, int, int] | npt.NDArray[np.uintp]) -> tuple[int, int]:
-    """
-    Returns the center (x, y) of a shape.
+    """Returns the center (x, y) of a shape.
 
     - If `shape` is a rect (x, y, width, height), the function returns:
         (x + width // 2, y + height // 2)
@@ -31,22 +32,16 @@ def get_center(shape: tuple[int, int, int, int] | npt.NDArray[np.uintp]) -> tupl
                     or a valid contour.
     """
     if isinstance(shape, np.ndarray):
-        if len(shape.shape) < 2 or shape.size == 0:
-            raise ValueError("Contour array is empty or invalid.")
-
         # Convert contour to the correct shape if needed (N, 2)
         # Many OpenCV contours come in shape (N, 1, 2), so let's reshape if needed
-        if shape.ndim == 3 and shape.shape[1] == 1:
-            contour = shape.reshape(-1, 2)
-        else:
-            contour = shape
+        contour = shape.reshape(-1, 2) if shape.ndim == 3 and shape.shape[1] == 1 else shape
 
         # Calculate centroid via moments
-        M = cv.moments(contour)
-        if M["m00"] == 0:
-            raise ValueError("Contour area (m00) is zero; cannot compute center.")
-        cx = int(M["m10"] / M["m00"])
-        cy = int(M["m01"] / M["m00"])
+        moments = cv.moments(contour)
+        if moments["m00"] == 0:
+            raise ValueError
+        cx = int(moments["m10"] / moments["m00"])
+        cy = int(moments["m01"] / moments["m00"])
         return cx, cy
 
     x, y, w, h = shape
@@ -54,8 +49,7 @@ def get_center(shape: tuple[int, int, int, int] | npt.NDArray[np.uintp]) -> tupl
 
 
 def get_random_point(shape: tuple[int, int, int, int] | npt.NDArray[np.uintp]) -> tuple[int, int]:
-    """
-    Returns a random point (x, y) from a shape.
+    """Returns a random point (x, y) from a shape.
 
     - If `shape` is a rect (x, y, width, height), it returns a random point
       within that bounding box.
@@ -76,15 +70,8 @@ def get_random_point(shape: tuple[int, int, int, int] | npt.NDArray[np.uintp]) -
                     or if the shape cannot be unpacked into (x, y, w, h).
     """
     if isinstance(shape, np.ndarray):
-        # Contour case
-        if len(shape.shape) < 2 or shape.size == 0:
-            raise ValueError("Contour array is empty or invalid.")
-
         # Convert contour to shape (N, 2) if it is (N, 1, 2)
-        if shape.ndim == 3 and shape.shape[1] == 1:
-            contour = shape.reshape(-1, 2)
-        else:
-            contour = shape
+        contour = shape.reshape(-1, 2) if shape.ndim == 3 and shape.shape[1] == 1 else shape
 
         # Pick a random index and return the point
         idx = np.random.randint(0, contour.shape[0])
