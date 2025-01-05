@@ -1134,4 +1134,4 @@ stubs = []
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.14"
-content-hash = "027814df508354b9aa1950e2434f60d7fdf3f6b48baf7c5b14328dd4526f371f"
+content-hash = "7599f2d4e94eca8477cd1f6876bcc70ebf8690cd331a09cd1ccbefc8c3de6b20"
