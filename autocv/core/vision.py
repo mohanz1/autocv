@@ -480,6 +480,34 @@ class Vision(WindowCapture):
         return cast("tuple[int, int, int]", tuple(int(x) for x in most_common_color))
 
     @check_valid_image
+    def get_count_of_color(
+        self: Self,
+        color: tuple[int, int, int],
+        rect: tuple[int, int, int, int] | None = None,
+        tolerance: int | None = 0,
+    ) -> int:
+        """Count the number of pixels in the image (or a specified region) that match a given color within a tolerance.
+
+        Args:
+            color (tuple[int, int, int]):
+                The RGB color to count, for example, (255, 0, 0) for red.
+            rect (tuple[int, int, int, int] | None, optional):
+                A tuple specifying the rectangular region of the image where the color match will be counted, in the
+                format (x, y, width, height). If not provided, the entire image is used.
+            tolerance (int | None, optional):
+                An integer specifying how close each channel of the pixel must be to the target color. A higher value
+                allows more deviation from the target color. Defaults to 0 (exact match).
+
+        Returns:
+            int:
+                The total number of pixels matching the color within the given
+                tolerance.
+        """
+        cropped_image = self._crop_image(rect)
+        match_mask = filter_colors(cropped_image, color, tolerance or 0)
+        return int(np.count_nonzero(match_mask))
+
+    @check_valid_image
     def get_all_colors_with_counts(
         self: Self,
         rect: tuple[int, int, int, int] | None = None,
@@ -492,7 +520,7 @@ class Vision(WindowCapture):
 
 
         Returns:
-          Color: Most common color.
+          list[tuple[tuple[int, int, int], int]]: A list of all the colors with the respective counts.
         """
         cropped_image = self._crop_image(rect)
 

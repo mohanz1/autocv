@@ -12,16 +12,17 @@ __all__ = ("check_valid_hwnd", "check_valid_image")
 import functools
 from typing import TYPE_CHECKING, Concatenate, ParamSpec, TypeVar, cast
 
-from autocv.core import Vision, WindowCapture
 from autocv.models import InvalidHandleError, InvalidImageError
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from autocv.core import Vision, WindowCapture
+
 P = ParamSpec("P")
 R = TypeVar("R")
-WindowCaptureT = TypeVar("WindowCaptureT", bound=WindowCapture)
-VisionT = TypeVar("VisionT", bound=Vision)
+WindowCaptureT = TypeVar("WindowCaptureT", bound="WindowCapture")
+VisionT = TypeVar("VisionT", bound="Vision")
 
 
 def check_valid_hwnd(func: Callable[Concatenate[WindowCaptureT, P], R]) -> Callable[Concatenate[WindowCaptureT, P], R]:
