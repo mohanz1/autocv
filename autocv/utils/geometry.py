@@ -4,6 +4,7 @@ from __future__ import annotations
 
 __all__ = ("get_center", "get_random_point")
 
+import cv2
 import cv2 as cv
 import numpy as np
 import numpy.typing as npt
@@ -70,13 +71,16 @@ def get_random_point(shape: tuple[int, int, int, int] | npt.NDArray[np.uintp]) -
                     or if the shape cannot be unpacked into (x, y, w, h).
     """
     if isinstance(shape, np.ndarray):
-        # Convert contour to shape (N, 2) if it is (N, 1, 2)
-        contour = shape.reshape(-1, 2) if shape.ndim == 3 and shape.shape[1] == 1 else shape
+        # Get bounding box
+        x, y, w, h = cv2.boundingRect(shape.astype(np.int32))
 
-        # Pick a random index and return the point
-        idx = np.random.randint(0, contour.shape[0])
-        point = contour[idx]
-        return int(point[0]), int(point[1])
+        while True:
+            # Generate random candidate in bounding box
+            rx = np.random.randint(x, x + w)
+            ry = np.random.randint(y, y + h)
+
+            if cv2.pointPolygonTest(shape.astype(np.int32), (rx, ry), measureDist=False) > 0:
+                return rx, ry
 
     # Rect case
     x, y, w, h = shape
