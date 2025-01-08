@@ -735,6 +735,38 @@ class Vision(WindowCapture):
         return int(median_diff)
 
     @check_valid_image
+    def erode_image(self, iterations: int = 1, kernel: npt.NDArray[np.uint8] | None = None) -> None:
+        """Erodes the image using the specified kernel and number of iterations.
+
+        Applies morphological erosion to the current OpenCV image. Erosion removes pixels on object boundaries,
+        effectively shrinking the objects in the image.
+
+        Args:
+            iterations (int, optional): The number of times erosion is applied. Defaults to 1.
+            kernel (npt.NDArray[np.uint8], optional): The structuring element used for erosion. Defaults to
+                a 3x3 array of ones.
+
+        """
+        kernel = kernel or np.ones((3, 3), np.uint8)
+        self.opencv_image = cast("npt.NDArray[np.uint8]", cv.erode(self.opencv_image, kernel, iterations=iterations))
+
+    @check_valid_image
+    def dilate_image(self, iterations: int = 1, kernel: npt.NDArray[np.uint8] | None = None) -> None:
+        """Dilates the image using the specified kernel and number of iterations.
+
+        Applies morphological dilation to the current OpenCV image. Dilation adds pixels to the boundaries of objects,
+        effectively expanding them in the image.
+
+        Args:
+            iterations (int, optional): The number of times dilation is applied. Defaults to 1.
+            kernel (npt.NDArray[np.uint8], optional): The structuring element used for dilation. Defaults to
+                a 3x3 array of ones.
+
+        """
+        kernel = kernel or np.ones((3, 3), np.uint8)
+        self.opencv_image = cast("npt.NDArray[np.uint8]", cv.dilate(self.opencv_image, kernel, iterations=iterations))
+
+    @check_valid_image
     def find_image(
         self: Self,
         sub_image: npt.NDArray[np.uint8] | Image.Image,
