@@ -48,7 +48,7 @@ stubs   = ["opencv-stubs", "pandas-stubs", "types-Pillow", "types_pywin32"]
 [tool.poetry.group.dev.dependencies]
 mypy                        = "~1.14"
 opencv-stubs                = "~0.0"
-ruff                        = "~0.8"
+ruff                        = "~0.9"
 types-Pillow                = "~10.2"
 types_pywin32               = "~308"
 
