@@ -39,7 +39,6 @@ jobs:
       - name: Test install
         run: |
           pip install .
-          pip uninstall -y autocv
 
   lint:
     strategy:
