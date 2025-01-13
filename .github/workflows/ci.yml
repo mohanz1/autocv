@@ -41,8 +41,6 @@ jobs:
           pip install .
           pip uninstall -y autocv
 
-          pip install .[docs]
-
   lint:
     strategy:
       # Allows for matrix sub-jobs to fail without cancelling the rest
