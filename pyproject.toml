@@ -1,51 +1,33 @@
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
-
-[tool.poetry]
+[project]
 name = "autocv"
-version = "1.0.0"
+dynamic = [ "version" ]
 description = "Computer vision library."
-authors = ["Zach <Zach#2679>"]
+license = { text = "MIT" }
 readme = "README.md"
-
-
-[tool.poetry.dependencies]
-python = ">=3.10,<3.14"
-
-numpy                       = "~2.2"
-opencv-python               = "~4.10"
-polars                      = "~1.19"
-pillow                      = "~11.1"
-pytesseract                 = "~0.3"
-pywin32                     = "~308"
-tesserocr = [
-    # For Python 3.10 on 64-bit Windows
-    { python = "~3.10", url = "https://github.com/simonflueckiger/tesserocr-windows_build/releases/download/tesserocr-v2.7.1-tesseract-5.4.1/tesserocr-2.7.1-cp310-cp310-win_amd64.whl", markers = "sys_platform == 'win32' and platform_machine == 'AMD64'" },
-    # For Python 3.10 on 32-bit Windows
-    { python = "~3.10", url = "https://github.com/simonflueckiger/tesserocr-windows_build/releases/download/tesserocr-v2.7.1-tesseract-5.4.1/tesserocr-2.7.1-cp310-cp310-win32.whl", markers = "sys_platform == 'win32' and platform_machine == 'x86'" },
-    # For Python 3.11 on 64-bit Windows
-    { python = "~3.11", url = "https://github.com/simonflueckiger/tesserocr-windows_build/releases/download/tesserocr-v2.7.1-tesseract-5.4.1/tesserocr-2.7.1-cp311-cp311-win_amd64.whl", markers = "sys_platform == 'win32' and platform_machine == 'AMD64'" },
-    # For Python 3.11 on 32-bit Windows
-    { python = "~3.11", url = "https://github.com/simonflueckiger/tesserocr-windows_build/releases/download/tesserocr-v2.7.1-tesseract-5.4.1/tesserocr-2.7.1-cp311-cp311-win32.whl", markers = "sys_platform == 'win32' and platform_machine == 'x86'" },
-    # For Python 3.12 on 64-bit Windows
-    { python = "~3.12", url = "https://github.com/simonflueckiger/tesserocr-windows_build/releases/download/tesserocr-v2.7.1-tesseract-5.4.1/tesserocr-2.7.1-cp312-cp312-win_amd64.whl", markers = "sys_platform == 'win32' and platform_machine == 'AMD64'" },
-    # For Python 3.12 on 32-bit Windows
-    { python = "~3.12", url = "https://github.com/simonflueckiger/tesserocr-windows_build/releases/download/tesserocr-v2.7.1-tesseract-5.4.1/tesserocr-2.7.1-cp312-cp312-win32.whl", markers = "sys_platform == 'win32' and platform_machine == 'x86'" },
-    # For Python 3.13 on 64-bit Windows
-    { python = "~3.13", url = "https://github.com/simonflueckiger/tesserocr-windows_build/releases/download/tesserocr-v2.7.1-tesseract-5.4.1/tesserocr-2.7.1-cp313-cp313-win_amd64.whl", markers = "sys_platform == 'win32' and platform_machine == 'AMD64'" },
-    # For Python 3.13 on 32-bit Windows
-    { python = "~3.13", url = "https://github.com/simonflueckiger/tesserocr-windows_build/releases/download/tesserocr-v2.7.1-tesseract-5.4.1/tesserocr-2.7.1-cp313-cp313-win32.whl", markers = "sys_platform == 'win32' and platform_machine == 'x86'" },
+requires-python = ">=3.10,<4.0"
+authors = [{ name = "Zach <#devzach>" }]
+dependencies = [
+    "numpy (>=2.2,<3.0)",
+    "opencv-python (>=4.10,<5.0)",
+    "polars (>=1.19,<2.0)",
+    "pillow (>=11.1,<12.0)",
+    "pytesseract (>=0.3,<1.0)",
+    "pywin32 (>=308,<309)",
+    "tesserocr @ https://github.com/simonflueckiger/tesserocr-windows_build/releases/download/tesserocr-v2.7.1-tesseract-5.4.1/tesserocr-2.7.1-cp310-cp310-win_amd64.whl ; python_version >= '3.10' and python_version < '3.11' and sys_platform == 'win32' and platform_machine == 'AMD64'",
+    "tesserocr @ https://github.com/simonflueckiger/tesserocr-windows_build/releases/download/tesserocr-v2.7.1-tesseract-5.4.1/tesserocr-2.7.1-cp310-cp310-win32.whl ; python_version >= '3.10' and python_version < '3.11' and sys_platform == 'win32' and platform_machine == 'x86'",
+    "tesserocr @ https://github.com/simonflueckiger/tesserocr-windows_build/releases/download/tesserocr-v2.7.1-tesseract-5.4.1/tesserocr-2.7.1-cp311-cp311-win_amd64.whl ; python_version >= '3.11' and python_version < '3.12' and sys_platform == 'win32' and platform_machine == 'AMD64'",
+    "tesserocr @ https://github.com/simonflueckiger/tesserocr-windows_build/releases/download/tesserocr-v2.7.1-tesseract-5.4.1/tesserocr-2.7.1-cp311-cp311-win32.whl ; python_version >= '3.11' and python_version < '3.12' and sys_platform == 'win32' and platform_machine == 'x86'",
+    "tesserocr @ https://github.com/simonflueckiger/tesserocr-windows_build/releases/download/tesserocr-v2.7.1-tesseract-5.4.1/tesserocr-2.7.1-cp312-cp312-win_amd64.whl ; python_version >= '3.12' and python_version < '3.13' and sys_platform == 'win32' and platform_machine == 'AMD64'",
+    "tesserocr @ https://github.com/simonflueckiger/tesserocr-windows_build/releases/download/tesserocr-v2.7.1-tesseract-5.4.1/tesserocr-2.7.1-cp312-cp312-win32.whl ; python_version >= '3.12' and python_version < '3.13' and sys_platform == 'win32' and platform_machine == 'x86'",
+    "tesserocr @ https://github.com/simonflueckiger/tesserocr-windows_build/releases/download/tesserocr-v2.7.1-tesseract-5.4.1/tesserocr-2.7.1-cp313-cp313-win_amd64.whl ; python_version >= '3.13' and python_version < '3.14' and sys_platform == 'win32' and platform_machine == 'AMD64'",
+    "tesserocr @ https://github.com/simonflueckiger/tesserocr-windows_build/releases/download/tesserocr-v2.7.1-tesseract-5.4.1/tesserocr-2.7.1-cp313-cp313-win32.whl ; python_version >= '3.13' and python_version < '3.14' and sys_platform == 'win32' and platform_machine == 'x86'",
+    "typing-extensions (>=4.12,<5.0)"
 ]
-typing-extensions           = "~4.12"
 
+[tool.poetry.group.lint]
+optional = true
 
-[tool.poetry.extras]
-docs    = ["furo", "sphinx", "sphinx-copybutton"]
-lint    = ["mypy", "ruff"]
-stubs   = ["opencv-stubs", "pandas-stubs", "types-Pillow", "types_pywin32"]
-
-[tool.poetry.group.dev.dependencies]
+[tool.poetry.group.lint.dependencies]
 mypy                        = "~1.14"
 opencv-stubs                = "~0.0"
 ruff                        = "~0.8"
@@ -60,6 +42,16 @@ optional = true
 furo                = "~2024.8"
 sphinx              = "~8.1"
 sphinx-copybutton   = "~0.5"
+
+[project.urls]
+homepage = "https://mohanz1.github.io/autocv/"
+repository = "https://github.com/mohanz1/autocv"
+documentation = "https://mohanz1.github.io/autocv/"
+"Bug Tracker" = "https://github.com/mohanz1/autocv/issues"
+
+[tool.poetry]
+version = "1.0"  # base version
+requires-poetry = ">=2.0"
 
 [tool.ruff]
 line-length = 120
@@ -140,7 +132,7 @@ incremental = true
 namespace_packages = true
 no_implicit_optional = true
 pretty = true
-python_version = "3.11"
+python_version = "3.10"
 show_column_numbers = true
 show_error_codes = true
 show_error_context = true
@@ -171,3 +163,7 @@ exclude = [
     "test.py",
     "setup.py"
 ]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
