@@ -32,10 +32,8 @@ docs = [
 ]
 lint = [
     "mypy (>=1.14,<2.0)",
-    "ruff (>=0.8,<1.0)"
-]
-stubs = [
     "opencv-stubs (>=0.0,<1.0)",
+    "ruff (>=0.8,<1.0)",
     "types-Pillow (>=10.2,<11.0)",
     "types_pywin32 (>=308,<309)"
 ]

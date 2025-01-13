@@ -504,7 +504,7 @@ description = "Unofficial stubs for the opencv-python package."
 optional = true
 python-versions = ">=3.7"
 groups = ["main"]
-markers = "extra == \"stubs\""
+markers = "extra == \"lint\""
 files = [
     {file = "opencv_stubs-0.0.10-py3-none-any.whl", hash = "sha256:470f979b7403e1766857fd21922f292a9b84450da90d2e498d63c6b59148d87e"},
     {file = "opencv_stubs-0.0.10.tar.gz", hash = "sha256:d739c5e7b0628838e1a9a7dc88f9eb1b2c0a9df14d5ae879f9615788a9de1436"},
@@ -1163,7 +1163,7 @@ description = "Typing stubs for Pillow"
 optional = true
 python-versions = ">=3.8"
 groups = ["main"]
-markers = "extra == \"stubs\""
+markers = "extra == \"lint\""
 files = [
     {file = "types-Pillow-10.2.0.20240822.tar.gz", hash = "sha256:559fb52a2ef991c326e4a0d20accb3bb63a7ba8d40eb493e0ecb0310ba52f0d3"},
     {file = "types_Pillow-10.2.0.20240822-py3-none-any.whl", hash = "sha256:d9dab025aba07aeb12fd50a6799d4eac52a9603488eca09d7662543983f16c5d"},
@@ -1176,7 +1176,7 @@ description = "Typing stubs for pywin32"
 optional = true
 python-versions = ">=3.8"
 groups = ["main"]
-markers = "extra == \"stubs\""
+markers = "extra == \"lint\""
 files = [
     {file = "types_pywin32-308.0.0.20241221-py3-none-any.whl", hash = "sha256:5bba1e74378cf070a86f810571a1ed3174771a68ccd31a98e5b9504029581fd3"},
     {file = "types_pywin32-308.0.0.20241221.tar.gz", hash = "sha256:af25c6752be827e882083f6cf89a0d84e45837727d70c353883b6b4da34bb3ca"},
@@ -1215,10 +1215,9 @@ zstd = ["zstandard (>=0.18.0)"]
 
 [extras]
 docs = ["furo", "sphinx", "sphinx-copybutton"]
-lint = ["mypy", "ruff"]
-stubs = ["opencv-stubs", "types-Pillow", "types_pywin32"]
+lint = ["mypy", "opencv-stubs", "ruff", "types-Pillow", "types_pywin32"]
 
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<4.0"
-content-hash = "c51086f8e61de152430d47f79e569c1c33cc48ca50ef4a1a6ff4a7f62f1a3e69"
+content-hash = "5290c4c5e0f715a89a5b23f6c1f5e954ee96a4a12cc8aa2d47b00b0bd4bb912b"

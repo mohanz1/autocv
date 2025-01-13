@@ -71,7 +71,7 @@ jobs:
           cache-dependency-path: poetry.lock
 
       - name: Install project
-        run: poetry install --with dev --no-interaction --no-root
+        run: poetry install --with lint --no-interaction --no-root
 
       - name: Run ruff format
         if: always()
