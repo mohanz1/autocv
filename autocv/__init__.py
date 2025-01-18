@@ -27,5 +27,5 @@ if platform.release() in {"10", "11"}:
 else:
     ctypes.windll.user32.SetProcessDPIAware()
 
+from .autocv import AutoCV  # noqa: I001
 from .auto_color_aid import AutoColorAid
-from .autocv import AutoCV
