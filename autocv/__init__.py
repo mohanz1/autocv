@@ -17,7 +17,7 @@ Modules:
 import ctypes
 import platform
 
-__all__ = ("AutoCV",)
+__all__ = ("AutoCV", "AutoColorAid")
 
 if platform.system() != "Windows":
     raise RuntimeError("Only Windows platform is currently supported.")  # noqa: TRY003
@@ -28,3 +28,4 @@ else:
     ctypes.windll.user32.SetProcessDPIAware()
 
 from .autocv import AutoCV
+from .auto_color_aid import AutoColorAid

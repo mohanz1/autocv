@@ -17,3 +17,11 @@ Geometry
    :members:
    :undoc-members:
    :show-inheritance:
+
+
+AutoColorAid
+----------------
+
+.. autoclass:: autocv.auto_color_aid.AutoColorAid
+   :members:
+   :show-inheritance:

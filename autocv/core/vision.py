@@ -11,7 +11,7 @@ __all__ = ("Vision",)
 import io
 import logging
 import pathlib
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 import cv2 as cv
 import numpy as np
@@ -27,6 +27,9 @@ from typing_extensions import Self
 from .decorators import check_valid_hwnd, check_valid_image
 from .image_processing import filter_colors
 from .window_capture import WindowCapture
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 RECTANGLE_SIDES = 4
 GRESCALE_CHANNELS = 3
@@ -967,7 +970,7 @@ class Vision(WindowCapture):
     @check_valid_image
     def draw_points(
         self: Self,
-        points: tuple[tuple[int, int]],
+        points: Sequence[tuple[int, int]],
         color: tuple[int, int, int] = (MAX_COLOR_VALUE, 0, 0),
     ) -> None:
         """Draw points on the image with the specified color.

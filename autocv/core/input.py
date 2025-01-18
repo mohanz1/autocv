@@ -32,9 +32,9 @@ class Input(Vision):
     with the application by incorporating randomness and delays in its actions.
     """
 
-    SPEED: Final[int] = 16
-    GRAVITY: Final[float] = 8 + random() / 2
-    WIND: Final[float] = 4 + random() / 2
+    __SPEED: Final[int] = 16
+    __GRAVITY: Final[float] = 8 + random() / 2
+    __WIND: Final[float] = 4 + random() / 2
 
     def __init__(self: Self, hwnd: int = -1) -> None:
         """Initializes an Input object by setting up the internal state and inheriting from the Vision class.

@@ -13,6 +13,7 @@ dependencies = [
     "pillow (>=11.1,<12.0)",
     "pytesseract (>=0.3,<1.0)",
     "pywin32 (>=308,<309)",
+    "sv-ttk (>=2.6, <3.0)",
     "tesserocr @ https://github.com/simonflueckiger/tesserocr-windows_build/releases/download/tesserocr-v2.7.1-tesseract-5.4.1/tesserocr-2.7.1-cp310-cp310-win_amd64.whl ; python_version >= '3.10' and python_version < '3.11' and sys_platform == 'win32' and platform_machine == 'AMD64'",
     "tesserocr @ https://github.com/simonflueckiger/tesserocr-windows_build/releases/download/tesserocr-v2.7.1-tesseract-5.4.1/tesserocr-2.7.1-cp310-cp310-win32.whl ; python_version >= '3.10' and python_version < '3.11' and sys_platform == 'win32' and platform_machine == 'x86'",
     "tesserocr @ https://github.com/simonflueckiger/tesserocr-windows_build/releases/download/tesserocr-v2.7.1-tesseract-5.4.1/tesserocr-2.7.1-cp311-cp311-win_amd64.whl ; python_version >= '3.11' and python_version < '3.12' and sys_platform == 'win32' and platform_machine == 'AMD64'",
@@ -113,6 +114,7 @@ ignore = [
     "S311",
     "S101",
     "PLR2004",
+    "PLR0914",
     "ANN401",
 ]
 
