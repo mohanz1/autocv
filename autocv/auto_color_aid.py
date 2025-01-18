@@ -1,5 +1,9 @@
 """A module providing a tkinter-based application that allows color selection and analysis from external windows."""
 
+from __future__ import annotations
+
+__all__ = ("AutoColorAid",)
+
 import tkinter as tk
 from pathlib import Path
 from tkinter import ttk
@@ -153,7 +157,7 @@ class AutoColorAid(tk.Tk):
         self.main_window_picker["values"] = windows
         self.main_window_picker.set("Select a main window")
 
-    def _on_main_window_selected(self, _: "tk.Event[ttk.Combobox]") -> None:
+    def _on_main_window_selected(self, _: tk.Event[ttk.Combobox]) -> None:
         """Event handler for when the user picks a main window.
 
         Args:
@@ -178,7 +182,7 @@ class AutoColorAid(tk.Tk):
             self.child_window_picker.set("No child windows found")
             self._has_valid_child = False
 
-    def _on_child_window_selected(self, _: "tk.Event[ttk.Combobox]") -> None:
+    def _on_child_window_selected(self, _: tk.Event[ttk.Combobox]) -> None:
         """Event handler for when the user picks a child window.
 
         Args:
@@ -316,7 +320,7 @@ class AutoColorAid(tk.Tk):
                 if points:
                     self.autocv.draw_points(points)
 
-    def _get_mouse_coords_in_frame(self, event: "tk.Event[ttk.Label]") -> tuple[int | None, int | None]:
+    def _get_mouse_coords_in_frame(self, event: tk.Event[ttk.Label]) -> tuple[int | None, int | None]:
         """Convert the mouse position (event.x, event.y) on image_label into (row, col) in self.autocv.opencv_image.
 
         If invalid or out of bounds, returns (None, None).
@@ -423,7 +427,7 @@ class AutoColorAid(tk.Tk):
         self._pixel_region_photoimage = ImageTk.PhotoImage(img)  # type: ignore[assignment]
         self.pixel_region_label.config(image=self._pixel_region_photoimage, text="")  # type: ignore[call-overload]
 
-    def _on_mouse_move(self, event: "tk.Event[ttk.Label]") -> None:
+    def _on_mouse_move(self, event: tk.Event[ttk.Label]) -> None:
         """Event handler for mouse movement over the main image label.
 
         Updates the _last_mouse_pos with the correct (row, col) from the frame,
@@ -437,7 +441,7 @@ class AutoColorAid(tk.Tk):
             self._last_mouse_pos = (row, col)
             self._show_3x3_region()
 
-    def _on_mouse_click(self, event: "tk.Event[ttk.Label]") -> None:
+    def _on_mouse_click(self, event: tk.Event[ttk.Label]) -> None:
         """Event handler for mouse clicks on the main image label.
 
         Determines the clicked pixel's color (in BGR from the frame), inserts it
