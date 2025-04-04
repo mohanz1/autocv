@@ -1,4 +1,8 @@
-"""This module provides utility functions for searching sequences and iterables."""
+"""Utility functions for searching sequences and iterables.
+
+This module provides helper functions to find the first matching element in sequences and iterables
+based on a predicate or specific attribute criteria.
+"""
 
 from __future__ import annotations
 
@@ -17,12 +21,12 @@ def find_first(predicate: Callable[[T], bool], seq: Sequence[T]) -> T | None:
     """Find the first element in a sequence that satisfies the given predicate.
 
     Args:
-        predicate (Callable[[T], bool]): A function that takes an element of the sequence as input and returns a bool
-            indicating whether the element satisfies some condition.
-        seq (Sequence[T]): A sequence of elements to search.
+        predicate: A function that takes an element of the sequence as input and returns a boolean
+            indicating whether the element satisfies a certain condition.
+        seq: A sequence of elements to search.
 
     Returns:
-        T | None: The first element of the sequence that satisfies the predicate, or None if no such element is found.
+        The first element of the sequence that satisfies the predicate, or None if no such element is found.
     """
     for element in seq:
         if predicate(element):
@@ -31,33 +35,34 @@ def find_first(predicate: Callable[[T], bool], seq: Sequence[T]) -> T | None:
 
 
 def get_first(iterable: Iterable[T], **kwargs: str | float) -> T | None:
-    """Find the first element in an iterable that has the specified attribute(s) with the specified value(s).
+    """Find the first element in an iterable with attributes matching the specified criteria.
+
+    The function accepts keyword arguments where each key is the name of an attribute (using "__" to
+    denote nested attributes) and the corresponding value is the value to match. For example,
+    a keyword argument of foo__bar=10 will match objects where the attribute "foo.bar" equals 10.
 
     Args:
-        iterable (Iterable[T]): An iterable of elements to search.
-        **kwargs (str | float): One or more keyword arguments specifying the name and value of an attribute to match.
-            The attribute name can use "__" to indicate nested attributes, e.g. "foo__bar" would match the "bar"
-            attribute of an object in the "foo" attribute.
+        iterable: An iterable of elements to search.
+        **kwargs: One or more attribute names and values to match against each element.
+            The attribute names can use "__" to indicate nested attributes.
 
     Returns:
-        T | None: The first element of the iterable that has the specified attribute(s) with the specified value(s), or
-            None if no such element is found.
+        The first element in the iterable that has all the specified attributes with matching values,
+        or None if no such element is found.
     """
-    all_ = all
-    attrget = attrgetter
-
-    # Special case the single element call
+    # Special case for a single attribute to match
     if len(kwargs) == 1:
-        k, v = kwargs.popitem()
-        pred = attrget(k.replace("__", "."))
+        key, value = next(iter(kwargs.items()))
+        getter = attrgetter(key.replace("__", "."))
         for elem in iterable:
-            if pred(elem) == v:
+            if getter(elem) == value:
                 return elem
         return None
 
-    converted = [(attrget(attr.replace("__", ".")), value) for attr, value in kwargs.items()]
+    # Prepare a list of (getter, expected_value) tuples for each attribute criterion
+    converters = [(attrgetter(attr.replace("__", ".")), value) for attr, value in kwargs.items()]
 
     for elem in iterable:
-        if all_(pred(elem) == value for pred, value in converted):
+        if all(getter(elem) == expected for getter, expected in converters):
             return elem
     return None

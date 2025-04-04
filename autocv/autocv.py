@@ -1,12 +1,11 @@
 """The `autocv` module provides a comprehensive interface for automation and computer vision tasks.
 
-This module contains the AutoCV class which extends the functionality of the `Input` class from the `core` module. It
-provides high-level methods for screen capture, image processing, color picking, and window manipulation. The module is
-designed to be an all-encompassing tool for building computer vision and GUI automation applications.
+This module contains the AutoCV class, which extends the functionality of the Input class from the core module.
+It provides high-level methods for screen capture, image processing, color picking, and window manipulation,
+making it an all-encompassing tool for building computer vision and GUI automation applications.
 
 Classes:
-- AutoCV: Inherits from Input, providing methods for finding and manipulating windows, capturing and processing images,
-performing OCR, and simulating user input.
+    AutoCV: Inherits from Input, providing methods for window and image manipulation, OCR, and user input simulation.
 """
 
 from __future__ import annotations
@@ -37,27 +36,26 @@ if TYPE_CHECKING:
 
 
 class AutoCV(Input):
-    """AutoCV is a class that provides an interface for interacting with windows and images on a computer screen.
+    """Provides an interface for interacting with windows and images on a computer screen.
 
-    It uses OpenCV and Tesseract OCR to manipulate the images and extract information. This class provides methods for
-    finding windows by title, setting the current window and inner window by title, getting all visible windows, getting
-    all child windows of the current window, setting an image as the current image buffer, refreshing the image of the
-    current window, and extracting text and color information from the current image buffer.
+    AutoCV uses OpenCV and Tesseract OCR to capture and process images, perform color picking,
+    and simulate user input. It offers methods for window manipulation, screen capture,
+    and image analysis.
     """
 
     def __init__(self: Self, hwnd: int = -1) -> None:
-        """Initializes an instance of the AutoCV class with a specified window handle (hwnd).
+        """Initializes an AutoCV instance with the specified window handle.
 
         Args:
             hwnd (int): The window handle to use for the AutoCV instance. Defaults to -1.
         """
         super().__init__(hwnd)
 
-        # Get the Python version info
+        # Determine the appropriate directory based on the current Python version.
         version = sys.version_info
         pyd_dir = Path(__file__).parent / "build" / f"python{version.major}{version.minor}"
 
-        # Check if the directory exists and append it to sys.path
+        # Append the directory to sys.path if it exists, and attempt to import antigcp.
         if pyd_dir.exists():
             sys.path.append(str(pyd_dir))
             try:
@@ -65,50 +63,48 @@ class AutoCV(Input):
 
                 self._antigcp = antigcp
             except ImportError as e:
-                raise ImportError(  # noqa: TRY003
-                    f"Failed to import the module from {pyd_dir}. Ensure the correct .pyd file exists."
-                ) from e
+                raise ImportError from e
         else:
             raise FileNotFoundError
 
+        # Create a dedicated logger for this instance.
         self._instance_logger = logging.getLogger(__name__).getChild(self.__class__.__name__).getChild(str(id(self)))
 
     @check_valid_hwnd
     def get_hwnd(self: Self) -> int:
-        """Gets the handle for the specified window.
+        """Returns the current window handle.
 
         Returns:
-            int: The handle for the specified window.
+            int: The window handle.
         """
         return self.hwnd
 
     @check_valid_hwnd
     def get_window_size(self: Self) -> tuple[int, int]:
-        """Retrieves the size of the window.
+        """Retrieves the width and height of the current window.
 
         Returns:
-            tuple[int, int]: A tuple representing the width and height of the window in pixels.
+            tuple[int, int]: A tuple (width, height) in pixels.
         """
         left, top, right, bottom = win32gui.GetWindowRect(self.hwnd)
-        width = right - left
-        height = bottom - top
-        return width, height
+        return right - left, bottom - top
 
     def antigcp(self: Self) -> bool:
-        """Replaces the `GetCursorPos` function in the `user32.dll` module of the target process.
+        """Patches the target process by replacing its GetCursorPos function.
 
         Returns:
-            bool: True if the function was successfully patched, False otherwise.
+            bool: True if successfully patched; otherwise, False.
         """
         return typing.cast("bool", self._antigcp.antigcp(self._get_topmost_hwnd()))
 
     @check_valid_hwnd
     def image_picker(self: Self) -> tuple[npt.NDArray[np.uint8] | None, tuple[int, int, int, int] | None]:
-        """Sets up an image picker interface and returns the selected image as a NumPy array.
+        """Launches the image picker interface for region selection.
 
         Returns:
-            tuple[npt.NDArray[np.uint8] | None, Rectangle | None]: The selected image as a NumPy array, or None if no
-                image was selected.
+            tuple[npt.NDArray[np.uint8] | None, tuple[int, int, int, int] | None]:
+                A tuple containing the selected image as a NumPy array and its rectangle (x, y, width, height),
+                or (None, None) if no image was selected.
         """
         self._instance_logger.debug("Setting up image picker.")
         root = Tk()
@@ -121,10 +117,12 @@ class AutoCV(Input):
 
     @check_valid_hwnd
     def color_picker(self: Self) -> tuple[tuple[int, int, int], tuple[int, int]] | None:
-        """Sets up a color picker interface and returns the selected color and its location.
+        """Launches the color picker interface for pixel color selection.
 
         Returns:
-            ColorWithPoint: The selected color and its location.
+            tuple[tuple[int, int, int], tuple[int, int]] | None:
+                A tuple containing the selected color (R, G, B) and its screen coordinates,
+                or None if no color was selected.
         """
         self._instance_logger.debug("Setting up color picker.")
         root = Tk()
@@ -136,22 +134,20 @@ class AutoCV(Input):
 
     @check_valid_image
     def image_filter(self: Self) -> FilterSettings:
-        """A class for applying an HSV filter, Canny edge detection, erode, and dilate operations to an image.
+        """Applies image filtering operations to the current backbuffer and returns the filter settings.
 
         Returns:
-            FilterSettings: The resulting FilterSettings object.
+            FilterSettings: The current filter settings after applying the image filter.
         """
+        # Instantiate ImageFilter using the current backbuffer image.
         return ImageFilter(self.opencv_image).filter_settings
 
     @check_valid_image
     def show_backbuffer(self: Self, *, live: bool = False) -> None:
-        """Displays the backbuffer image of the window.
+        """Displays the current backbuffer image in a window.
 
         Args:
-            live (bool): Whether to show a live refreshing view. Defaults to False.
-
-        Returns:
-            None
+            live (bool, optional): If True, shows a live refreshing view. Defaults to False.
         """
         self._instance_logger.debug("Showing backbuffer.")
         cv.imshow("AutoCV Backbuffer", self.opencv_image)

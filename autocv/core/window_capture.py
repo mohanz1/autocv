@@ -1,13 +1,11 @@
-"""This module defines the WindowCapture class which is used for capturing images from specified windows on the desktop.
+"""This module defines the WindowCapture class for capturing images from windows on the desktop.
 
-It includes methods for obtaining window handles and titles, capturing specific windows, and listing child windows.
-The class interacts with the Windows API to manage window handles and capture screens.
+It provides methods for enumerating windows, capturing screenshots, and managing child windows.
 """
 
 from __future__ import annotations
 
 __all__ = ("WindowCapture",)
-
 
 import win32gui
 from typing_extensions import Self
@@ -16,28 +14,31 @@ from autocv.utils import filtering
 
 
 class WindowCapture:
-    """The WindowCapture class is used to capture images of windows on the desktop.
+    """A class for capturing images of windows on the desktop.
 
-    It provides methods for getting information about windows, setting the current window to a new window, and getting a
-    list of child windows for the current window. The class can be initialized with a handle to a specific window to
-    capture or left unspecified to capture the entire screen.
+    This class provides methods to obtain information about windows, capture images from specific windows,
+    and list child windows for the current window. It interacts with the Windows API to manage window handles
+    and capture screens.
+
+    Attributes:
+        hwnd (int): The handle of the current window. Defaults to -1 if not set.
     """
 
     def __init__(self: Self, hwnd: int = -1) -> None:
-        """Initialize the WindowCapture object.
+        """Initializes the WindowCapture instance.
 
         Args:
-            hwnd (int | None): The handle to the window to capture. If None, it will need to be set later.
+            hwnd: The handle to the window to capture. If not provided, the instance will be initialized with -1.
         """
         self.hwnd = hwnd
 
     @staticmethod
     def _window_enumeration_handler(hwnd: int, top_windows: list[tuple[int, str]]) -> None:
-        """Adds window title and ID to the array.
+        """Appends the window handle and title of a visible window to the provided list.
 
         Args:
-            hwnd (int): The window handle.
-            top_windows (list[tuple[int, str]]): The list of top windows with window handle and title.
+            hwnd: The window handle.
+            top_windows: A list to which the tuple (hwnd, title) is appended for each visible window.
         """
         title = win32gui.GetWindowText(hwnd)
         if win32gui.IsWindowVisible(hwnd) and title:
@@ -45,90 +46,84 @@ class WindowCapture:
 
     @staticmethod
     def _child_window_enumeration_handler(hwnd: int, child_windows: list[tuple[int, str]]) -> None:
-        """Adds window class name and ID to the array.
+        """Appends the child window handle and class name to the provided list.
 
         Args:
-            hwnd (int): The window handle.
-            child_windows (list[tuple[int, str]]): The list of child windows with window handle and class name.
+            hwnd: The window handle.
+            child_windows: A list to which the tuple (hwnd, class_name) is appended for each child window.
         """
         class_name = win32gui.GetClassName(hwnd)
         if class_name:
             child_windows.append((hwnd, class_name))
 
     def get_windows_with_hwnds(self: Self) -> list[tuple[int, str]]:
-        """Returns a list of all visible windows with their corresponding IDs.
+        """Retrieves all visible windows with their handles and titles.
 
         Returns:
-            list[tuple[int, str]]: A list of tuples containing the window handle (HWND) and the window title (str).
+            A list of tuples, where each tuple contains a window handle and its corresponding title.
         """
         top_windows: list[tuple[int, str]] = []
         win32gui.EnumWindows(self._window_enumeration_handler, top_windows)
         return top_windows
 
     def get_hwnd_by_title(self: Self, title: str) -> int | None:
-        """Returns the window ID of the first visible window whose title contains the specified string.
+        """Finds the first visible window whose title contains the specified string.
 
         Args:
-            title (str): A string to search for in the window titles.
+            title: A substring to search for within window titles.
 
         Returns:
-            int | None: The window ID of the first visible window whose title contains the specified string, or None if
-                no matching window is found.
+            The window handle of the first matching window, or None if no match is found.
         """
         top_windows = self.get_windows_with_hwnds()
-        title = title.casefold()
-        first = filtering.find_first(lambda x: title in x[1].casefold(), top_windows)
-        return first[0] if first else None
+        title_lower = title.casefold()
+        found = filtering.find_first(lambda x: title_lower in x[1].casefold(), top_windows)
+        return found[0] if found else None
 
     def get_child_windows(self: Self) -> list[tuple[int, str]]:
-        """Returns a list of all child windows for the current window.
+        """Retrieves all child windows for the current window.
 
         Returns:
-            list[tuple[int, str]]: A list of tuples, each containing a child window's ID and class name.
+            A list of tuples, where each tuple contains a child window handle and its class name.
         """
         child_windows: list[tuple[int, str]] = []
         win32gui.EnumChildWindows(self.hwnd, self._child_window_enumeration_handler, child_windows)
         return child_windows
 
     def set_hwnd_by_title(self: Self, title: str, *, case_insensitive: bool = False) -> bool:
-        """Sets the current window to the first visible window whose title contains the specified string.
+        """Sets the current window handle based on a window title substring.
 
         Args:
-            title (str): A string to search for in the window titles.
-            case_insensitive (bool): Whether to use case sensitive when searching.
+            title: A substring to search for within window titles.
+            case_insensitive: If True, the search will be case-insensitive. Defaults to False.
 
         Returns:
-            bool: True if a matching window is found and the current window is set to it, False otherwise.
+            True if a matching window was found and the current window handle was updated; False otherwise.
         """
         top_windows = self.get_windows_with_hwnds()
-
         if case_insensitive:
-            title = title.casefold()
-
-        first = filtering.find_first(
-            lambda x: title in x[1].casefold() if case_insensitive else title in x[1],
-            top_windows,
-        )
-        if first:
-            self.hwnd = first[0]
+            title_lower = title.casefold()
+            found = filtering.find_first(lambda x: title_lower in x[1].casefold(), top_windows)
+        else:
+            found = filtering.find_first(lambda x: title in x[1], top_windows)
+        if found:
+            self.hwnd = found[0]
             return True
         return False
 
     def set_inner_hwnd_by_title(self: Self, class_name: str) -> bool:
-        """Sets the current window to the first child window whose class name contains the specified string.
+        """Sets the current window handle based on a child window's class name substring.
 
         Args:
-            class_name (str): A string representing the class name to search for in child windows.
+            class_name: A substring to search for within child window class names.
 
         Returns:
-            bool: True if a child window was found and the current window was set to it. False otherwise.
+            True if a matching child window was found and the current window handle was updated; False otherwise.
         """
-        child_windows: list[tuple[int, str]] = []
-        win32gui.EnumChildWindows(self.hwnd, self._child_window_enumeration_handler, child_windows)
-
-        class_name = class_name.casefold()
-        first = filtering.find_first(lambda x: class_name in x[1].casefold(), child_windows)
-        if first:
-            self.hwnd = first[0]
+        child_windows = self.get_child_windows()
+        class_name_lower = class_name.casefold()
+        found = filtering.find_first(lambda x: class_name_lower in x[1].casefold(), child_windows)
+        if found:
+            self.hwnd = found[0]
             return True
         return False

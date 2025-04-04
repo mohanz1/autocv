@@ -1,4 +1,8 @@
-"""This module provides utility functions for working with shapes."""
+"""Utility functions for working with shapes.
+
+This module provides helper functions to get the center of a shape, obtain a random point within a shape,
+and sort shapes based on various criteria.
+"""
 
 from __future__ import annotations
 
@@ -7,40 +11,35 @@ __all__ = ("get_center", "get_random_point", "sort_shapes")
 from typing import Literal
 
 import cv2
-import cv2 as cv
 import numpy as np
 import numpy.typing as npt
 
 
 def get_center(shape: tuple[int, int, int, int] | npt.NDArray[np.uintp]) -> tuple[int, int]:
-    """Returns the center (x, y) of a shape.
+    """Return the center (x, y) of a shape.
 
-    - If `shape` is a rect (x, y, width, height), the function returns:
-        (x + width // 2, y + height // 2)
+    If the shape is a rectangle (x, y, width, height), returns:
+        (x + width // 2, y + height // 2).
 
-    - If `shape` is a contour (np.ndarray of points), the function returns
-      the centroid calculated by image moments (M10 / M00, M01 / M00).
+    If the shape is a contour (a NumPy array of points), returns the centroid computed
+    from image moments (m10/m00, m01/m00).
 
     Args:
-        shape: Either
-            - A tuple of four integers (x, y, w, h).
-            - A NumPy array (contour) of shape (N, 2) or (N, 1, 2).
+        shape: Either a tuple of four integers (x, y, w, h) representing a rectangle,
+            or a NumPy array representing a contour with shape (N, 2) or (N, 1, 2).
 
     Returns:
         A tuple (center_x, center_y) as integers.
 
     Raises:
-        ValueError: If the area (M00) of the contour is zero or
-                    if the shape is not recognized as a tuple of length 4
-                    or a valid contour.
+        ValueError: If the contour area (m00) is zero.
     """
     if isinstance(shape, np.ndarray):
-        # Convert contour to the correct shape if needed (N, 2)
-        # Many OpenCV contours come in shape (N, 1, 2), so let's reshape if needed
+        # Reshape contour to (N, 2) if necessary (e.g., when shape is (N, 1, 2))
         contour = shape.reshape(-1, 2) if shape.ndim == 3 and shape.shape[1] == 1 else shape
 
-        # Calculate centroid via moments
-        moments = cv.moments(contour)
+        # Calculate centroid using image moments
+        moments = cv2.moments(contour)
         if moments["m00"] == 0:
             raise ValueError
         cx = int(moments["m10"] / moments["m00"])
@@ -52,39 +51,36 @@ def get_center(shape: tuple[int, int, int, int] | npt.NDArray[np.uintp]) -> tupl
 
 
 def get_random_point(shape: tuple[int, int, int, int] | npt.NDArray[np.uintp]) -> tuple[int, int]:
-    """Returns a random point (x, y) from a shape.
+    """Return a random point (x, y) within a shape.
 
-    - If `shape` is a rect (x, y, width, height), it returns a random point
-      within that bounding box.
-
-    - If `shape` is a contour (np.ndarray of points), it returns a random
-      point chosen from the contour points themselves.
+    If the shape is a rectangle (x, y, width, height), returns a random point within that rectangle.
+    If the shape is a contour (a NumPy array of points), returns a random point that lies inside the contour.
 
     Args:
-        shape: Either
-            - A tuple of four integers (x, y, w, h).
-            - A NumPy array (contour) of shape (N, 2) or (N, 1, 2).
+        shape: Either a tuple of four integers (x, y, w, h) representing a rectangle,
+            or a NumPy array representing a contour with shape (N, 2) or (N, 1, 2).
 
     Returns:
-        A tuple (rand_x, rand_y) as integers.
+        A tuple (rand_x, rand_y) as integers representing a random point inside the shape.
 
     Raises:
-        ValueError: If the contour array is empty or invalid,
-                    or if the shape cannot be unpacked into (x, y, w, h).
+        ValueError: If the contour is empty or invalid, or if the shape cannot be unpacked into (x, y, w, h).
     """
     if isinstance(shape, np.ndarray):
-        # Get bounding box
-        x, y, w, h = cv2.boundingRect(shape.astype(np.int32))
+        # Convert contour to int32 and get its bounding rectangle
+        int_shape = shape.astype(np.int32)
+        x, y, w, h = cv2.boundingRect(int_shape)
 
         while True:
-            # Generate random candidate in bounding box
+            # Generate a random candidate point within the bounding rectangle
             rx = np.random.randint(x, x + w)
             ry = np.random.randint(y, y + h)
 
-            if cv2.pointPolygonTest(shape.astype(np.int32), (rx, ry), measureDist=False) > 0:
+            # Check if the point is inside the contour
+            if cv2.pointPolygonTest(int_shape, (rx, ry), measureDist=False) > 0:
                 return rx, ry
 
-    # Rect case
+    # Rectangle case
     x, y, w, h = shape
     rand_x = np.random.randint(x, x + w)
     rand_y = np.random.randint(y, y + h)
@@ -103,73 +99,49 @@ def sort_shapes(
         "bottom_top",
     ],
 ) -> list[tuple[int, int, int, int] | npt.NDArray[np.uintp]]:
-    """Sorts a list of shapes according to the specified criterion.
+    """Sort shapes based on the specified criterion.
 
-    The shapes can be either rectangles (x, y, w, h) or contours (NumPy arrays of points).
-    The sorting is based on the center of each shape, obtained via ``get_center``.
+    Shapes can be either rectangles (x, y, w, h) or contours (NumPy arrays of points).
+    Sorting is performed based on the center of each shape, computed using `get_center`.
 
-    The available sorting methods are:
-
-    - ``inner_outer``: Sort by ascending distance from the window center.
-    - ``outer_inner``: Sort by descending distance from the window center.
-    - ``left_right``:  Sort by ascending x-coordinate of the shape center.
-    - ``right_left``:  Sort by descending x-coordinate of the shape center.
-    - ``top_bottom``:  Sort by ascending y-coordinate of the shape center.
-    - ``bottom_top``:  Sort by descending y-coordinate of the shape center.
+    Sorting options:
+        - "inner_outer": Sort in ascending order of distance from the window center.
+        - "outer_inner": Sort in descending order of distance from the window center.
+        - "left_right":  Sort in ascending order of the x-coordinate of the shape center.
+        - "right_left":  Sort in descending order of the x-coordinate of the shape center.
+        - "top_bottom":  Sort in ascending order of the y-coordinate of the shape center.
+        - "bottom_top":  Sort in descending order of the y-coordinate of the shape center.
 
     Args:
-        window_size (tuple[int, int]):
-            The (width, height) of the window. Used to determine the window's center
-            for distance-based sorting.
-        shapes (list[tuple[int, int, int, int] | numpy.typing.NDArray[numpy.uintp]]):
-            A list of shapes, where each shape is either:
-             - A tuple of four integers (x, y, w, h).
-             - A NumPy array (contour) of shape (N, 2) or (N, 1, 2).
-        sort_by (Literal["inner_outer", "outer_inner", "left_right", "right_left", "top_bottom", "bottom_top"]):
-            The sorting criterion.
+        window_size: A tuple (width, height) representing the size of the window. Used to compute the window center.
+        shapes: A list of shapes, each of which is either a tuple (x, y, w, h) or a NumPy array representing a contour.
+        sort_by: The sorting criterion. Must be one of "inner_outer", "outer_inner", "left_right",
+            "right_left", "top_bottom", or "bottom_top".
 
     Returns:
-        list[tuple[int, int, int, int] | numpy.typing.NDArray[numpy.uintp]]:
-            The sorted list of shapes.
+        A sorted list of shapes according to the specified criterion.
 
     Raises:
-        ValueError: If any of the shapes cannot be recognized or has an area of zero
-            when calculating the center (e.g., for empty contours).
+        ValueError: If any shape is unrecognized or has an area of zero when calculating the center.
     """
-    shapes_sorted = shapes
-    # Helper to compute distance from window center.
 
     def distance_from_window_center(s: tuple[int, int, int, int] | npt.NDArray[np.uintp]) -> float:
+        """Compute the squared distance from the shape's center to the window center."""
         center_x, center_y = get_center(s)
-        # Window center:
         window_center_x = window_size[0] // 2
         window_center_y = window_size[1] // 2
         return (center_x - window_center_x) ** 2 + (center_y - window_center_y) ** 2
 
-    # Decide which key function to use for sorting, and whether to reverse.
     if sort_by in {"inner_outer", "outer_inner"}:
-        # Sort by distance from window center.
         reverse_sort = sort_by == "outer_inner"
-        shapes_sorted = sorted(
-            shapes,
-            key=distance_from_window_center,
-            reverse=reverse_sort,
-        )
+        shapes_sorted = sorted(shapes, key=distance_from_window_center, reverse=reverse_sort)
     elif sort_by in {"left_right", "right_left"}:
-        # Sort by center x-coordinate.
         reverse_sort = sort_by == "right_left"
-        shapes_sorted = sorted(
-            shapes,
-            key=lambda s: get_center(s)[0],
-            reverse=reverse_sort,
-        )
+        shapes_sorted = sorted(shapes, key=lambda s: get_center(s)[0], reverse=reverse_sort)
     elif sort_by in {"top_bottom", "bottom_top"}:
-        # Sort by center y-coordinate.
         reverse_sort = sort_by == "bottom_top"
-        shapes_sorted = sorted(
-            shapes,
-            key=lambda s: get_center(s)[1],
-            reverse=reverse_sort,
-        )
+        shapes_sorted = sorted(shapes, key=lambda s: get_center(s)[1], reverse=reverse_sort)
+    else:
+        shapes_sorted = shapes
 
     return shapes_sorted

@@ -1,7 +1,7 @@
 """The image_processing module provides utility functions for processing images.
 
-This includes filtering colors within specific tolerance ranges. It primarily supports the operations related to color
-manipulation and filtering in OpenCV images.
+This includes filtering colors within specific tolerance ranges. It primarily supports operations
+related to color manipulation and filtering in OpenCV images.
 """
 
 from __future__ import annotations
@@ -25,57 +25,69 @@ def filter_colors(
     *,
     keep_original_colors: bool = False,
 ) -> npt.NDArray[np.uint8]:
-    """Filter out all colors from the image that are not in the specified list of colors with a given tolerance.
+    """Filters an OpenCV image to retain only the specified colors within a given tolerance.
+
+    This function creates a mask by checking if each pixel's color is within the tolerance range
+    of any of the target colors (provided as RGB tuples). Optionally, it returns a filtered version
+    of the original image in which all non-matching pixels are set to black.
 
     Args:
-        opencv_image (npt.NDArray[np.uint8]): The image to filter.
-        colors (Union[Sequence[int, int, int], Sequence[Sequence[int, int, int]]]): A sequence of RGB tuples or a
-            sequence of sequences containing RGB tuples.
-        tolerance (int): The color tolerance in the range of 0-255.
-        keep_original_colors (bool): If True, the returned value will be a copy of the input image where all
-            non-matching pixels are set to black.
+        opencv_image (npt.NDArray[np.uint8]): The input image in BGR format.
+        colors (tuple[int, int, int] | list[tuple[int, int, int]]):
+            A single RGB tuple or a list of RGB tuples representing the target colors (specified in RGB order).
+        tolerance (int, optional): The allowed deviation (0-255) for each color channel. Defaults to 0.
+        keep_original_colors (bool, optional): If True, returns an image with non-matching pixels set to black.
+            If False, returns a binary mask. Defaults to False.
 
     Returns:
-        npt.NDArray[np.uint8]: The mask of the filtered image.
+        npt.NDArray[np.uint8]: The filtered image if `keep_original_colors` is True;
+            otherwise, a binary mask where matching pixels have the maximum value (255).
     """
-    # Convert color_values to numpy array
+    # Convert the input colors to a NumPy array of shape (N, 3)
     color_values = np.array(colors, dtype=np.int16)
-
-    # If color_values has only one dimension, add another dimension to make it 2D
     if color_values.ndim == 1:
         color_values = color_values[np.newaxis, :]
 
     logger.debug(
-        "Filtering with %s color(s) with tolerance=%s and keep_original_colors=%s.",
+        "Filtering with %d color(s) with tolerance=%d and keep_original_colors=%s.",
         len(color_values),
         tolerance,
         keep_original_colors,
     )
 
-    # Convert color_values from RGB to BGR order
+    # Convert colors from RGB to BGR order for OpenCV processing
     color_values = color_values[..., ::-1]
 
-    # Create lower and upper bounds for each color
+    # Create lower and upper bounds for each target color
     lower_bounds = np.clip(color_values - tolerance, 0, 255)
     upper_bounds = np.clip(color_values + tolerance, 0, 255)
 
-    # Create a mask for each color and combine them using bitwise OR
-    mask = cv.inRange(opencv_image, lower_bounds[0], upper_bounds[0])
+    # Build the mask using the first color
+    mask = cv.inRange(opencv_image, lower_bounds[0].astype(np.uint8), upper_bounds[0].astype(np.uint8))
     logger.debug(
-        "Filtering color 1/%s with lower bound %s and upper bound %s.",
+        "Filtering color 1 of %d with lower bound %s and upper bound %s.",
         len(color_values),
         lower_bounds[0],
         upper_bounds[0],
     )
+
+    # Combine masks for remaining colors using bitwise OR
     for i, (lb, ub) in enumerate(zip(lower_bounds[1:], upper_bounds[1:], strict=False), start=2):
-        logger.debug("Filtering color %s with lower bound %s and upper bound %s.", i / len(color_values), lb, ub)
-        color_mask = cv.inRange(opencv_image, lb, ub)
+        logger.debug(
+            "Filtering color %d of %d with lower bound %s and upper bound %s.",
+            i,
+            len(color_values),
+            lb,
+            ub,
+        )
+        color_mask = cv.inRange(opencv_image, lb.astype(np.uint8), ub.astype(np.uint8))  # type: ignore[call-overload]
         mask = cv.bitwise_or(mask, color_mask)
 
-    # If keep_original_colors is True, create a copy of the image and set all non-matching pixels to black
+    # Optionally return a filtered image preserving original colors
     if keep_original_colors:
-        logger.debug("Reverting to original colors.")
+        logger.debug("Returning filtered image with original colors preserved for matching pixels.")
         filtered_image = np.zeros_like(opencv_image)
         filtered_image[mask > 0] = opencv_image[mask > 0]
         return filtered_image
+
     return cast("npt.NDArray[np.uint8]", mask)
