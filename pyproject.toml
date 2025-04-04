@@ -4,7 +4,7 @@ dynamic = [ "version" ]
 description = "Computer vision library."
 license = { text = "MIT" }
 readme = "README.md"
-requires-python = ">=3.10,<4.0"
+requires-python = ">=3.11,<4.0"
 authors = [{ name = "Zach <#devzach>" }]
 dependencies = [
     "numpy (>=2.2,<3.0)",
@@ -29,11 +29,11 @@ dependencies = [
 optional = true
 
 [tool.poetry.group.lint.dependencies]
-mypy                        = "~1.14"
+mypy                        = "~1.15"
 opencv-stubs                = "~0.0"
-ruff                        = "~0.8"
+ruff                        = "~0.11"
 types-Pillow                = "~10.2"
-types_pywin32               = "~308"
+types_pywin32               = "~310"
 
 
 [tool.poetry.group.docs]
@@ -41,7 +41,7 @@ optional = true
 
 [tool.poetry.group.docs.dependencies]
 furo                = "~2024.8"
-sphinx              = "~8.1"
+sphinx              = "~8.2"
 sphinx-copybutton   = "~0.5"
 
 [project.urls]

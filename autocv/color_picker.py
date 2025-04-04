@@ -65,7 +65,7 @@ class ColorPicker:
         self.result: tuple[tuple[int, int, int], tuple[int, int]] | None = None
 
         # Get the initial state of the left mouse button.
-        self.prev_state = win32api.GetKeyState(win32con.VK_LBUTTON)  # type: ignore[no-untyped-call]
+        self.prev_state = win32api.GetKeyState(win32con.VK_LBUTTON)
 
         # Create a Vision instance for screen capture.
         self.vision = Vision(self.hwnd)
@@ -151,7 +151,7 @@ class ColorPicker:
         self.draw_center_rectangle(cropped_image)
 
         # Check if the left mouse button state has changed (indicating a click).
-        curr_state = win32api.GetKeyState(win32con.VK_LBUTTON)  # type: ignore[no-untyped-call]
+        curr_state = win32api.GetKeyState(win32con.VK_LBUTTON)
         if self.prev_state != curr_state:
             if curr_state >= 0:
                 self.handle_button_press(x, y)

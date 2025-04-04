@@ -334,7 +334,7 @@ class Input(Vision):
         Returns:
             True if the key has been pressed since the last call; otherwise, False.
         """
-        return bool(win32api.GetAsyncKeyState(vk_code))  # type: ignore[no-untyped-call]
+        return bool(win32api.GetAsyncKeyState(vk_code))
 
     @check_valid_hwnd
     def send_keys(self: Self, characters: str) -> None:
