@@ -13,6 +13,7 @@ Note:
 Modules:
     autocv: Contains the AutoCV class, providing high-level methods for automation and computer vision tasks.
 """
+
 from __future__ import annotations
 
 import ctypes

@@ -61,7 +61,6 @@ dev = [
 ]
 docs = [
     { name = "furo" },
-    { name = "sphinx", version = "8.2.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "sphinx-copybutton" },
 ]
 
@@ -93,7 +92,6 @@ dev = [
 ]
 docs = [
     { name = "furo", specifier = ">=2024.8,<2025" },
-    { name = "sphinx", marker = "python_full_version >= '3.11'", specifier = ">=8.2,<9" },
     { name = "sphinx-copybutton", specifier = ">=0.5,<1" },
 ]
 

@@ -59,7 +59,7 @@ class AutoCV(Input):
         if pyd_dir.exists():
             sys.path.append(str(pyd_dir))
             try:
-                import antigcp  # type: ignore[import-not-found]
+                import antigcp
 
                 self._antigcp = antigcp
             except ImportError as e:

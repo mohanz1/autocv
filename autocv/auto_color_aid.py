@@ -338,7 +338,7 @@ class AutoColorAid(tk.Tk):
         if x - pixels < 0 or y - pixels < 0 or x + pixels >= w or y + pixels >= h:
             cropped_image = np.ones((3, 3, 3), dtype=np.uint8) * 217
         else:
-            cropped_image = np.array(  # type: ignore[assignment]
+            cropped_image = np.array(
                 frame[y - pixels : y + pixels + 1, x - pixels : x + pixels + 1, ::-1],
                 dtype=np.uint8,
             )

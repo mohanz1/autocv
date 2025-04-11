@@ -45,14 +45,13 @@ dependencies = [
 ]
 
 [dependency-groups]
-stubs = [
+dev = [
     "opencv-stubs >=0.0,<1",
     "types-Pillow >=10.2,<11",
     "types_pywin32 >=310,<311",
 ]
 docs = [
     "furo >=2024.8,<2025",
-    "sphinx >=8.2,<9; python_version >= '3.11'",
     "sphinx-copybutton >=0.5,<1",
 ]
 

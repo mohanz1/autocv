@@ -21,7 +21,7 @@ import win32con
 import win32gui
 import win32ui
 from PIL import Image
-from tesserocr import OEM, PSM, PyTessBaseAPI  # type: ignore[import-untyped]
+from tesserocr import OEM, PSM, PyTessBaseAPI
 from typing_extensions import Self
 
 from .decorators import check_valid_hwnd, check_valid_image
@@ -227,29 +227,35 @@ class Vision(WindowCapture):
 
         # Filter out invalid or low-confidence text.
         text = text.filter((pl.col("conf") > 0) & (pl.col("conf") < 100))
-        text = text.with_columns([
-            pl.col("text").cast(pl.Utf8),
-            (pl.col("conf") / 100).alias("conf"),
-        ])
+        text = text.with_columns(
+            [
+                pl.col("text").cast(pl.Utf8),
+                (pl.col("conf") / 100).alias("conf"),
+            ]
+        )
         text = text.filter(pl.col("text").str.strip_chars().str.len_chars() > 0)
 
-        grouped_text = text.group_by("block_num").agg([
-            pl.col("word_num").max().alias("word_num"),
-            pl.col("left").min().alias("left"),
-            pl.col("top").min().alias("top"),
-            pl.col("height").max().alias("height"),
-            pl.col("conf").max().alias("confidence"),
-            pl.col("text").str.concat(" ").alias("text"),
-            ((pl.col("left") + pl.col("width")).max() - pl.col("left").min()).alias("width"),
-        ])
+        grouped_text = text.group_by("block_num").agg(
+            [
+                pl.col("word_num").max().alias("word_num"),
+                pl.col("left").min().alias("left"),
+                pl.col("top").min().alias("top"),
+                pl.col("height").max().alias("height"),
+                pl.col("conf").max().alias("confidence"),
+                pl.col("text").str.concat(" ").alias("text"),
+                ((pl.col("left") + pl.col("width")).max() - pl.col("left").min()).alias("width"),
+            ]
+        )
 
         sorted_text = grouped_text.sort("confidence", descending=True)
-        return sorted_text.with_columns([
-            (pl.col("top") // 2).alias("top"),
-            (pl.col("left") // 2).alias("left"),
-            (pl.col("height") // 2).alias("height"),
-            (pl.col("width") // 2).alias("width"),
-        ])
+        return sorted_text.with_columns(
+            [
+                (pl.col("top") // 2).alias("top"),
+                (pl.col("left") // 2).alias("left"),
+                (pl.col("height") // 2).alias("height"),
+                (pl.col("width") // 2).alias("width"),
+            ]
+        )
 
     def _crop_image(
         self: Self,
@@ -299,7 +305,7 @@ class Vision(WindowCapture):
             acceptable_text = acceptable_text.with_columns(pl.col("left") + rect[0], pl.col("top") + rect[1])
         df = acceptable_text.with_columns(pl.concat_list(["left", "top", "width", "height"]).alias("rect"))
         df = df.select(["text", "rect", "confidence"])
-        return df.collect().to_dicts()
+        return cast(list[dict[str, str | int | float | list[int]]], df.collect().to_dicts())
 
     @check_valid_image
     def get_color(self: Self, point: tuple[int, int]) -> tuple[int, int, int]:
@@ -447,7 +453,7 @@ class Vision(WindowCapture):
         sorted_unique = unique[sorted_indices]
         sorted_counts = counts[sorted_indices]
         return [
-            ((int(bgr[2]), int(bgr[1]), int(bgr[0])), int(c))  # type: ignore[index]
+            ((int(bgr[2]), int(bgr[1]), int(bgr[0])), int(c))
             for bgr, c in zip(sorted_unique, sorted_counts, strict=False)
         ]
 
@@ -554,16 +560,20 @@ class Vision(WindowCapture):
         Returns:
             A tuple containing the lower and upper bounds as NumPy arrays.
         """
-        lower_bound = np.array([
-            max(dominant_color[0] - tolerance, 0),
-            max(dominant_color[1] - tolerance, 0),
-            max(dominant_color[2] - tolerance, 0),
-        ])
-        upper_bound = np.array([
-            min(dominant_color[0] + tolerance, 255),
-            min(dominant_color[1] + tolerance, 255),
-            min(dominant_color[2] + tolerance, 255),
-        ])
+        lower_bound = np.array(
+            [
+                max(dominant_color[0] - tolerance, 0),
+                max(dominant_color[1] - tolerance, 0),
+                max(dominant_color[2] - tolerance, 0),
+            ]
+        )
+        upper_bound = np.array(
+            [
+                min(dominant_color[0] + tolerance, 255),
+                min(dominant_color[1] + tolerance, 255),
+                min(dominant_color[2] + tolerance, 255),
+            ]
+        )
         return lower_bound, upper_bound
 
     def _get_pixel_counts(
@@ -787,7 +797,7 @@ class Vision(WindowCapture):
             A list of grouped rectangles.
         """
         rects = np.repeat(np.array(rects), 2, axis=0)
-        rects, _ = cv.groupRectangles(rects, groupThreshold=1, eps=0.1)  # type: ignore[arg-type]
+        rects, _ = cv.groupRectangles(rects, groupThreshold=1, eps=0.1)
         return cast("list[tuple[int, int, int, int]]", rects)
 
     @check_valid_image
@@ -822,7 +832,7 @@ class Vision(WindowCapture):
                 for c in contours
                 if vertices == len(cv.approxPolyDP(c, 0.01 * cv.arcLength(c, closed=True), closed=True))
             ]
-        return cast("list[npt.NDArray[np.uintp]]", contours)
+        return contours
 
     @check_valid_image
     def draw_points(
@@ -851,7 +861,7 @@ class Vision(WindowCapture):
             contours: The contours to draw.
             color: The drawing color as an RGB tuple. Defaults to red.
         """
-        cv.drawContours(self.opencv_image, contours, -1, color[::-1], 2)  # type: ignore[arg-type]
+        cv.drawContours(self.opencv_image, contours, -1, color[::-1], 2)
 
     @check_valid_image
     def draw_circle(
