@@ -57,11 +57,11 @@ jobs:
 
       - name: Run ruff format
         if: always()
-        run: uvx ruff format --preview --check .
+        run: uvx ruff format --check .
 
       - name: Run ruff check
         if: always()
-        run: uvx ruff check --preview --output-format=github .
+        run: uvx ruff check --output-format=github .
 
       - name: Run mypy
         if: always()
@@ -86,7 +86,8 @@ jobs:
       - name: Sphinx build
         run: |
           cd docs
-          uvx --from sphinx sphinx-build -b html -j auto -a -T -W --keep-going . _build/html
+          uv tool install sphinx
+          uv tool run sphinx-build -b html -j auto -a -T -W --keep-going . _build/html
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
