@@ -80,9 +80,11 @@ jobs:
           enable-cache: true
           python-version: "3.13"
 
+      - name: Install dependencies
+        run: uv sync --group docs
+
       - name: Sphinx build
         run: |
-          uv sync --group docs
           cd docs
           uvx --from sphinx sphinx-build -b html -j auto -a -T -W --keep-going . _build/html
 
