@@ -12,6 +12,7 @@ Modules:
 - Vision: Class for performing image processing and optical character recognition.
 - WindowCapture: Class for capturing window images.
 """
+from __future__ import annotations
 
 __all__ = ("Input", "Vision", "WindowCapture", "check_valid_hwnd", "check_valid_image", "filter_colors")
 

@@ -82,7 +82,7 @@ class ImagePicker:
         self.master_screen.geometry(f"{width + 2}x{height + 2}+{x1}+{y1}")
         self.master_screen.attributes("-alpha", 0.3)
         self.master_screen.lift()
-        self.master_screen.attributes("-topmost", True)  # noqa: FBT003
+        self.master_screen.attributes("-topmost", True)
         self.master_screen.overrideredirect(boolean=True)
         self.master_screen.focus_set()
 

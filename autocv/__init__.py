@@ -13,6 +13,7 @@ Note:
 Modules:
     autocv: Contains the AutoCV class, providing high-level methods for automation and computer vision tasks.
 """
+from __future__ import annotations
 
 import ctypes
 import platform
@@ -20,7 +21,7 @@ import platform
 __all__ = ("AutoCV", "AutoColorAid")
 
 if platform.system() != "Windows":
-    raise RuntimeError("Only Windows platform is currently supported.")  # noqa: TRY003
+    raise RuntimeError("Only Windows platform is currently supported.")
 
 if platform.release() in {"10", "11"}:
     ctypes.windll.shcore.SetProcessDpiAwareness(2)

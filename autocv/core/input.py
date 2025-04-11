@@ -110,7 +110,7 @@ class Input(Vision):
             ghost_mouse=ghost_mouse,
         )
 
-    def _wind_mouse(  # noqa: PLR0913, PLR0917
+    def _wind_mouse(
         self: Self,
         xs: float,
         ys: float,

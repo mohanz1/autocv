@@ -112,7 +112,7 @@ class Vision(WindowCapture):
         bmp_dc.BitBlt((0, 0), (width, height), mem_dc, (0, 0), win32con.SRCCOPY)
 
         # Convert raw data into a format that OpenCV can read.
-        signed_ints_array = bitmap.GetBitmapBits(True)  # noqa: FBT003
+        signed_ints_array = bitmap.GetBitmapBits(True)
         img = np.frombuffer(signed_ints_array, dtype="uint8")
         img.shape = (height, width, 4)
 

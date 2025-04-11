@@ -1,48 +1,60 @@
+[build-system]
+requires = ["hatchling >= 1.27"]
+build-backend = "hatchling.build"
+
 [project]
 name = "autocv"
-dynamic = [ "version" ]
+version = "1.0"
 description = "Computer vision library."
-license = { text = "MIT" }
-readme = "README.md"
-requires-python = ">=3.11,<4.0"
 authors = [{ name = "Zach <#devzach>" }]
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: Microsoft :: Windows :: Windows 10",
+    "Operating System :: Microsoft :: Windows :: Windows 11",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
 dependencies = [
-    "numpy (>=2.2,<3.0)",
-    "opencv-python (>=4.10,<5.0)",
-    "polars (>=1.19,<2.0)",
-    "pillow (>=11.1,<12.0)",
-    "pytesseract (>=0.3,<1.0)",
-    "pywin32 (>=308,<309)",
-    "sv-ttk (>=2.6, <3.0)",
-    "tesserocr @ https://github.com/simonflueckiger/tesserocr-windows_build/releases/download/tesserocr-v2.7.1-tesseract-5.4.1/tesserocr-2.7.1-cp310-cp310-win_amd64.whl ; python_version >= '3.10' and python_version < '3.11' and sys_platform == 'win32' and platform_machine == 'AMD64'",
-    "tesserocr @ https://github.com/simonflueckiger/tesserocr-windows_build/releases/download/tesserocr-v2.7.1-tesseract-5.4.1/tesserocr-2.7.1-cp310-cp310-win32.whl ; python_version >= '3.10' and python_version < '3.11' and sys_platform == 'win32' and platform_machine == 'x86'",
-    "tesserocr @ https://github.com/simonflueckiger/tesserocr-windows_build/releases/download/tesserocr-v2.7.1-tesseract-5.4.1/tesserocr-2.7.1-cp311-cp311-win_amd64.whl ; python_version >= '3.11' and python_version < '3.12' and sys_platform == 'win32' and platform_machine == 'AMD64'",
-    "tesserocr @ https://github.com/simonflueckiger/tesserocr-windows_build/releases/download/tesserocr-v2.7.1-tesseract-5.4.1/tesserocr-2.7.1-cp311-cp311-win32.whl ; python_version >= '3.11' and python_version < '3.12' and sys_platform == 'win32' and platform_machine == 'x86'",
-    "tesserocr @ https://github.com/simonflueckiger/tesserocr-windows_build/releases/download/tesserocr-v2.7.1-tesseract-5.4.1/tesserocr-2.7.1-cp312-cp312-win_amd64.whl ; python_version >= '3.12' and python_version < '3.13' and sys_platform == 'win32' and platform_machine == 'AMD64'",
-    "tesserocr @ https://github.com/simonflueckiger/tesserocr-windows_build/releases/download/tesserocr-v2.7.1-tesseract-5.4.1/tesserocr-2.7.1-cp312-cp312-win32.whl ; python_version >= '3.12' and python_version < '3.13' and sys_platform == 'win32' and platform_machine == 'x86'",
-    "tesserocr @ https://github.com/simonflueckiger/tesserocr-windows_build/releases/download/tesserocr-v2.7.1-tesseract-5.4.1/tesserocr-2.7.1-cp313-cp313-win_amd64.whl ; python_version >= '3.13' and python_version < '3.14' and sys_platform == 'win32' and platform_machine == 'AMD64'",
-    "tesserocr @ https://github.com/simonflueckiger/tesserocr-windows_build/releases/download/tesserocr-v2.7.1-tesseract-5.4.1/tesserocr-2.7.1-cp313-cp313-win32.whl ; python_version >= '3.13' and python_version < '3.14' and sys_platform == 'win32' and platform_machine == 'x86'",
-    "typing-extensions (>=4.12,<5.0)"
+    "numpy >=2.2,<3",
+    "opencv-python >=4.11,<5",
+    "polars >=1.27,<2",
+    "pillow >=11.1,<12",
+    "pytesseract >=0.3,<1",
+    "pywin32 >=310,<311",
+    "sv-ttk >=2.6,<3",
+    "tesserocr @ https://github.com/simonflueckiger/tesserocr-windows_build/releases/download/tesserocr-v2.8.0-tesseract-5.5.0/tesserocr-2.8.0-cp310-cp310-win_amd64.whl ; python_version >= '3.10' and python_version < '3.11' and sys_platform == 'win32' and platform_machine == 'AMD64'",
+    "tesserocr @ https://github.com/simonflueckiger/tesserocr-windows_build/releases/download/tesserocr-v2.8.0-tesseract-5.5.0/tesserocr-2.8.0-cp310-cp310-win32.whl ; python_version >= '3.10' and python_version < '3.11' and sys_platform == 'win32' and platform_machine == 'x86'",
+    "tesserocr @ https://github.com/simonflueckiger/tesserocr-windows_build/releases/download/tesserocr-v2.8.0-tesseract-5.5.0/tesserocr-2.8.0-cp311-cp311-win_amd64.whl ; python_version >= '3.11' and python_version < '3.12' and sys_platform == 'win32' and platform_machine == 'AMD64'",
+    "tesserocr @ https://github.com/simonflueckiger/tesserocr-windows_build/releases/download/tesserocr-v2.8.0-tesseract-5.5.0/tesserocr-2.8.0-cp311-cp311-win32.whl ; python_version >= '3.11' and python_version < '3.12' and sys_platform == 'win32' and platform_machine == 'x86'",
+    "tesserocr @ https://github.com/simonflueckiger/tesserocr-windows_build/releases/download/tesserocr-v2.8.0-tesseract-5.5.0/tesserocr-2.8.0-cp312-cp312-win_amd64.whl ; python_version >= '3.12' and python_version < '3.13' and sys_platform == 'win32' and platform_machine == 'AMD64'",
+    "tesserocr @ https://github.com/simonflueckiger/tesserocr-windows_build/releases/download/tesserocr-v2.8.0-tesseract-5.5.0/tesserocr-2.8.0-cp312-cp312-win32.whl ; python_version >= '3.12' and python_version < '3.13' and sys_platform == 'win32' and platform_machine == 'x86'",
+    "tesserocr @ https://github.com/simonflueckiger/tesserocr-windows_build/releases/download/tesserocr-v2.8.0-tesseract-5.5.0/tesserocr-2.8.0-cp313-cp313-win_amd64.whl ; python_version >= '3.13' and python_version < '3.14' and sys_platform == 'win32' and platform_machine == 'AMD64'",
+    "tesserocr @ https://github.com/simonflueckiger/tesserocr-windows_build/releases/download/tesserocr-v2.8.0-tesseract-5.5.0/tesserocr-2.8.0-cp313-cp313-win32.whl ; python_version >= '3.13' and python_version < '3.14' and sys_platform == 'win32' and platform_machine == 'x86'",
+    "typing-extensions >=4.13,<5"
 ]
 
-[tool.poetry.group.lint]
-optional = true
-
-[tool.poetry.group.lint.dependencies]
-mypy                        = "~1.15"
-opencv-stubs                = "~0.0"
-ruff                        = "~0.11"
-types-Pillow                = "~10.2"
-types_pywin32               = "~310"
-
-
-[tool.poetry.group.docs]
-optional = true
-
-[tool.poetry.group.docs.dependencies]
-furo                = "~2024.8"
-sphinx              = "~8.2"
-sphinx-copybutton   = "~0.5"
+[dependency-groups]
+stubs = [
+    "opencv-stubs >=0.0,<1",
+    "types-Pillow >=10.2,<11",
+    "types_pywin32 >=310,<311",
+]
+docs = [
+    "furo >=2024.8,<2025",
+    "sphinx >=8.2,<9; python_version >= '3.11'",
+    "sphinx-copybutton >=0.5,<1",
+]
 
 [project.urls]
 homepage = "https://mohanz1.github.io/autocv/"
@@ -50,86 +62,51 @@ repository = "https://github.com/mohanz1/autocv"
 documentation = "https://mohanz1.github.io/autocv/"
 "Bug Tracker" = "https://github.com/mohanz1/autocv/issues"
 
-[tool.poetry]
-version = "1.0"  # base version
-requires-poetry = ">=2.0"
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [tool.ruff]
 line-length = 120
 target-version = "py310"
 
 [tool.ruff.lint]
-ignore-init-module-imports = true
 select = [
-    "F",  # pyflakes
-    "E",  # pycodestyle error
-    "W",  # pycodestyle warning
-    "C90",  # mccabe
-    "I",  # isort
-    "N",  # pep8-naming
-    "D",  # pydocstyle
-    "UP",  # pyupgrade
-    "YTT",  # flake8-2020
-    "ANN",  # flake8-annotations
-    "S",  # flake8-bandit
-    "BLE",  # flake8-blind-except
-    "FBT",  # flake8-boolean-trap
-    "B",  # flake8-bugbear
-    "A",  # flake8-builtins
-    "C4",  # flake8-comprehensions
-    "DTZ",  # flake8-datetimez
-    "T10",  # flake8-debugger
-    "FA",  # flake8-future-annotations
-    "ISC",  # flake8-implicit-str-concat
-    "ICN",  # flake8-import-conventions
-    "G",  # flake8-logging-format
-    "INP",  # flake8-no-pep420
-    "PIE",  # flake8-pie
-    "T20",  # flake8-print
-    "PYI",  # flake8-pyi
-    "PT",  # flake8-pytest-style
-    "Q",  # flake8-quotes
-    "RSE",  # flake8-raise
-    "RET",  # flake8-return
-    "SLF",  # flake8-self
-    "SLOT",  # flake8-slots
-    "SIM",  # flake8-simplify
-    "TID",  # flake8-tidy-imports
-    "TCH",  # flake8-type-checking
-    "ARG",  # flake8-unused-arguments
-    "PTH",  # flake8-use-pathlib
-    "FIX",  # flake8-fixme
-    "ERA",  # eradicate
-    "PGH",  # pygrep-hooks
-    "PL",  # Pylint
-    "TRY",  # tryceratops
-    "FLY",  # flynt
-    "PERF",  # Perflint
-    "FURB",  # refurb
-    "LOG",  # flake8-logging
-    "RUF",  # Ruff-specific rules
+    "E", # pycodestyle (error)
+    "F", # pyflakes
+    "B", # bugbear
+    "B9",
+    "C4", # flake8-comprehensions
+    "SIM", # flake8-simplify
+    "I", # isort
+    "UP", # pyupgrade
+    "PIE", # flake8-pie
+    "PGH", # pygrep-hooks
+    "PYI", # flake8-pyi
+    "RUF",
 ]
+
 ignore = [
-    "INP001",
-    "S311",
-    "S101",
-    "PLR2004",
-    "PLR0914",
-    "ANN401",
+    # only relevant if you run a script with `python -0`,
+    # which seems unlikely for any of the scripts in this repo
+    "B011",
+    # Leave it to the formatter to split long lines and
+    # the judgement of all of us.
+    "E501"
 ]
+
+[tool.ruff.lint.isort]
+required-imports = ["from __future__ import annotations"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
 
-[tool.ruff.lint.pylint]
-max-positional-args = 7
-max-args = 7
-max-public-methods = 25
-
 [tool.mypy]
+ignore_missing_imports = true
+
 # general settings
 strict = true
 check_untyped_defs = true
+enable_error_code = "explicit-override"
 incremental = true
 namespace_packages = true
 no_implicit_optional = true
@@ -147,9 +124,6 @@ allow_redefinition = true
 disallow_untyped_decorators = true
 disallow_incomplete_defs = true
 disallow_untyped_defs = true
-untyped_calls_exclude = [
-    "win32api"
-]
 
 # warnings
 warn_no_return = true
@@ -158,14 +132,11 @@ warn_return_any = true
 warn_unreachable = true
 warn_unused_configs = true
 warn_unused_ignores = true
+
 exclude = [
-    "venv",
+    ".venv",
     "data",
     "source",
     "test.py",
     "setup.py"
 ]
-
-[build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"

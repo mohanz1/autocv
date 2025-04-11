@@ -112,7 +112,7 @@ class ColorPicker:
         self.set_geometry()
         self.master_screen.deiconify()
         self.master_screen.lift()
-        self.master_screen.attributes("-topmost", True)  # noqa: FBT003
+        self.master_screen.attributes("-topmost", True)
         self.master_screen.overrideredirect(boolean=True)
         self.master_screen.focus_set()
         self.master.after(0, self.on_tick)
