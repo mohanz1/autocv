@@ -87,7 +87,7 @@ jobs:
         run: |
           cd docs
           uv tool install sphinx
-          uv tool run sphinx-build -b html -j auto -a -T -W --keep-going . _build/html
+          uv tool --from sphinx sphinx-build -b html -j auto -a -T -W --keep-going . _build/html
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
