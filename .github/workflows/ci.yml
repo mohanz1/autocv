@@ -63,9 +63,13 @@ jobs:
         if: always()
         run: uvx ruff check --output-format=github .
 
+      - name: Install project
+        if: always()
+        run: uv sync
+
       - name: Run mypy
         if: always()
-        run: uvx mypy --check .
+        run: uv tool mypy --check .
 
   docs:
     runs-on: windows-latest
