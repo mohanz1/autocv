@@ -4,7 +4,7 @@ updates:
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: daily
+      interval: weekly
     rebase-strategy: auto
     target-branch: main
     groups:
@@ -13,10 +13,10 @@ updates:
           - "*"
 
   # Python packages
-  - package-ecosystem: pip
+  - package-ecosystem: uv
     directory: /
     schedule:
-      interval: daily
+      interval: weekly
     rebase-strategy: auto
     target-branch: main
     groups:
