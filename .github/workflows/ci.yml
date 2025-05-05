@@ -40,11 +40,8 @@ jobs:
         run: uv pip install .
 
       - name: Smoke-test import
-        run: |
-          python - <<'EOF'
-          import your_package_name
-          print("✅ imported", your_package_name.__name__)
-          EOF
+        run: python -c "import your_package_name; print('✅ imported', your_package_name.__name__)"
+
 
   lint:
     runs-on: windows-latest
