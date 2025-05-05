@@ -30,8 +30,10 @@ jobs:
       - name: Install the latest version of uv and set the python version
         uses: astral-sh/setup-uv@v6
         with:
+          activate-environment: true
           enable-cache: true
           python-version: ${{ matrix.python-version }}
+          cache-dependency-glob: "**/uv.lock"
 
       - name: Test install
         run: uv pip install .

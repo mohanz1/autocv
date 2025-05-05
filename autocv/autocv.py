@@ -53,11 +53,11 @@ class AutoCV(Input):
 
         # Determine the appropriate directory based on the current Python version.
         version = sys.version_info
-        pyd_dir = Path(__file__).parent / "build" / f"python{version.major}{version.minor}"
+        pyd_dir = Path(__file__).parent / "prebuilt" / f"python{version.major}{version.minor}"
 
         # Append the directory to sys.path if it exists, and attempt to import antigcp.
         if pyd_dir.exists():
-            sys.path.append(str(pyd_dir))
+            sys.path.insert(0, str(pyd_dir))
             try:
                 import antigcp
 

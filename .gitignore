@@ -5,6 +5,7 @@ __pycache__
 # Virtual environments
 .venv*
 venv*
+autocv/.nox*
 
 # PyCharm/IntelliJ-generated files
 *.iml
@@ -20,6 +21,7 @@ venv*
 .pypirc
 
 # Setuptools/twine-generated files, compiled sources.
+autocv/build
 docs/_build
 dist
 *.egg-info
@@ -49,6 +51,7 @@ autocv/antigcp.c
 autocv/antigcp.py
 autocv/Dockerfile
 autocv/setup.py
+autocv/noxfile.py
 
 # my test file
 test.py
