@@ -40,7 +40,7 @@ jobs:
         run: uv pip install .
 
       - name: Smoke-test import
-        run: python -c "import your_package_name; print('✅ imported', your_package_name.__name__)"
+        run: python -c "import autocv; print('✅ imported', autocv.__name__)"
 
 
   lint:
