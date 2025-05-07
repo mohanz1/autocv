@@ -16,18 +16,6 @@ concurrency:
 env:
   UV_CACHE_GLOB: "**/uv.lock"
 
-defaults: &checkout-and-setup
-  steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-    - name: Setup UV & Python
-      uses: astral-sh/setup-uv@v6
-      with:
-        activate-environment: true
-        enable-cache: true
-        python-version: ${{ matrix.python-version }}
-        cache-dependency-glob: ${{ env.UV_CACHE_GLOB }}
-
 jobs:
   test:
     runs-on: windows-latest
@@ -37,7 +25,16 @@ jobs:
         python-version: [ "3.10", "3.11", "3.12", "3.13" ]
 
     steps:
-      - *checkout-and-setup
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup UV & Python ${{ matrix.python-version }}
+        uses: astral-sh/setup-uv@v6
+        with:
+          activate-environment: true
+          enable-cache: true
+          python-version: ${{ matrix.python-version }}
+          cache-dependency-glob: ${{ env.UV_CACHE_GLOB }}
 
       - name: Install package
         run: uv pip install .
@@ -56,7 +53,16 @@ jobs:
         python-version: [ "3.10", "3.11", "3.12", "3.13" ]
 
     steps:
-      - *checkout-and-setup
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup UV & Python ${{ matrix.python-version }}
+        uses: astral-sh/setup-uv@v6
+        with:
+          activate-environment: true
+          enable-cache: true
+          python-version: ${{ matrix.python-version }}
+          cache-dependency-glob: ${{ env.UV_CACHE_GLOB }}
 
       - name: Ruff format check
         if: always()
@@ -77,11 +83,18 @@ jobs:
     if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     needs: [ test, lint ]
     runs-on: windows-latest
-    matrix:
-      python-version: [ "3.13" ]
 
     steps:
-      - *checkout-and-setup
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup UV & Python 3.13
+        uses: astral-sh/setup-uv@v6
+        with:
+          activate-environment: true
+          enable-cache: true
+          python-version: 3.13
+          cache-dependency-glob: ${{ env.UV_CACHE_GLOB }}
 
       - name: Install docs deps
         run: uv sync --group docs
