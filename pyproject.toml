@@ -139,5 +139,6 @@ exclude = [
     "data",
     "source",
     "test.py",
-    "setup.py"
+    "setup.py",
+    "noxfile.py",
 ]

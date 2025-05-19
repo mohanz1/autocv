@@ -223,8 +223,8 @@ class Input(Vision):
             win32api.SendMessage(
                 self.hwnd,
                 win32con.WM_SETCURSOR,
-                self.hwnd,
-                self._make_lparam(result, win32con.WM_MOUSEMOVE),
+                self.hwnd,  # type: ignore[arg-type]
+                self._make_lparam(result, win32con.WM_MOUSEMOVE),  # type: ignore[arg-type]
             )
             win32api.PostMessage(self.hwnd, win32con.WM_MOUSEMOVE, 0, self._make_lparam(*screen_point))
         else:
@@ -264,10 +264,10 @@ class Input(Vision):
         top_hwnd = self._get_topmost_hwnd()
         lparam_button = self._make_lparam(result, button_to_press)
         win32gui.SendMessage(top_hwnd, win32con.WM_MOUSEACTIVATE, top_hwnd, lparam_button)
-        win32api.SendMessage(self.hwnd, win32con.WM_SETCURSOR, self.hwnd, lparam_button)
+        win32api.SendMessage(self.hwnd, win32con.WM_SETCURSOR, self.hwnd, lparam_button)  # type: ignore[arg-type]
 
         if send_message:
-            last_moved_point_lparam = win32api.MAKELONG(*self._last_moved_point)
+            last_moved_point_lparam = win32api.MAKELONG(*self._last_moved_point)  # type: ignore[no-untyped-call]
             win32gui.SendMessage(self.hwnd, button_to_press, button, last_moved_point_lparam)
             time.sleep(randint(10, 50) / 1_000)
             win32gui.SendMessage(self.hwnd, button_to_press + 1, 0, last_moved_point_lparam)
@@ -286,12 +286,12 @@ class Input(Vision):
         Raises:
             None.
         """
-        scan_code = win32api.MapVirtualKey(vk_code, 0)
+        scan_code = win32api.MapVirtualKey(vk_code, 0)  # type: ignore[no-untyped-call]
         l_param = (scan_code << 16) | 1
-        win32api.SendMessage(self.hwnd, win32con.WM_ACTIVATE, 1, self.hwnd)
-        win32api.SendMessage(self.hwnd, win32con.WM_KEYDOWN, vk_code, l_param)
+        win32api.SendMessage(self.hwnd, win32con.WM_ACTIVATE, 1, self.hwnd)  # type: ignore[arg-type]
+        win32api.SendMessage(self.hwnd, win32con.WM_KEYDOWN, vk_code, l_param)  # type: ignore[arg-type]
         win32api.SendMessage(self.hwnd, win32con.WM_CHAR, chr(vk_code), l_param)
-        win32api.SendMessage(self.hwnd, win32con.WM_ACTIVATE, 0, self.hwnd)
+        win32api.SendMessage(self.hwnd, win32con.WM_ACTIVATE, 0, self.hwnd)  # type: ignore[arg-type]
 
     @check_valid_hwnd
     def release_vk_key(self: Self, vk_code: int) -> None:
@@ -303,12 +303,12 @@ class Input(Vision):
         Raises:
             None.
         """
-        scan_code = win32api.MapVirtualKey(vk_code, 0)
+        scan_code = win32api.MapVirtualKey(vk_code, 0)  # type: ignore[no-untyped-call]
         l_param = (scan_code << 16) | 1
         l_param |= 0xC0000000
-        win32api.SendMessage(self.hwnd, win32con.WM_ACTIVATE, 1, self.hwnd)
-        win32api.SendMessage(self.hwnd, win32con.WM_KEYUP, vk_code, l_param)
-        win32api.SendMessage(self.hwnd, win32con.WM_ACTIVATE, 0, self.hwnd)
+        win32api.SendMessage(self.hwnd, win32con.WM_ACTIVATE, 1, self.hwnd)  # type: ignore[arg-type]
+        win32api.SendMessage(self.hwnd, win32con.WM_KEYUP, vk_code, l_param)  # type: ignore[arg-type]
+        win32api.SendMessage(self.hwnd, win32con.WM_ACTIVATE, 0, self.hwnd)  # type: ignore[arg-type]
 
     @check_valid_hwnd
     def send_vk_key(self: Self, vk_code: int) -> None:
@@ -346,15 +346,15 @@ class Input(Vision):
         Raises:
             None.
         """
-        win32api.SendMessage(self.hwnd, win32con.WM_ACTIVATE, 1, self.hwnd)
+        win32api.SendMessage(self.hwnd, win32con.WM_ACTIVATE, 1, self.hwnd)  # type: ignore[arg-type]
         for c in characters:
             vk = win32api.VkKeyScan(c)
-            scan_code = win32api.MapVirtualKey(ord(c.upper()), 0)
+            scan_code = win32api.MapVirtualKey(ord(c.upper()), 0)  # type: ignore[no-untyped-call]
             l_param = (scan_code << 16) | 1
             win32api.SendMessage(self.hwnd, win32con.WM_KEYDOWN, vk, l_param)
-            win32api.SendMessage(self.hwnd, win32con.WM_CHAR, ord(c), l_param)
+            win32api.SendMessage(self.hwnd, win32con.WM_CHAR, ord(c), l_param)  # type: ignore[arg-type]
             time.sleep(randint(3, 5) / 1_000)
             l_param |= 0xC0000000
             win32api.SendMessage(self.hwnd, win32con.WM_KEYUP, vk, l_param)
             time.sleep(randint(20, 60) / 1_000)
-        win32api.SendMessage(self.hwnd, win32con.WM_ACTIVATE, 0, self.hwnd)
+        win32api.SendMessage(self.hwnd, win32con.WM_ACTIVATE, 0, self.hwnd)  # type: ignore[arg-type]

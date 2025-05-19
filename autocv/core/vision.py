@@ -453,7 +453,7 @@ class Vision(WindowCapture):
         sorted_unique = unique[sorted_indices]
         sorted_counts = counts[sorted_indices]
         return [
-            ((int(bgr[2]), int(bgr[1]), int(bgr[0])), int(c))
+            ((int(bgr[2]), int(bgr[1]), int(bgr[0])), int(c))  # type: ignore[index]
             for bgr, c in zip(sorted_unique, sorted_counts, strict=False)
         ]
 
@@ -797,7 +797,7 @@ class Vision(WindowCapture):
             A list of grouped rectangles.
         """
         rects = np.repeat(np.array(rects), 2, axis=0)
-        rects, _ = cv.groupRectangles(rects, groupThreshold=1, eps=0.1)
+        rects, _ = cv.groupRectangles(rects, groupThreshold=1, eps=0.1)  # type: ignore[arg-type]
         return cast("list[tuple[int, int, int, int]]", rects)
 
     @check_valid_image
@@ -832,7 +832,7 @@ class Vision(WindowCapture):
                 for c in contours
                 if vertices == len(cv.approxPolyDP(c, 0.01 * cv.arcLength(c, closed=True), closed=True))
             ]
-        return contours
+        return cast(list[npt.NDArray[np.uintp]], contours)
 
     @check_valid_image
     def draw_points(
@@ -861,7 +861,7 @@ class Vision(WindowCapture):
             contours: The contours to draw.
             color: The drawing color as an RGB tuple. Defaults to red.
         """
-        cv.drawContours(self.opencv_image, contours, -1, color[::-1], 2)
+        cv.drawContours(self.opencv_image, contours, -1, color[::-1], 2)  # type: ignore[arg-type]
 
     @check_valid_image
     def draw_circle(
