@@ -41,7 +41,8 @@ dependencies = [
     "tesserocr @ https://github.com/simonflueckiger/tesserocr-windows_build/releases/download/tesserocr-v2.8.0-tesseract-5.5.0/tesserocr-2.8.0-cp312-cp312-win32.whl ; python_version >= '3.12' and python_version < '3.13' and sys_platform == 'win32' and platform_machine == 'x86'",
     "tesserocr @ https://github.com/simonflueckiger/tesserocr-windows_build/releases/download/tesserocr-v2.8.0-tesseract-5.5.0/tesserocr-2.8.0-cp313-cp313-win_amd64.whl ; python_version >= '3.13' and python_version < '3.14' and sys_platform == 'win32' and platform_machine == 'AMD64'",
     "tesserocr @ https://github.com/simonflueckiger/tesserocr-windows_build/releases/download/tesserocr-v2.8.0-tesseract-5.5.0/tesserocr-2.8.0-cp313-cp313-win32.whl ; python_version >= '3.13' and python_version < '3.14' and sys_platform == 'win32' and platform_machine == 'x86'",
-    "typing-extensions >=4.13,<5"
+    "typing-extensions >=4.13,<5",
+    "nox>=2025.5.1",
 ]
 
 [dependency-groups]

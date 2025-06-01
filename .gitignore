@@ -42,9 +42,7 @@ credentials.env
 # Logs
 *.log
 
-!autocv/build/python310/antigcp.pyd
-!autocv/build/python311/antigcp.pyd
-!autocv/build/python312/antigcp.pyd
+!autocv/prebuilt/*/*.pyd
 
 # Compiling antigcp functions
 autocv/antigcp.c
