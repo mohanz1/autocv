@@ -118,26 +118,8 @@ jobs:
           publish_dir: docs/_build/html
           force_orphan: true
 
-  # Allows us to add this as a required check in Github branch rules, as all the other jobs are subject to change
-  ci-done:
-    needs: [ test, lint, docs ]
-    if: always() && !cancelled()
-
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Fail if any job failed
-        env:
-          RESULTS: ${{ join(needs.*.result, ' ') }}
-        run: |
-          for result in $RESULTS; do
-            if [ "$result" != "success" ]; then
-              exit 1
-            fi
-          done
-
   auto-merge:
-    needs: [ ci-done ]
+    needs: [ test, lint, docs ]
     if: ${{ github.actor == 'dependabot[bot]' }}
     runs-on: ubuntu-latest
     steps:
