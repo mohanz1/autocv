@@ -104,7 +104,7 @@ jobs:
           python-version: 3.13
 
       - name: Install docs deps
-        run: uv sync --frozen --only-group sphinx
+        run: uv sync --frozen --only-group nox
 
       - name: Sphinx build
         run: |
