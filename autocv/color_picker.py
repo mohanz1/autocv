@@ -11,7 +11,10 @@ from __future__ import annotations
 __all__ = ("ColorPicker",)
 
 from pathlib import Path
-from tkinter import NW, Canvas, Tk, Toplevel
+from tkinter import NW
+from tkinter import Canvas
+from tkinter import Tk
+from tkinter import Toplevel
 
 import cv2 as cv
 import numpy as np
@@ -19,7 +22,10 @@ import numpy.typing as npt
 import win32api
 import win32con
 import win32gui
-from PIL import Image, ImageDraw, ImageFont, ImageTk
+from PIL import Image
+from PIL import ImageDraw
+from PIL import ImageFont
+from PIL import ImageTk
 from PIL.ImageTk import PhotoImage
 from typing_extensions import Self
 
@@ -101,13 +107,13 @@ class ColorPicker:
 
         # Create a PhotoImage from the default canvas.
         img = Image.fromarray(self.default_canvas)
-        img = ImageTk.PhotoImage(img)
+        photo_img = ImageTk.PhotoImage(img)
 
         self.snip_surface = Canvas(self.master_screen, width=self.size, height=self.size, highlightthickness=0)
         self.snip_surface.pack()
 
-        self.snip_surface.create_image(0, 0, image=img, anchor=NW)
-        self.snip_surface.img = img  # type: ignore[attr-defined]
+        self.snip_surface.create_image(0, 0, image=photo_img, anchor=NW)
+        self.snip_surface.img = photo_img  # type: ignore[attr-defined]
 
         self.set_geometry()
         self.master_screen.deiconify()
@@ -139,15 +145,15 @@ class ColorPicker:
             cropped_image = self.default_canvas
 
         # Resize the cropped image to create a magnified view.
-        img = cv.resize(cropped_image, None, fx=ZOOM, fy=ZOOM, interpolation=cv.INTER_NEAREST)
-        img = Image.fromarray(img)
+        resized_img = cv.resize(cropped_image, None, fx=ZOOM, fy=ZOOM, interpolation=cv.INTER_NEAREST)
+        img = Image.fromarray(resized_img)
         img = self.draw_cursor_coordinates(img, x, y)
-        img = PhotoImage(img)
+        photo_image = PhotoImage(img)
 
         # Update the canvas with the new image.
         self.snip_surface.delete("center")
-        self.snip_surface.create_image(0, 0, image=img, anchor=NW)
-        self.snip_surface.img = img  # type: ignore[attr-defined]
+        self.snip_surface.create_image(0, 0, image=photo_image, anchor=NW)
+        self.snip_surface.img = photo_image  # type: ignore[attr-defined]
         self.draw_center_rectangle(cropped_image)
 
         # Check if the left mouse button state has changed (indicating a click).

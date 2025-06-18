@@ -1,23 +1,32 @@
-"""This module provides decorators that validate certain attributes on a class instance.
+"""Decorators that validate key attributes on a class instance.
 
 Decorators:
-  - check_valid_hwnd: Ensures an object has a valid (non-negative) `hwnd` attribute.
-  - check_valid_image: Ensures an object has a non-empty `opencv_image` attribute.
+    - check_valid_hwnd: Ensures an object has a valid (non-negative) `hwnd` attribute.
+    - check_valid_image: Ensures an object has a non-empty `opencv_image` attribute.
 """
 
 from __future__ import annotations
 
-__all__ = ("check_valid_hwnd", "check_valid_image")
+__all__ = (
+    "check_valid_hwnd",
+    "check_valid_image",
+)
 
 import functools
-from typing import TYPE_CHECKING, Concatenate, ParamSpec, TypeVar, cast
+from typing import TYPE_CHECKING
+from typing import Concatenate
+from typing import ParamSpec
+from typing import TypeVar
+from typing import cast
 
-from autocv.models import InvalidHandleError, InvalidImageError
+from autocv.models import InvalidHandleError
+from autocv.models import InvalidImageError
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from autocv.core import Vision, WindowCapture
+    from autocv.core import Vision
+    from autocv.core import WindowCapture
 
 P = ParamSpec("P")
 R = TypeVar("R")

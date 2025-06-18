@@ -7,8 +7,15 @@ from __future__ import annotations
 
 __all__ = ("ImagePicker",)
 
-from tkinter import BOTH, YES, Canvas, Event, Frame, Tk, Toplevel
-from typing import TYPE_CHECKING, Any
+from tkinter import BOTH
+from tkinter import YES
+from tkinter import Canvas
+from tkinter import Event
+from tkinter import Frame
+from tkinter import Tk
+from tkinter import Toplevel
+from typing import TYPE_CHECKING
+from typing import Any
 
 import win32con
 import win32gui
@@ -126,7 +133,7 @@ class ImagePicker:
         win_rect = win32gui.GetWindowRect(self.hwnd)
         self.rect = (win_rect[0], win_rect[1], win_rect[2] - win_rect[0], win_rect[3] - win_rect[1])
 
-    def on_button_release(self: Self, _: Any) -> None:
+    def on_button_release(self: Self, _: Event[Canvas]) -> None:
         """Finalizes the region selection and captures the screenshot.
 
         Once the left mouse button is released, the selected region is determined from the recorded

@@ -14,6 +14,8 @@ import cv2
 import numpy as np
 import numpy.typing as npt
 
+THREE = 3
+
 
 def get_center(shape: tuple[int, int, int, int] | npt.NDArray[np.uintp]) -> tuple[int, int]:
     """Return the center (x, y) of a shape.
@@ -36,7 +38,7 @@ def get_center(shape: tuple[int, int, int, int] | npt.NDArray[np.uintp]) -> tupl
     """
     if isinstance(shape, np.ndarray):
         # Reshape contour to (N, 2) if necessary (e.g., when shape is (N, 1, 2))
-        contour = shape.reshape(-1, 2) if shape.ndim == 3 and shape.shape[1] == 1 else shape
+        contour = shape.reshape(-1, 2) if shape.ndim == THREE and shape.shape[1] == 1 else shape
 
         # Calculate centroid using image moments
         moments = cv2.moments(contour)
@@ -71,10 +73,11 @@ def get_random_point(shape: tuple[int, int, int, int] | npt.NDArray[np.uintp]) -
         int_shape = shape.astype(np.int32)
         x, y, w, h = cv2.boundingRect(int_shape)
 
+        rng = np.random.default_rng()
         while True:
             # Generate a random candidate point within the bounding rectangle
-            rx = np.random.randint(x, x + w)
-            ry = np.random.randint(y, y + h)
+            rx = rng.integers(x, x + w).astype(int)
+            ry = rng.integers(y, y + h).astype(int)
 
             # Check if the point is inside the contour
             if cv2.pointPolygonTest(int_shape, (rx, ry), measureDist=False) > 0:
@@ -82,8 +85,11 @@ def get_random_point(shape: tuple[int, int, int, int] | npt.NDArray[np.uintp]) -
 
     # Rectangle case
     x, y, w, h = shape
-    rand_x = np.random.randint(x, x + w)
-    rand_y = np.random.randint(y, y + h)
+    rng = np.random.default_rng()
+
+    rand_x = rng.integers(x, x + w).astype(int)
+    rand_y = rng.integers(y, y + h).astype(int)
+
     return rand_x, rand_y
 
 

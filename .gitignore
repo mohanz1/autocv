@@ -3,32 +3,45 @@ __pycache__
 *.pyc
 
 # Virtual environments
-.venv*
-venv*
-autocv/.nox*
+.venv*/
+venv*/
+
+# CI pages, coverage reports, etc
+public/
 
 # PyCharm/IntelliJ-generated files
 *.iml
-.idea
+.idea/
 
 # Visual Studio Code-generated files
-.settings
+.settings/
 .project
-.vscode
-.vs
+.vscode/
+.vs/
 
 # Secrets
 .pypirc
 
 # Setuptools/twine-generated files, compiled sources.
-autocv/build
-docs/_build
-dist
-*.egg-info
-pip-wheel-metadata
+build/
+dist/
+*.egg-info/
+pip-wheel-metadata/
 *.so
 *.o
 *.pyd
+
+# Tox/Nox-generated files
+.[nt]ox/
+
+# Coverage-generated files
+.coverage*
+coverage.xml
+**/*,cover*
+
+# PyTest-generated files
+.pytest/
+.pytest_cache/
 
 # Container logs
 **.container.log
@@ -37,19 +50,18 @@ pip-wheel-metadata
 credentials.env
 
 # Mypy Cache
-.mypy_cache
+.mypy_cache/
+
+# Profiling in pytest
+prof/
 
 # Logs
 *.log
 
-!autocv/prebuilt/*/*.pyd
+# Misc
+Pipfile*
+pyrightconfig.json
 
-# Compiling antigcp functions
-autocv/antigcp.c
-autocv/antigcp.py
-autocv/Dockerfile
-autocv/setup.py
-autocv/noxfile.py
-
-# my test file
+# my local testing
+test/
 test.py

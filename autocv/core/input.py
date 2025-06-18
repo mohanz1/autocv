@@ -12,9 +12,9 @@ __all__ = ("Input",)
 import logging
 import math
 import time
-from random import randint, random
 from typing import Final
 
+import numpy as np
 import win32api
 import win32con
 import win32gui
@@ -26,16 +26,16 @@ from .vision import Vision
 logger = logging.getLogger(__name__)
 
 
+THREE = 3
+HALF = 0.5
+
+
 class Input(Vision):
     """Extends the Vision class with functionalities for simulating user input.
 
     This class supports human-like mouse movements, clicks, and keyboard key presses.
     Randomness and delays are incorporated to mimic natural interaction.
     """
-
-    __SPEED: Final[int] = 16
-    __GRAVITY: Final[float] = 8 + random() / 2
-    __WIND: Final[float] = 4 + random() / 2
 
     def __init__(self: Self, hwnd: int = -1) -> None:
         """Initializes an Input object.
@@ -45,6 +45,11 @@ class Input(Vision):
         """
         super().__init__(hwnd)
         self._last_moved_point: tuple[int, int] = (0, 0)
+        self._rng = np.random.default_rng()
+
+        self.__speed: Final[int] = 16
+        self.__gravity: Final[float] = 8 + self._rng.random() / 2
+        self.__wind: Final[float] = 4 + self._rng.random() / 2
 
     def get_last_moved_point(self: Self) -> tuple[int, int]:
         """Returns the last point where the mouse cursor was moved.
@@ -96,7 +101,7 @@ class Input(Vision):
             return
 
         # Determine a random speed factor.
-        speed = (random() * 15 + 30) / 10
+        speed = (self._rng.random() * 15 + 30) / 10
         self._wind_mouse(
             *self._last_moved_point,
             x,
@@ -162,9 +167,9 @@ class Input(Vision):
                 raise TimeoutError
 
             # Randomly adjust wind.
-            if random() < 0.5:
-                wind_x = wind_x / sqrt_3 + (random() * (round(wind) * 2 + 1) - wind) / sqrt_5
-                wind_y = wind_y / sqrt_3 + (random() * (round(wind) * 2 + 1) - wind) / sqrt_5
+            if self._rng.random() < HALF:
+                wind_x = wind_x / sqrt_3 + (self._rng.random() * (round(wind) * 2 + 1) - wind) / sqrt_5
+                wind_y = wind_y / sqrt_3 + (self._rng.random() * (round(wind) * 2 + 1) - wind) / sqrt_5
 
             traveled_distance = math.hypot(x - xs, y - ys)
             remaining_distance = math.hypot(x - xe, y - ye)
@@ -173,23 +178,23 @@ class Input(Vision):
                 break
 
             if remaining_distance < target_area:
-                step = (remaining_distance / 2) + (random() * 6 - 3)
+                step = (remaining_distance / 2) + (self._rng.random() * 6 - 3)
             elif traveled_distance < target_area:
-                if traveled_distance < 3:
-                    traveled_distance = 10 * random()
-                step = traveled_distance * (1 + random() * 3)
+                if traveled_distance < THREE:
+                    traveled_distance = 10 * self._rng.random()
+                step = traveled_distance * (1 + self._rng.random() * 3)
             else:
                 step = max_step
 
             step = min(step, max_step)
-            if step < 3:
-                step = 3 + (random() * 3)
+            if step < THREE:
+                step = 3 + (self._rng.random() * 3)
 
             velo_x += wind_x + gravity * (xe - x) / remaining_distance
             velo_y += wind_y + gravity * (ye - y) / remaining_distance
 
             if math.hypot(velo_x, velo_y) > step:
-                random_dist = step / 3.0 + (step / 2 * random())
+                random_dist = step / 3.0 + (step / 2 * self._rng.random())
                 velo_mag = math.hypot(velo_x, velo_y)
                 velo_x = (velo_x / velo_mag) * random_dist
                 velo_y = (velo_y / velo_mag) * random_dist
@@ -269,11 +274,11 @@ class Input(Vision):
         if send_message:
             last_moved_point_lparam = win32api.MAKELONG(*self._last_moved_point)  # type: ignore[no-untyped-call]
             win32gui.SendMessage(self.hwnd, button_to_press, button, last_moved_point_lparam)
-            time.sleep(randint(10, 50) / 1_000)
+            time.sleep(self._rng.integers(10, 50).astype(int) / 1_000)
             win32gui.SendMessage(self.hwnd, button_to_press + 1, 0, last_moved_point_lparam)
         else:
             win32gui.PostMessage(self.hwnd, button_to_press, button, screen_lparam)
-            time.sleep(randint(10, 50) / 1_000)
+            time.sleep(self._rng.integers(10, 50).astype(int) / 1_000)
             win32gui.PostMessage(self.hwnd, button_to_press + 1, 0, screen_lparam)
 
     @check_valid_hwnd
@@ -321,7 +326,7 @@ class Input(Vision):
             None.
         """
         self.press_vk_key(vk_code)
-        time.sleep(randint(3, 5) / 1_000)
+        time.sleep(self._rng.integers(3, 5).astype(int) / 1_000)
         self.release_vk_key(vk_code)
 
     @staticmethod
@@ -347,14 +352,15 @@ class Input(Vision):
             None.
         """
         win32api.SendMessage(self.hwnd, win32con.WM_ACTIVATE, 1, self.hwnd)  # type: ignore[arg-type]
+
         for c in characters:
             vk = win32api.VkKeyScan(c)
             scan_code = win32api.MapVirtualKey(ord(c.upper()), 0)  # type: ignore[no-untyped-call]
             l_param = (scan_code << 16) | 1
             win32api.SendMessage(self.hwnd, win32con.WM_KEYDOWN, vk, l_param)
             win32api.SendMessage(self.hwnd, win32con.WM_CHAR, ord(c), l_param)  # type: ignore[arg-type]
-            time.sleep(randint(3, 5) / 1_000)
+            time.sleep(self._rng.integers(3, 5).astype(int) / 1_000)
             l_param |= 0xC0000000
             win32api.SendMessage(self.hwnd, win32con.WM_KEYUP, vk, l_param)
-            time.sleep(randint(20, 60) / 1_000)
+            time.sleep(self._rng.integers(20, 60).astype(int) / 1_000)
         win32api.SendMessage(self.hwnd, win32con.WM_ACTIVATE, 0, self.hwnd)  # type: ignore[arg-type]

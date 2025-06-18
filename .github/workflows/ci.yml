@@ -2,9 +2,11 @@ name: CI
 
 on:
   push:
-    branches-ignore:
-      - "dependabot/**"
-  pull_request_target:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: write
@@ -13,118 +15,143 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  UV_CACHE_GLOB: "**/uv.lock"
-
 jobs:
   test:
     runs-on: windows-latest
     strategy:
       fail-fast: false
       matrix:
-        python-version: [ "3.10", "3.11", "3.12", "3.13" ]
+        python-version: [ "3.10", 3.11, 3.12, 3.13 ]
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup UV & Python ${{ matrix.python-version }}
+      - name: Setup uv
         uses: astral-sh/setup-uv@v6
         with:
-          activate-environment: true
-          enable-cache: true
           python-version: ${{ matrix.python-version }}
-          cache-dependency-glob: ${{ env.UV_CACHE_GLOB }}
+          activate-environment: true
+          # TODO(https://github.com/astral-sh/setup-uv/issues/226): Remove this.
+          prune-cache: ${{ matrix.os != 'windows-latest' }}
 
-      - name: Install package
-        run: uv pip install .
+      - name: Test Installation
+        shell: bash
+        run: |
+          uv pip install .
+          uv pip uninstall autocv
 
-      - name: Smoke-test import
-        run: python -c "import autocv; print('imported', autocv.__name__)"
+      - name: Run tests
+        shell: bash
+        run: |
+          uv sync --frozen
+          python -c "import autocv; print('imported', autocv.__name__)"
 
 
-  lint:
+  linting:
     runs-on: windows-latest
 
-    strategy:
-      # Allows for matrix sub-jobs to fail without cancelling the rest
-      fail-fast: false
-      matrix:
-        python-version: [ "3.10", "3.11", "3.12", "3.13" ]
-
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup UV & Python ${{ matrix.python-version }}
+      - name: Setup uv
         uses: astral-sh/setup-uv@v6
         with:
+          python-version: "3.10"
           activate-environment: true
-          enable-cache: true
-          python-version: ${{ matrix.python-version }}
-          cache-dependency-glob: ${{ env.UV_CACHE_GLOB }}
 
-      - name: Ruff format check
-        if: always()
-        run: uvx ruff format --check .
+      - name: Install nox
+        run: |
+          uv sync --frozen --only-group nox
+          
+      - name: Audit
+        if: always() && !cancelled()
+        run: |
+          nox -s audit
 
-      - name: Run lint
-        if: always()
-        run: uvx ruff check --output-format=github .
+      - name: Mypy
+        if: always() && !cancelled()
+        run: |
+          nox -s mypy
 
-      - name: Install dependencies
-        if: always()
-        run: uv sync
+      - name: Ruff
+        if: always() && !cancelled()
+        run: |
+          nox -s ruff -- --output-format=github
 
-      - name: Type-check with mypy
-        run: uv run mypy --check .
+      - name: Codespell
+        if: always() && !cancelled()
+        run: |
+          nox -s codespell
+
+      - name: Check trailing whitespaces
+        if: always() && !cancelled()
+        run: |
+          nox -s check-trailing-whitespaces
 
   docs:
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-    needs: [ test, lint ]
     runs-on: windows-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup UV & Python 3.13
+      - name: Setup uv
         uses: astral-sh/setup-uv@v6
         with:
           activate-environment: true
-          enable-cache: true
           python-version: 3.13
-          cache-dependency-glob: ${{ env.UV_CACHE_GLOB }}
 
       - name: Install docs deps
-        run: uv sync --group docs
+        run: uv sync --frozen --only-group docs
 
       - name: Sphinx build
         run: |
-          cd docs
-          uv run sphinx-build -b html -j auto -a -T -W --keep-going . _build/html
+          nox -s sphinx
 
       - name: Upload artifacts
+        if: github.event_name == 'pull_request'
         uses: actions/upload-artifact@v4
         with:
           name: docs
-          path: docs/_build/html/*
+          path: public/docs
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           publish_branch: docs
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: docs/_build/html
+          publish_dir: public/docs
           force_orphan: true
 
   auto-merge:
-    needs: [ test, lint, docs ]
+    needs: [ test, linting, docs ]
     if: ${{ github.actor == 'dependabot[bot]' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: ahmadnassri/action-dependabot-auto-merge@v2
+      - name: Upload artifacts
+        uses: actions/checkout@v4
+
+      - name: Auto merge
+        uses: ahmadnassri/action-dependabot-auto-merge@v2
         with:
-          target: minor
           github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  # Allows us to add this as a required check in Github branch rules, as all the other jobs are subject to change
+  ci-done:
+    needs: [ test, linting, docs ]
+    if: always() && !cancelled()
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set status based on required jobs
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          for result in $RESULTS; do
+            if [ "$result" != "success" ]; then
+              exit 1
+            fi
+          done

@@ -24,7 +24,9 @@ import win32gui
 from typing_extensions import Self
 
 from .color_picker import ColorPicker
-from .core import Input, check_valid_hwnd, check_valid_image
+from .core import Input
+from .core import check_valid_hwnd
+from .core import check_valid_image
 from .image_filter import ImageFilter
 from .image_picker import ImagePicker
 
@@ -59,7 +61,7 @@ class AutoCV(Input):
         if pyd_dir.exists():
             sys.path.insert(0, str(pyd_dir))
             try:
-                import antigcp
+                import antigcp  # type: ignore[import-not-found]
 
                 self._antigcp = antigcp
             except ImportError as e:

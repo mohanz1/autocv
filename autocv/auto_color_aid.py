@@ -1,7 +1,7 @@
 """A module providing a tkinter-based application that allows color selection and analysis from external windows.
 
 This application captures frames from external windows via AutoCV, displays a live view,
-and lets the user inspect and select pixel colors. Selected colors are stored and analyzed
+and let's the user inspect and select pixel colors. Selected colors are stored and analyzed
 to compute a "best color" based on the selected pixels.
 """
 
@@ -16,7 +16,9 @@ from typing import TYPE_CHECKING
 import cv2
 import numpy as np
 import sv_ttk
-from PIL import Image, ImageDraw, ImageTk
+from PIL import Image
+from PIL import ImageDraw
+from PIL import ImageTk
 
 from autocv import AutoCV
 
@@ -343,8 +345,8 @@ class AutoColorAid(tk.Tk):
                 dtype=np.uint8,
             )
 
-        img = cv2.resize(cropped_image, None, fx=zoom, fy=zoom, interpolation=cv2.INTER_NEAREST)
-        img = Image.fromarray(img)
+        resized_img = cv2.resize(cropped_image, None, fx=zoom, fy=zoom, interpolation=cv2.INTER_NEAREST)
+        img = Image.fromarray(resized_img)
         draw = ImageDraw.Draw(img)
         center_top_left = (pixels * zoom, pixels * zoom)
         center_bottom_right = (center_top_left[0] + zoom, center_top_left[1] + zoom)
@@ -359,7 +361,7 @@ class AutoColorAid(tk.Tk):
             outline=inverse_color,
             width=1,
         )
-        self._pixel_region_photoimage = ImageTk.PhotoImage(Image.fromarray(np.array(img)))
+        self._pixel_region_photoimage = ImageTk.PhotoImage(img)
         self.pixel_region_label.config(image=self._pixel_region_photoimage, text="")
 
     def _on_mouse_move(self, event: tk.Event[ttk.Label]) -> None:

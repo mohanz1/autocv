@@ -9,10 +9,13 @@ from __future__ import annotations
 __all__ = ("find_first", "get_first")
 
 from operator import attrgetter
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING
+from typing import TypeVar
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable, Sequence
+    from collections.abc import Callable
+    from collections.abc import Iterable
+    from collections.abc import Sequence
 
 T = TypeVar("T")
 

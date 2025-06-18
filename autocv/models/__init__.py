@@ -14,9 +14,7 @@ __all__ = [
     "InvalidLengthError",
 ]
 
-from .exceptions import (
-    InvalidHandleError,
-    InvalidImageError,
-    InvalidLengthError,
-)
+from .exceptions import InvalidHandleError
+from .exceptions import InvalidImageError
+from .exceptions import InvalidLengthError
 from .filter_settings import FilterSettings

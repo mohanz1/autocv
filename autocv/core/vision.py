@@ -11,7 +11,8 @@ __all__ = ("Vision",)
 import io
 import logging
 import pathlib
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
+from typing import cast
 
 import cv2 as cv
 import numpy as np
@@ -21,10 +22,13 @@ import win32con
 import win32gui
 import win32ui
 from PIL import Image
-from tesserocr import OEM, PSM, PyTessBaseAPI
+from tesserocr import OEM
+from tesserocr import PSM
+from tesserocr import PyTessBaseAPI
 from typing_extensions import Self
 
-from .decorators import check_valid_hwnd, check_valid_image
+from .decorators import check_valid_hwnd
+from .decorators import check_valid_image
 from .image_processing import filter_colors
 from .window_capture import WindowCapture
 
@@ -34,6 +38,7 @@ if TYPE_CHECKING:
 RECTANGLE_SIDES = 4
 GRESCALE_CHANNELS = 3
 MAX_COLOR_VALUE = 255
+ONE_HUNDRED = 100
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +83,7 @@ class Vision(WindowCapture):
                 cv.cvtColor(np.array(image), cv.COLOR_RGB2BGR),
             )
         else:
-            self.opencv_image = cast("npt.NDArray[np.uint8]", image)
+            self.opencv_image = image
 
     @check_valid_hwnd
     def refresh(self: Self, *, set_backbuffer: bool = True) -> npt.NDArray[np.uint8] | None:
@@ -226,7 +231,7 @@ class Vision(WindowCapture):
         )
 
         # Filter out invalid or low-confidence text.
-        text = text.filter((pl.col("conf") > 0) & (pl.col("conf") < 100))
+        text = text.filter((pl.col("conf") > 0) & (pl.col("conf") < ONE_HUNDRED))
         text = text.with_columns(
             [
                 pl.col("text").cast(pl.Utf8),
@@ -303,9 +308,9 @@ class Vision(WindowCapture):
         acceptable_text = acceptable_text.select("text", "left", "top", "width", "height", "confidence")
         if rect:
             acceptable_text = acceptable_text.with_columns(pl.col("left") + rect[0], pl.col("top") + rect[1])
-        df = acceptable_text.with_columns(pl.concat_list(["left", "top", "width", "height"]).alias("rect"))
-        df = df.select(["text", "rect", "confidence"])
-        return cast(list[dict[str, str | int | float | list[int]]], df.collect().to_dicts())
+        result_df = acceptable_text.with_columns(pl.concat_list(["left", "top", "width", "height"]).alias("rect"))
+        result_df = result_df.select(["text", "rect", "confidence"])
+        return cast("list[dict[str, str | int | float | list[int]]]", result_df.collect().to_dicts())
 
     @check_valid_image
     def get_color(self: Self, point: tuple[int, int]) -> tuple[int, int, int]:
@@ -378,8 +383,8 @@ class Vision(WindowCapture):
         """
         image = self._crop_image(rect, image)
         avg_color = cv.mean(image)
-        avg_color = np.array(avg_color[:3], dtype=np.int16)
-        return avg_color[::-1]
+        avg_color_rgb = np.array(avg_color[:3], dtype=np.int16)
+        return avg_color_rgb[::-1]
 
     @check_valid_image
     def get_most_common_color(
@@ -796,9 +801,9 @@ class Vision(WindowCapture):
         Returns:
             A list of grouped rectangles.
         """
-        rects = np.repeat(np.array(rects), 2, axis=0)
-        rects, _ = cv.groupRectangles(rects, groupThreshold=1, eps=0.1)  # type: ignore[arg-type]
-        return cast("list[tuple[int, int, int, int]]", rects)
+        rects_arr = np.repeat(np.array(rects), 2, axis=0)
+        grouped_rects, _ = cv.groupRectangles(rects_arr, groupThreshold=1, eps=0.1)  # type: ignore[arg-type]
+        return cast("list[tuple[int, int, int, int]]", grouped_rects)
 
     @check_valid_image
     def find_contours(
@@ -832,7 +837,7 @@ class Vision(WindowCapture):
                 for c in contours
                 if vertices == len(cv.approxPolyDP(c, 0.01 * cv.arcLength(c, closed=True), closed=True))
             ]
-        return cast(list[npt.NDArray[np.uintp]], contours)
+        return cast("list[npt.NDArray[np.uintp]]", contours)
 
     @check_valid_image
     def draw_points(
@@ -846,8 +851,8 @@ class Vision(WindowCapture):
             points: A sequence of (x, y) coordinates.
             color: The drawing color as an RGB tuple. Defaults to red.
         """
-        points = np.array(points)
-        self.opencv_image[points[:, 1], points[:, 0]] = color[::-1]
+        points_arr = np.array(points)
+        self.opencv_image[points_arr[:, 1], points_arr[:, 0]] = color[::-1]
 
     @check_valid_image
     def draw_contours(
@@ -910,4 +915,4 @@ class Vision(WindowCapture):
                 updated.
         """
         grey_image = filter_colors(self.opencv_image, colors, tolerance, keep_original_colors=keep_original_colors)
-        self.opencv_image = cast("npt.NDArray[np.uint8]", grey_image)
+        self.opencv_image = grey_image
