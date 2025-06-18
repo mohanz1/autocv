@@ -104,7 +104,7 @@ def _remove_trailing_whitespaces_for_file(file: pathlib.Path, session: nox.Sessi
 
         session.log(f"Removing trailing whitespaces present in {file}")
 
-        file.write_bytes(b"".join(lines))
+        file.write_bytes(b"".join(new_lines))
 
         if GIT is not None:
             result = subprocess.check_call(  # noqa: S603

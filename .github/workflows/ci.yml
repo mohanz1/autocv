@@ -64,7 +64,7 @@ jobs:
       - name: Install nox
         run: |
           uv sync --frozen --only-group nox
-          
+
       - name: Audit
         if: always() && !cancelled()
         run: |
@@ -104,7 +104,7 @@ jobs:
           python-version: 3.13
 
       - name: Install docs deps
-        run: uv sync --frozen --only-group docs
+        run: uv sync --frozen --only-group sphinx
 
       - name: Sphinx build
         run: |

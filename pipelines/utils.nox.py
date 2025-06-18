@@ -11,7 +11,7 @@ DIRECTORIES_TO_DELETE = [
     ".nox",
     "build",
     "dist",
-    "hikari.egg-info",
+    "autocv.egg-info",
     "public",
     ".pytest_cache",
     ".mypy_cache",
