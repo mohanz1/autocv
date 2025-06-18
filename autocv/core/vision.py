@@ -772,8 +772,10 @@ class Vision(WindowCapture):
         """
         rects = []
         w, h = sub_image_bgr.shape[1::-1]
-        for loc in np.fliplr(np.transpose(np.where(res))):
-            x, y = loc
+        locations = np.column_stack(np.where(res))
+        for i in range(locations.shape[0]):
+            y = int(locations[i, 0])
+            x = int(locations[i, 1])
             main_image_region = main_image[y : y + h, x : x + w]
             found_rect = (
                 x + (rect[0] if rect else 0),
