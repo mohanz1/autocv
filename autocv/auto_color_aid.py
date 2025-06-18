@@ -12,6 +12,7 @@ __all__ = ("AutoColorAid",)
 import tkinter as tk
 from tkinter import ttk
 from typing import TYPE_CHECKING
+from typing import Any
 
 import cv2
 import numpy as np
@@ -23,7 +24,7 @@ from PIL import ImageTk
 from autocv import AutoCV
 
 if TYPE_CHECKING:
-    from PIL.ImageTk import PhotoImage
+    from numpy.typing import NDArray
 
 
 class AutoColorAid(tk.Tk):
@@ -47,7 +48,7 @@ class AutoColorAid(tk.Tk):
         self.autocv = AutoCV()
 
         # Internal attributes to hold PhotoImage references (to prevent garbage collection).
-        self._photo_image: PhotoImage
+        self._photo_image: ImageTk.PhotoImage
         self._pixel_region_photoimage: ImageTk.PhotoImage | None = None
         self._last_mouse_pos = (-1, -1)
 
@@ -337,6 +338,7 @@ class AutoColorAid(tk.Tk):
         frame = self.autocv.opencv_image
         h, w, _ = frame.shape
 
+        cropped_image: NDArray[Any]
         if x - pixels < 0 or y - pixels < 0 or x + pixels >= w or y + pixels >= h:
             cropped_image = np.ones((3, 3, 3), dtype=np.uint8) * 217
         else:
