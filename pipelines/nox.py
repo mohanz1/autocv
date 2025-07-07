@@ -7,7 +7,7 @@ import nox
 NoxCallbackSigT = typing.Callable[[nox.Session], None]
 
 # Default sessions should be defined here
-nox.options.sessions = ["reformat-code", "codespell", "ruff", "mypy"]
+nox.options.sessions = ["reformat-code", "codespell", "pytest", "ruff", "mypy"]
 nox.options.default_venv_backend = "uv"
 
 
