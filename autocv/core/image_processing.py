@@ -80,7 +80,7 @@ def filter_colors(
             lb,
             ub,
         )
-        color_mask = cv.inRange(opencv_image, lb.astype(np.uint8), ub.astype(np.uint8))
+        color_mask = cv.inRange(opencv_image, lb.astype(np.uint8), ub.astype(np.uint8))  # type: ignore[call-overload]
         mask = cv.bitwise_or(mask, color_mask)
 
     # Optionally return a filtered image preserving original colors

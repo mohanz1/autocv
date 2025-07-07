@@ -87,18 +87,18 @@ jobs:
       - name: Extract individual coverage files
         run: |
           cd coverages
-          
+
           for coverage_dir in ./.coverage.*; do
               mv "$coverage_dir/.coverage" "../$coverage_dir"
               rmdir "$coverage_dir"
           done
-          
+
           cd ..
 
       - name: Combine coverage
         run: |
           uv sync --frozen --only-group coverage
-          
+
           coverage combine
           coverage xml
           coverage report
@@ -199,7 +199,7 @@ jobs:
 
   # Allows us to add this as a required check in Github branch rules, as all the other jobs are subject to change
   ci-done:
-    needs: [ test, linting, docs ]
+    needs: [ upload-coverage, linting, docs ]
     if: always() && !cancelled()
 
     runs-on: ubuntu-latest

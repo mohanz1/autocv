@@ -458,7 +458,7 @@ class Vision(WindowCapture):
         sorted_unique = unique[sorted_indices]
         sorted_counts = counts[sorted_indices]
         return [
-            ((int(bgr[2]), int(bgr[1]), int(bgr[0])), int(c))
+            ((int(bgr[2]), int(bgr[1]), int(bgr[0])), int(c))  # type: ignore[index]
             for bgr, c in zip(sorted_unique, sorted_counts, strict=False)
         ]
 
