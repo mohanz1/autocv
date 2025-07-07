@@ -3,7 +3,7 @@ from __future__ import annotations
 from pipelines import config
 from pipelines import nox
 
-IGNORED_WORDS = ["amin"]
+IGNORED_WORDS = ["amin", "arange"]
 
 
 @nox.session()
