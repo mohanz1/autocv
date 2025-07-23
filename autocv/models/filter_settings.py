@@ -12,7 +12,9 @@ __all__ = ("FilterSettings",)
 from dataclasses import dataclass
 
 # Use slots if supported by the dataclass implementation.
-SLOTS_DATACLASS = {"slots": True} if "slots" in dataclass.__kwdefaults__ else {}
+# Ensure __kwdefaults__ is at least an empty dict
+kwdefaults = dataclass.__kwdefaults__ or {}
+SLOTS_DATACLASS = {"slots": True} if "slots" in kwdefaults else {}
 
 
 @dataclass(**SLOTS_DATACLASS)
