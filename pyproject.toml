@@ -13,7 +13,7 @@ dependencies = [
     "polars >=1.27,<2",
     "pillow >=11.1,<12",
     "pytesseract >=0.3,<1",
-    "pywin32 >=310,<311",
+    "pywin32 >=311,<312",
     "sv-ttk >=2.6,<3",
     "tesserocr >=2.8.0,<3",
     "typing-extensions >=4.13,<5",
@@ -70,7 +70,7 @@ pytest = [
 ruff = ["ruff >=0.11.13,<1"]
 types = [
     "types-Pillow >=10.2,<11",
-    "types_pywin32 >=310,<311",
+    "types_pywin32 >=310,<313",
 ]
 
 [tool.uv]
