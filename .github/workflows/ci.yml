@@ -74,7 +74,7 @@ jobs:
           activate-environment: true
 
       - name: Download coverage
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           path: coverages/
           # Not specifying any name will lead to the download of all available artifacts
