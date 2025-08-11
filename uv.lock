@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.10"
 resolution-markers = [
     "python_full_version == '3.13.*' and platform_machine == 'AMD64' and sys_platform == 'win32'",
@@ -1854,11 +1854,11 @@ wheels = [
 
 [[package]]
 name = "types-pywin32"
-version = "311.0.0.20250723"
+version = "311.0.0.20250809"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/fa/14/3f12d6d6b4bf9699b6b2988dece12f1d7f065d21c80e4be565410028f7da/types_pywin32-311.0.0.20250723.tar.gz", hash = "sha256:95c28cae88d3a229b5793c9d2d5661c2da6f4dde8ad73ff243934e84371d3c0f", size = 328590, upload-time = "2025-07-23T03:24:08.044Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d8/45/ba592347eee2a6549fdea4d61e59e46046679c1480314768202fe745fa19/types_pywin32-311.0.0.20250809.tar.gz", hash = "sha256:ff20a481a452d5dbdab7368bb5ff6cf9427eb8b0515c84911f22b86d5de87df9", size = 329351, upload-time = "2025-08-09T03:16:00.012Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/de/35/c5358b61cafc9394c919120d588f94ddfd2f9bcb7b486fce6466a7044904/types_pywin32-311.0.0.20250723-py3-none-any.whl", hash = "sha256:9c969fc4e4a0bdab61035c72baaef2ec64c2ada9cdcebe46af38ef5139f07434", size = 390486, upload-time = "2025-07-23T03:24:06.592Z" },
+    { url = "https://files.pythonhosted.org/packages/82/92/f9d1f9f74794e5cc4ee55a0a366532b71abf110c54d7e829fcfb6a9b32c3/types_pywin32-311.0.0.20250809-py3-none-any.whl", hash = "sha256:3923ad5a3534135fcd585556d112994708627e98b5eff1a568fc2f15e15b72e3", size = 392818, upload-time = "2025-08-09T03:15:58.722Z" },
 ]
 
 [[package]]
