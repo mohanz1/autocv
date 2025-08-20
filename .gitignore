@@ -62,6 +62,10 @@ prof/
 Pipfile*
 pyrightconfig.json
 
+# Explicitly keep prebuilt
+!autocv/prebuilt/
+!autocv/prebuilt/**
+
 # my local testing
 test/
 test.py
