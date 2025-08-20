@@ -276,7 +276,7 @@ class Vision(WindowCapture):
         Returns:
             The cropped image.
         """
-        image = image if image is not None else self.opencv_image
+        image = image or self.opencv_image
         if rect:
             x, y, w, h = rect
             return image[y : y + h, x : x + w]
