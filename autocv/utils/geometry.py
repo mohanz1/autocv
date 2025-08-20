@@ -6,7 +6,7 @@ and sort shapes based on various criteria.
 
 from __future__ import annotations
 
-__all__ = ("get_center", "get_random_point", "sort_shapes", "get_overlap")
+__all__ = ("get_center", "get_random_point", "sort_shapes")
 
 from typing import Literal
 
@@ -149,3 +149,4 @@ def sort_shapes(
         shapes_sorted = sorted(shapes, key=lambda s: get_center(s)[1], reverse=reverse_sort)
     else:
         shapes_sorted = shapes
+    return shapes_sorted
