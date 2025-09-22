@@ -1,21 +1,11 @@
-"""This module defines the ImagePicker class which allows users to select a region of a window and take a screenshot.
-
-It uses Tkinter for the GUI and Win32 APIs to interact with the window and capture the screenshot.
-"""
+"""Tkinter overlay for selecting and capturing AutoCV window regions."""
 
 from __future__ import annotations
 
 __all__ = ("ImagePicker",)
 
-from tkinter import BOTH
-from tkinter import YES
-from tkinter import Canvas
-from tkinter import Event
-from tkinter import Frame
-from tkinter import Tk
-from tkinter import Toplevel
-from typing import TYPE_CHECKING
-from typing import Any
+from tkinter import BOTH, YES, Canvas, Event, Frame, Tk, Toplevel
+from typing import TYPE_CHECKING, Any
 
 import win32con
 import win32gui
@@ -29,11 +19,7 @@ if TYPE_CHECKING:
 
 
 class ImagePicker:
-    """Allows the user to select a region of a window and capture a screenshot of that region.
-
-    This class creates an interactive overlay window using Tkinter, where the user can click and drag
-    to select a region. Win32 APIs are used to bring the target window to the foreground and capture its screenshot.
-    """
+    """Interactive overlay for selecting and capturing a region of a window."""
 
     def __init__(self: Self, hwnd: int, master: Tk) -> None:
         """Initializes the ImagePicker instance and sets up the GUI overlay for region selection.

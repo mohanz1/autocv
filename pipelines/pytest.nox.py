@@ -4,8 +4,7 @@ from __future__ import annotations
 
 import typing
 
-from pipelines import config
-from pipelines import nox
+from pipelines import config, nox
 
 RUN_FLAGS = ["-c", config.PYPROJECT_TOML, "--showlocals"]
 COVERAGE_FLAGS = [

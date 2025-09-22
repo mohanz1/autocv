@@ -1,7 +1,7 @@
-"""Module to define custom exceptions for the AutoCV project.
+"""Exception classes used across AutoCV.
 
-This module provides custom exception classes to indicate specific errors that can occur in the application,
-such as invalid handles, images, or lengths.
+These lightweight subclasses communicate invalid state encountered while
+validating window handles, image buffers, or sequence lengths.
 """
 
 from __future__ import annotations
@@ -16,45 +16,42 @@ from typing_extensions import Self
 
 
 class InvalidHandleError(Exception):
-    """Exception raised when an invalid window handle is encountered.
+    """Raised when a window handle is missing or otherwise unusable.
 
     Attributes:
-        hwnd (int): The invalid handle that caused the exception.
+        hwnd (int): Handle value that failed validation.
     """
 
     def __init__(self: Self, hwnd: int) -> None:
-        """Initialize the exception with the invalid handle.
+        """Initialise the error with the offending handle.
 
         Args:
-            hwnd (int): The invalid handle value.
+            hwnd (int): Handle value that triggered the error.
         """
         super().__init__(f"Invalid handle: {hwnd}. Please set handle before calling this method.")
 
 
 class InvalidImageError(Exception):
-    """Exception raised when an invalid image is encountered.
-
-    This exception typically indicates that an image has not been captured or refreshed properly.
-    """
+    """Raised when an OpenCV image buffer is empty or unset."""
 
     def __init__(self: Self) -> None:
-        """Initialize the exception for an invalid image."""
+        """Initialise the error for a missing or empty image buffer."""
         super().__init__("Invalid image. Please call refresh() before calling this method.")
 
 
 class InvalidLengthError(Exception):
-    """Exception raised when the length of an input does not meet the expected value.
+    """Raised when iterable length mismatches the expected size.
 
     Attributes:
-        expected (int): The expected length.
-        received (int): The length that was received.
+        expected (int): Target number of items required by the caller.
+        received (int): Number of items supplied by the caller.
     """
 
     def __init__(self: Self, expected: int, received: int) -> None:
-        """Initialize the exception with the expected and received lengths.
+        """Initialise the error with the expected versus received lengths.
 
         Args:
-            expected (int): The expected length.
-            received (int): The actual length received.
+            expected (int): Number of items the routine requires.
+            received (int): Number of items provided.
         """
         super().__init__(f"Expected length {expected}. Instead received length {received}.")

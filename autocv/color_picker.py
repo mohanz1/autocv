@@ -11,10 +11,7 @@ from __future__ import annotations
 __all__ = ("ColorPicker",)
 
 from pathlib import Path
-from tkinter import NW
-from tkinter import Canvas
-from tkinter import Tk
-from tkinter import Toplevel
+from tkinter import NW, Canvas, Tk, Toplevel
 
 import cv2 as cv
 import numpy as np
@@ -22,10 +19,7 @@ import numpy.typing as npt
 import win32api
 import win32con
 import win32gui
-from PIL import Image
-from PIL import ImageDraw
-from PIL import ImageFont
-from PIL import ImageTk
+from PIL import Image, ImageDraw, ImageFont, ImageTk
 from PIL.ImageTk import PhotoImage
 from typing_extensions import Self
 
@@ -37,20 +31,16 @@ ZOOM = 40
 
 
 class ColorPicker:
-    """Provides an interactive color picking tool using a Tkinter window.
-
-    Captures a magnified view of a small region around the mouse cursor,
-    allowing the user to accurately select a pixel's color from a target window.
+    """Interactive magnifier that returns pixel samples from a target window.
 
     Attributes:
-        hwnd (int): Handle of the window from which colors will be picked.
-        master (Tk): The root Tkinter window for the color picker interface.
-        size (int): The size (in pixels) of the magnifier window.
-        snip_surface (Canvas): The Tkinter canvas on which the magnified view is drawn.
-        result (tuple[tuple[int, int, int], tuple[int, int]] | None): The most recently picked color and its screen
-            coordinates.
-        prev_state (int): The previous state of the left mouse button to detect clicks.
-        vision (Vision): A Vision instance used for screen capture and color analysis.
+        hwnd (int): Window handle that supplies frames for sampling.
+        master (Tk): Root Tk instance responsible for lifecycle management.
+        size (int): Side length (in pixels) of the magnifier canvas.
+        snip_surface (Canvas): Canvas displaying the magnified cursor region.
+        result (tuple[tuple[int, int, int], tuple[int, int]] | None): Latest sampled RGB colour and screen coordinate.
+        prev_state (int): Cached state of the left mouse button for edge detection.
+        vision (Vision): AutoCV vision wrapper used to capture frames.
     """
 
     def __init__(self: Self, hwnd: int, master: Tk) -> None:

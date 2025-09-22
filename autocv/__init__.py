@@ -1,17 +1,11 @@
-"""The `autocv` package provides a suite of tools to automate and perform computer vision tasks on the Windows platform.
+"""Windows-specific automation bootstrap and metadata exports.
 
-This package includes capabilities for screen capture, image processing, color picking, and simulation of user input,
-all designed to facilitate the creation of automation scripts and applications that interact with GUI elements. The
-AutoCV class serves as the main interface for these functionalities.
+Importing this package configures DPI awareness for the current process and
+re-exports the high-level automation entry points alongside project metadata.
 
 Note:
-    The package is specifically designed for the Windows platform and may not function correctly on other operating
-        systems.
-    DPI awareness is set according to the detected Windows version to ensure consistent behavior across different
-        screen resolutions and scalings.
-
-Modules:
-    autocv: Contains the AutoCV class, providing high-level methods for automation and computer vision tasks.
+    Only Windows builds are supported; importing on other platforms raises a
+    ``RuntimeError``.
 """
 
 from __future__ import annotations

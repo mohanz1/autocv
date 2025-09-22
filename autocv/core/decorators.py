@@ -1,9 +1,4 @@
-"""Decorators that validate key attributes on a class instance.
-
-Decorators:
-    - check_valid_hwnd: Ensures an object has a valid (non-negative) `hwnd` attribute.
-    - check_valid_image: Ensures an object has a non-empty `opencv_image` attribute.
-"""
+"""Validation decorators for window handles and image buffers."""
 
 from __future__ import annotations
 
@@ -13,20 +8,14 @@ __all__ = (
 )
 
 import functools
-from typing import TYPE_CHECKING
-from typing import Concatenate
-from typing import ParamSpec
-from typing import TypeVar
-from typing import cast
+from typing import TYPE_CHECKING, Concatenate, ParamSpec, TypeVar, cast
 
-from autocv.models import InvalidHandleError
-from autocv.models import InvalidImageError
+from autocv.models import InvalidHandleError, InvalidImageError
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from autocv.core import Vision
-    from autocv.core import WindowCapture
+    from autocv.core import Vision, WindowCapture
 
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -35,15 +24,17 @@ VisionT = TypeVar("VisionT", bound="Vision")
 
 
 def check_valid_hwnd(func: Callable[Concatenate[WindowCaptureT, P], R]) -> Callable[Concatenate[WindowCaptureT, P], R]:
-    """Decorator to ensure the instance has a valid window handle.
+    """Ensure the bound instance exposes a valid ``hwnd``.
 
-    This decorator checks that the `hwnd` attribute exists on the instance and is not -1.
-
-    Raises:
-        InvalidHandleError: If `self.hwnd` is missing or equals -1.
+    Args:
+        func (Callable[Concatenate[WindowCaptureT, P], R]): Method being wrapped.
 
     Returns:
-        The wrapped function if the handle is valid.
+        Callable[Concatenate[WindowCaptureT, P], R]: Wrapped callable that raises
+            :class:`InvalidHandleError` when ``self.hwnd`` equals ``-1``.
+
+    Raises:
+        InvalidHandleError: If ``self.hwnd`` has not been set on the instance.
     """
 
     @functools.wraps(func)
@@ -56,15 +47,17 @@ def check_valid_hwnd(func: Callable[Concatenate[WindowCaptureT, P], R]) -> Calla
 
 
 def check_valid_image(func: Callable[Concatenate[VisionT, P], R]) -> Callable[Concatenate[VisionT, P], R]:
-    """Decorator to ensure the instance has a valid image.
+    """Ensure the bound instance exposes a populated ``opencv_image`` buffer.
 
-    This decorator checks that the `opencv_image` attribute exists on the instance and is non-empty.
-
-    Raises:
-        InvalidImageError: If `self.opencv_image` is missing or has zero size.
+    Args:
+        func (Callable[Concatenate[VisionT, P], R]): Method being wrapped.
 
     Returns:
-        The wrapped function if the image is valid.
+        Callable[Concatenate[VisionT, P], R]: Wrapped callable that raises
+            :class:`InvalidImageError` when ``self.opencv_image`` is empty.
+
+    Raises:
+        InvalidImageError: If the instance lacks an image or the array size is zero.
     """
 
     @functools.wraps(func)

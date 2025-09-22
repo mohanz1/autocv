@@ -1,8 +1,4 @@
-"""This module defines the ImageFilter class used for applying various image processing techniques.
-
-It supports HSV filtering, Canny edge detection, erosion, and dilation operations using OpenCV.
-A user interface with trackbars is provided for real-time adjustment of filter settings.
-"""
+"""Interactive HSV/Canny filter tuning widget backed by AutoCV frames."""
 
 from __future__ import annotations
 
@@ -77,7 +73,7 @@ class ImageFilter:
         cv.destroyAllWindows()
 
     def update_filter_settings(self: Self) -> None:
-        """Updates filter settings based on current trackbar positions."""
+        """Synchronise the stored settings with the active trackbar positions."""
         self.filter_settings.h_min = cv.getTrackbarPos("H min", "Trackbars")
         self.filter_settings.h_max = cv.getTrackbarPos("H max", "Trackbars")
         self.filter_settings.s_min = cv.getTrackbarPos("S min", "Trackbars")

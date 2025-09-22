@@ -11,15 +11,13 @@ __all__ = ("AutoColorAid",)
 
 import tkinter as tk
 from tkinter import ttk
-from typing import TYPE_CHECKING
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import cv2
 import numpy as np
 import sv_ttk
-from PIL import Image
-from PIL import ImageDraw
-from PIL import ImageTk
+from PIL import Image, ImageDraw, ImageTk
+from typing_extensions import Self
 
 from autocv import AutoCV
 
@@ -28,19 +26,14 @@ if TYPE_CHECKING:
 
 
 class AutoColorAid(tk.Tk):
-    """GUI application for color selection and analysis from captured windows.
+    """Tkinter application for sampling colours from AutoCV-captured frames.
 
-    This application uses AutoCV to capture images from external windows, displays
-    the captured frame, and provides pixel-level inspection (including a zoomed 3x3 region)
-    along with a list of selected colors and computed "best color" information.
+    Streams window frames via AutoCV, offers pixel inspection tools,
+    and computes helper statistics for automation tuning.
     """
 
     def __init__(self) -> None:
-        """Initializes the main application window.
-
-        Sets up the tkinter root window, initializes an AutoCV object for capturing frames,
-        creates the UI widgets, binds event handlers, and starts the periodic image update loop.
-        """
+        """Initialise the Tk window, AutoCV capture, and recurring refresh loop."""
         super().__init__()
         self.title("Auto Color Aid")
 
@@ -147,14 +140,14 @@ class AutoColorAid(tk.Tk):
         self.child_window_picker.bind("<<ComboboxSelected>>", self._on_child_window_selected)
 
     def _refresh_main_windows(self) -> None:
-        """Refreshes the list of main windows and updates the main window picker."""
+        """Refresh the list of top-level windows and populate the picker."""
         windows_with_hwnds = self.autocv.get_windows_with_hwnds()
         windows = [name for (_, name) in windows_with_hwnds]
         self.main_window_picker["values"] = windows
         self.main_window_picker.set("Select a main window")
 
     def _on_main_window_selected(self, _: tk.Event[ttk.Combobox]) -> None:
-        """Handles selection of a main window from the combo box.
+        """Handle selection events from the main-window picker.
 
         Args:
             _ (tk.Event): The event object (unused).
@@ -178,7 +171,7 @@ class AutoColorAid(tk.Tk):
             self._has_valid_child = False
 
     def _on_child_window_selected(self, _: tk.Event[ttk.Combobox]) -> None:
-        """Handles selection of a child window from the combo box.
+        """Handle selection events from the child-window picker.
 
         Args:
             _ (tk.Event): The event object (unused).
@@ -272,12 +265,8 @@ class AutoColorAid(tk.Tk):
         self._show_3x3_region()
         self.after(5, self._update_image)
 
-    def _draw_color_markers(self) -> None:
-        """Draws markers on the image for each selected pixel.
-
-        If the "Mark Best Color Only" toggle is enabled, markers are drawn using the computed best color.
-        Otherwise, each pixel is marked using its own color.
-        """
+    def _draw_color_markers(self: Self) -> None:
+        """Overlay markers for either the best colour or every sampled colour."""
         if not self.selected_pixels:
             return
 
@@ -295,7 +284,7 @@ class AutoColorAid(tk.Tk):
         """Converts mouse coordinates from the image label to frame coordinates in the captured image.
 
         Args:
-            event (tk.Event): The mouse event containing x and y positions on the label.
+            event (tk.Event[ttk.Label]): Mouse event carrying the label-relative coordinates.
 
         Returns:
             tuple[int | None, int | None]: The (row, col) coordinates in the frame, or (None, None) if out of bounds.
@@ -323,9 +312,9 @@ class AutoColorAid(tk.Tk):
         return None, None
 
     def _show_3x3_region(self) -> None:
-        """Extracts a 3x3 pixel region around the last mouse position and displays it in the right panel.
+        """Render a magnified 3x3 pixel preview around the last mouse position.
 
-        If the region is out of bounds, a default gray image is displayed.
+        Displays a neutral gray image when the cursor sample falls outside the frame.
         """
         if self.autocv.opencv_image.size == 0:
             self._pixel_region_photoimage = None
@@ -367,10 +356,10 @@ class AutoColorAid(tk.Tk):
         self.pixel_region_label.config(image=self._pixel_region_photoimage, text="")
 
     def _on_mouse_move(self, event: tk.Event[ttk.Label]) -> None:
-        """Handles mouse movement over the main image label to update pixel preview.
+        """Handle pointer motion to refresh the magnified pixel preview.
 
         Args:
-            event (tk.Event): The mouse event containing position data.
+            event (tk.Event[ttk.Label]): Mouse move event from the preview label.
         """
         row, col = self._get_mouse_coords_in_frame(event)
         if row is not None and col is not None:
@@ -378,13 +367,10 @@ class AutoColorAid(tk.Tk):
             self._show_3x3_region()
 
     def _on_mouse_click(self, event: tk.Event[ttk.Label]) -> None:
-        """Handles mouse clicks on the main image label to record the selected color.
-
-        Retrieves the color at the clicked position, inserts it into the listbox,
-        and updates the best color computation.
+        """Persist the colour under the cursor when the preview is clicked.
 
         Args:
-            event (tk.Event): The mouse event containing the click position.
+            event (tk.Event[ttk.Label]): Mouse click event from the preview label.
         """
         row, col = self._get_mouse_coords_in_frame(event)
         if row is None or col is None:

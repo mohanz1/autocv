@@ -180,7 +180,6 @@ ignore = [
 
 [tool.ruff.lint.isort]
 required-imports = ["from __future__ import annotations"]
-force-single-line = true
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

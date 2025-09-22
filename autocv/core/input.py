@@ -41,7 +41,7 @@ class Input(Vision):
         """Initializes an Input object.
 
         Args:
-            hwnd: The window handle to which input should be directed. Defaults to -1.
+            hwnd (int): Window handle that will receive simulated input. Defaults to -1.
         """
         super().__init__(hwnd)
         self._last_moved_point: tuple[int, int] = (0, 0)
@@ -55,7 +55,7 @@ class Input(Vision):
         """Returns the last point where the mouse cursor was moved.
 
         Returns:
-            A tuple (x, y) representing the last moved position.
+            tuple[int, int]: Last cursor position that was targeted.
         """
         return self._last_moved_point
 
@@ -64,7 +64,7 @@ class Input(Vision):
         """Retrieves the topmost (root) window handle for the target window.
 
         Returns:
-            The topmost window handle.
+            int: Handle for the topmost ancestor window.
         """
         parent_hwnd: int = win32gui.GetAncestor(self.hwnd, win32con.GA_ROOT)
         logger.debug("Found parent handle: %s", parent_hwnd)
@@ -72,14 +72,14 @@ class Input(Vision):
 
     @staticmethod
     def _make_lparam(x: int, y: int) -> int:
-        """Constructs a valid lParam value for mouse messages.
+        """Construct a packed LPARAM value for Win32 messages.
 
         Args:
-            x: The x-coordinate.
-            y: The y-coordinate.
+            x (int): X-coordinate to encode in the message.
+            y (int): Y-coordinate to encode in the message.
 
         Returns:
-            The constructed lParam value.
+            int: Packed LPARAM value suitable for Win32 messages.
         """
         return (y << 16) | (x & 0xFFFF)
 
@@ -91,10 +91,10 @@ class Input(Vision):
         the movement will simulate natural motion.
 
         Args:
-            x: The target x-coordinate.
-            y: The target y-coordinate.
-            human_like: If True, move the mouse with a human-like trajectory.
-            ghost_mouse: If True, use ghost mouse simulation; otherwise, directly set the cursor position.
+            x (int): Target x-coordinate inside the client area.
+            y (int): Target y-coordinate inside the client area.
+            human_like (bool): When ``True``, simulate human-like mouse motion.
+            ghost_mouse (bool): When ``True``, rely on ghost mouse behaviour; otherwise emit OS cursor updates.
         """
         if not human_like:
             self._move_mouse(x, y, ghost_mouse=ghost_mouse)
@@ -135,17 +135,17 @@ class Input(Vision):
         The movement is influenced by gravity and wind, producing a curved path.
 
         Args:
-            xs: Starting x-coordinate.
-            ys: Starting y-coordinate.
-            xe: Ending x-coordinate.
-            ye: Ending y-coordinate.
-            gravity: The gravitational factor pulling the cursor toward the target.
-            wind: The wind factor introducing randomness.
-            min_wait: Minimum delay between movements.
-            max_wait: Maximum delay between movements.
-            max_step: Maximum distance covered in one step.
-            target_area: When remaining distance is less than this, motion slows down.
-            ghost_mouse: If True, use ghost mouse simulation.
+            xs (float): Starting x-coordinate of the cursor.
+            ys (float): Starting y-coordinate of the cursor.
+            xe (float): Destination x-coordinate.
+            ye (float): Destination y-coordinate.
+            gravity (float): Strength of the pull toward the destination.
+            wind (float): Randomness factor to jitter the trajectory.
+            min_wait (float): Minimum wait time between steps, in milliseconds.
+            max_wait (float): Maximum wait time between steps, in milliseconds.
+            max_step (float): Maximum distance covered per iteration.
+            target_area (float): Threshold under which the cursor eases into the target.
+            ghost_mouse (bool): When ``True``, rely on ghost mouse simulation instead of OS cursor updates.
 
         Raises:
             TimeoutError: If the movement does not complete within 15 seconds.
@@ -217,9 +217,9 @@ class Input(Vision):
         If `ghost_mouse` is True, the movement is simulated via message passing.
 
         Args:
-            x: The target x-coordinate.
-            y: The target y-coordinate.
-            ghost_mouse: If True, simulate the movement using ghost mouse techniques.
+            x (int): Target x-coordinate inside the client area.
+            y (int): Target y-coordinate inside the client area.
+            ghost_mouse (bool): When ``True``, simulate the movement using ghost mouse techniques.
         """
         # Convert client coordinates to screen coordinates.
         screen_point = win32gui.ClientToScreen(self.hwnd, (x, y))
@@ -241,11 +241,9 @@ class Input(Vision):
         """Simulates a mouse click at the last moved position.
 
         Args:
-            button: The mouse button to click (1 for left, 2 for right, 3 for middle).
-            send_message: If True, uses SendMessage instead of PostMessage for the click.
+            button (int): Mouse button identifier (1=left, 2=right, 3=middle).
+            send_message (bool): When ``True``, dispatches ``SendMessage`` instead of ``PostMessage``.
 
-        Raises:
-            None.
         """
         screen_point = win32gui.ClientToScreen(self.hwnd, self._last_moved_point)
         button_messages = {
@@ -286,10 +284,8 @@ class Input(Vision):
         """Simulates pressing a virtual key.
 
         Args:
-            vk_code: The virtual key code to press.
+            vk_code (int): Virtual-key code to press.
 
-        Raises:
-            None.
         """
         scan_code = win32api.MapVirtualKey(vk_code, 0)  # type: ignore[no-untyped-call]
         l_param = (scan_code << 16) | 1
@@ -303,10 +299,8 @@ class Input(Vision):
         """Simulates releasing a virtual key.
 
         Args:
-            vk_code: The virtual key code to release.
+            vk_code (int): Virtual-key code to release.
 
-        Raises:
-            None.
         """
         scan_code = win32api.MapVirtualKey(vk_code, 0)  # type: ignore[no-untyped-call]
         l_param = (scan_code << 16) | 1
@@ -320,10 +314,8 @@ class Input(Vision):
         """Sends a virtual key by simulating a press and release.
 
         Args:
-            vk_code: The virtual key code to send.
+            vk_code (int): Virtual-key code to send.
 
-        Raises:
-            None.
         """
         self.press_vk_key(vk_code)
         time.sleep(self._rng.integers(3, 5).astype(int) / 1_000)
@@ -334,10 +326,10 @@ class Input(Vision):
         """Retrieves the asynchronous state of a specified virtual key.
 
         Args:
-            vk_code: One of 256 possible virtual-key codes.
+            vk_code (int): Virtual-key code tested via ``GetAsyncKeyState``.
 
         Returns:
-            True if the key has been pressed since the last call; otherwise, False.
+            bool: ``True`` if the key was pressed since the previous poll, otherwise ``False``.
         """
         return bool(win32api.GetAsyncKeyState(vk_code))
 
@@ -346,10 +338,8 @@ class Input(Vision):
         """Sends a sequence of keystrokes to the active window.
 
         Args:
-            characters: The string of characters to send.
+            characters (str): Characters to emit sequentially.
 
-        Raises:
-            None.
         """
         win32api.SendMessage(self.hwnd, win32con.WM_ACTIVATE, 1, self.hwnd)  # type: ignore[arg-type]
 

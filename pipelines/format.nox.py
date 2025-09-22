@@ -7,8 +7,7 @@ import shutil
 import subprocess
 import time
 
-from pipelines import config
-from pipelines import nox
+from pipelines import config, nox
 
 GIT = shutil.which("git")
 

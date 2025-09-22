@@ -1,9 +1,4 @@
-"""The models package of the AutoCV library.
-
-Provides classes and utilities for representing and manipulating various geometric shapes and entities such as points,
-rectangles, circles, colors, and more complex structures. It also includes exceptions specific to the AutoCV domain and
-settings configurations for image processing filters.
-"""
+"""Data structures and domain exceptions used by AutoCV."""
 
 from __future__ import annotations
 
@@ -14,7 +9,5 @@ __all__ = [
     "InvalidLengthError",
 ]
 
-from .exceptions import InvalidHandleError
-from .exceptions import InvalidImageError
-from .exceptions import InvalidLengthError
+from .exceptions import InvalidHandleError, InvalidImageError, InvalidLengthError
 from .filter_settings import FilterSettings

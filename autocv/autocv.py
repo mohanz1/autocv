@@ -1,12 +1,4 @@
-"""The `autocv` module provides a comprehensive interface for automation and computer vision tasks.
-
-This module contains the AutoCV class, which extends the functionality of the Input class from the core module.
-It provides high-level methods for screen capture, image processing, color picking, and window manipulation,
-making it an all-encompassing tool for building computer vision and GUI automation applications.
-
-Classes:
-    AutoCV: Inherits from Input, providing methods for window and image manipulation, OCR, and user input simulation.
-"""
+"""AutoCV orchestrates high-level window capture, OCR, and input automation."""
 
 from __future__ import annotations
 
@@ -24,9 +16,7 @@ import win32gui
 from typing_extensions import Self
 
 from .color_picker import ColorPicker
-from .core import Input
-from .core import check_valid_hwnd
-from .core import check_valid_image
+from .core import Input, check_valid_hwnd, check_valid_image
 from .image_filter import ImageFilter
 from .image_picker import ImagePicker
 
@@ -38,75 +28,63 @@ if TYPE_CHECKING:
 
 
 class AutoCV(Input):
-    """Provides an interface for interacting with windows and images on a computer screen.
-
-    AutoCV uses OpenCV and Tesseract OCR to capture and process images, perform color picking,
-    and simulate user input. It offers methods for window manipulation, screen capture,
-    and image analysis.
-    """
+    """Coordinate window capture, live inspection tools, and automation hooks."""
 
     def __init__(self: Self, hwnd: int = -1) -> None:
-        """Initializes an AutoCV instance with the specified window handle.
+        """Initialise the automation facade.
 
         Args:
-            hwnd (int): The window handle to use for the AutoCV instance. Defaults to -1.
+            hwnd (int): Window handle that receives capture and input. Defaults to ``-1``.
+
+        Raises:
+            FileNotFoundError: If a matching prebuilt extension directory is missing for the interpreter version.
+            ImportError: If the ``antigcp`` prebuilt cannot be imported.
         """
         super().__init__(hwnd)
 
-        # Determine the appropriate directory based on the current Python version.
         version = sys.version_info
         pyd_dir = Path(__file__).parent / "prebuilt" / f"python{version.major}{version.minor}"
 
-        # Append the directory to sys.path if it exists, and attempt to import antigcp.
-        if pyd_dir.exists():
-            sys.path.insert(0, str(pyd_dir))
-            try:
-                import antigcp  # type: ignore[import-not-found] # noqa: PLC0415
-
-                self._antigcp = antigcp
-            except ImportError as e:
-                raise ImportError from e
-        else:
+        if not pyd_dir.exists():
             raise FileNotFoundError
 
-        # Create a dedicated logger for this instance.
+        sys.path.insert(0, str(pyd_dir))
+        try:
+            import antigcp  # type: ignore[import-not-found] # noqa: PLC0415
+        except ImportError as exc:  # pragma: no cover - bubble up exact exception
+            raise ImportError from exc
+
+        self._antigcp = antigcp
         self._instance_logger = logging.getLogger(__name__).getChild(self.__class__.__name__).getChild(str(id(self)))
 
     @check_valid_hwnd
     def get_hwnd(self: Self) -> int:
-        """Returns the current window handle.
-
-        Returns:
-            int: The window handle.
-        """
+        """Return the current target window handle."""
         return self.hwnd
 
     @check_valid_hwnd
     def get_window_size(self: Self) -> tuple[int, int]:
-        """Retrieves the width and height of the current window.
-
-        Returns:
-            tuple[int, int]: A tuple (width, height) in pixels.
-        """
+        """Return the client area dimensions for the active window."""
         left, top, right, bottom = win32gui.GetWindowRect(self.hwnd)
         return right - left, bottom - top
 
     def antigcp(self: Self) -> bool:
-        """Patches the target process by replacing its GetCursorPos function.
+        """Install the GetCursorPos patch shipped with the prebuilt extension.
 
         Returns:
-            bool: True if successfully patched; otherwise, False.
+            bool: ``True`` when the patch succeeds, otherwise ``False``.
         """
         return typing.cast("bool", self._antigcp.antigcp(self._get_topmost_hwnd()))
 
     @check_valid_hwnd
-    def image_picker(self: Self) -> tuple[npt.NDArray[np.uint8] | None, tuple[int, int, int, int] | None]:
-        """Launches the image picker interface for region selection.
+    def image_picker(
+        self: Self,
+    ) -> tuple[npt.NDArray[np.uint8] | None, tuple[int, int, int, int] | None]:
+        """Launch the ROI picker overlay.
 
         Returns:
             tuple[npt.NDArray[np.uint8] | None, tuple[int, int, int, int] | None]:
-                A tuple containing the selected image as a NumPy array and its rectangle (x, y, width, height),
-                or (None, None) if no image was selected.
+                Captured region and bounding rectangle, or ``(None, None)`` when cancelled.
         """
         self._instance_logger.debug("Setting up image picker.")
         root = Tk()
@@ -119,12 +97,11 @@ class AutoCV(Input):
 
     @check_valid_hwnd
     def color_picker(self: Self) -> tuple[tuple[int, int, int], tuple[int, int]] | None:
-        """Launches the color picker interface for pixel color selection.
+        """Launch the pixel colour picker.
 
         Returns:
             tuple[tuple[int, int, int], tuple[int, int]] | None:
-                A tuple containing the selected color (R, G, B) and its screen coordinates,
-                or None if no color was selected.
+                Selected RGB colour with screen coordinates, or ``None``.
         """
         self._instance_logger.debug("Setting up color picker.")
         root = Tk()
@@ -136,20 +113,15 @@ class AutoCV(Input):
 
     @check_valid_image
     def image_filter(self: Self) -> FilterSettings:
-        """Applies image filtering operations to the current backbuffer and returns the filter settings.
-
-        Returns:
-            FilterSettings: The current filter settings after applying the image filter.
-        """
-        # Instantiate ImageFilter using the current backbuffer image.
+        """Return interactive filter settings derived from the current backbuffer."""
         return ImageFilter(self.opencv_image).filter_settings
 
     @check_valid_image
     def show_backbuffer(self: Self, *, live: bool = False) -> None:
-        """Displays the current backbuffer image in a window.
+        """Display the active backbuffer in an OpenCV window.
 
         Args:
-            live (bool, optional): If True, shows a live refreshing view. Defaults to False.
+            live (bool): When ``True``, refresh continuously until a key press.
         """
         self._instance_logger.debug("Showing backbuffer.")
         cv.imshow("AutoCV Backbuffer", self.opencv_image)

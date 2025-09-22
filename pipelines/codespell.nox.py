@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from pipelines import config
-from pipelines import nox
+from pipelines import config, nox
 
 IGNORED_WORDS = ["amin", "arange"]
 
