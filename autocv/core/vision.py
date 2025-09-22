@@ -144,9 +144,8 @@ class Vision(WindowCapture):
         """Calculates the number of pixels that have changed between the current image and a newly captured image.
 
         Args:
-            area (tuple[int, int, int, int] | None): Region of interest expressed as
-                (x, y, width, height); ``None`` inspects the full frame.
-                  If None, the entire image is used.
+            area (tuple[int, int, int, int] | None): Region of interest expressed as (x, y, width, height); ``None``
+                inspects the full frame. If None, the entire image is used.
 
         Raises:
             InvalidImageError: Raised when the capture buffer is empty.
