@@ -72,8 +72,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           activate-environment: true
-          cache: true
-          cache-dependency-path: uv.lock
+          enable-cache: true
           prune-cache: false
 
       - name: Test Installation
@@ -114,8 +113,7 @@ jobs:
         with:
           python-version: "3.10"
           activate-environment: true
-          cache: true
-          cache-dependency-path: uv.lock
+          enable-cache: true
 
       - name: Download coverage
         uses: actions/download-artifact@v5
@@ -136,9 +134,11 @@ jobs:
 
       - name: Combine coverage
         run: |
-          uv tool run --with coverage[toml] coverage combine
-          uv tool run coverage xml
-          uv tool run coverage report
+          uv sync --frozen --only-group coverage
+
+          coverage combine
+          coverage xml
+          coverage report
 
       - name: Upload coverage to codecov
         uses: codecov/codecov-action@v5
@@ -162,8 +162,7 @@ jobs:
         with:
           python-version: "3.10"
           activate-environment: true
-          cache: true
-          cache-dependency-path: uv.lock
+          enable-cache: true
           prune-cache: false
 
       - name: Install nox
@@ -236,8 +235,7 @@ jobs:
         with:
           activate-environment: true
           python-version: 3.13
-          cache: true
-          cache-dependency-path: uv.lock
+          enable-cache: true
           prune-cache: false
 
       - name: Install docs deps
