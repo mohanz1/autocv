@@ -1,7 +1,8 @@
 import numpy as np
 import pytest
-from mock import patch, MagicMock
+from mock import MagicMock, patch
 from autocv import AutoCV
+from autocv.core.vision import _bgr_to_rgb, _to_bgr
 
 
 @pytest.fixture
@@ -37,11 +38,25 @@ class TestAutoCVVision:
         image = np.zeros((10, 10, 3), dtype=np.uint8)
         autocv.set_backbuffer(image)
         assert autocv.opencv_image.shape == (10, 10, 3)
+        assert autocv.opencv_image.flags["C_CONTIGUOUS"]
+
+    def test_set_backbuffer_from_pil(self, autocv):
+        from PIL import Image
+
+        pil_image = Image.fromarray(np.zeros((5, 5, 3), dtype=np.uint8))
+        autocv.set_backbuffer(pil_image)
+        assert autocv.opencv_image.shape == (5, 5, 3)
+        assert autocv.opencv_image.flags["C_CONTIGUOUS"]
 
     @patch("autocv.core.vision.filter_colors", return_value=np.ones((10, 10), dtype=np.uint8))
     def test_find_color(self, mock_filter, autocv):
         result = autocv.find_color((255, 255, 255))
         assert all(isinstance(x, tuple) and len(x) == 2 for x in result)
+
+    def test_draw_points_handles_empty(self, autocv):
+        before = autocv.opencv_image.copy()
+        autocv.draw_points([])
+        assert np.array_equal(autocv.opencv_image, before)
 
     def test_get_color(self, autocv):
         color = autocv.get_color((0, 0))
@@ -63,8 +78,8 @@ class TestAutoCVVision:
     def test_get_all_colors_with_counts(self, autocv):
         results = autocv.get_all_colors_with_counts()
         assert isinstance(results[0], tuple)
-        assert isinstance(results[0][0], tuple)  # RGB
-        assert isinstance(results[0][1], int)  # Count
+        assert isinstance(results[0][0], tuple)
+        assert isinstance(results[0][1], int)
 
     @patch("autocv.core.Vision._get_grouped_text")
     def test_get_text_filters_confidence(self, mock_grouped, autocv):
@@ -74,3 +89,12 @@ class TestAutoCVVision:
         ]
         text = autocv.get_text(confidence=0.8)
         assert isinstance(text, list)
+
+    @staticmethod
+    def test_to_bgr_helper():
+        assert _to_bgr((10, 20, 30)) == (30, 20, 10)
+
+    @staticmethod
+    def test_bgr_to_rgb_helper():
+        assert _bgr_to_rgb((30, 20, 10)) == (10, 20, 30)
+        assert _bgr_to_rgb(np.array([30, 20, 10], dtype=np.uint8)) == (10, 20, 30)

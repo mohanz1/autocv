@@ -32,11 +32,23 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
 RECTANGLE_SIDES = 4
-GRESCALE_CHANNELS = 3
+GRAYSCALE_CHANNELS = 3
 MAX_COLOR_VALUE = 255
 ONE_HUNDRED = 100
 
 logger = logging.getLogger(__name__)
+
+
+def _to_bgr(color: tuple[int, int, int]) -> tuple[int, int, int]:
+    """Return a BGR tuple for OpenCV drawing calls."""
+    r, g, b = (int(channel) for channel in color)
+    return b, g, r
+
+
+def _bgr_to_rgb(color: Sequence[int]) -> tuple[int, int, int]:
+    """Return an RGB tuple from a BGR sequence."""
+    b, g, r = (int(channel) for channel in color[:3])
+    return r, g, b
 
 
 class Vision(WindowCapture):
@@ -76,53 +88,37 @@ class Vision(WindowCapture):
         if isinstance(image, Image.Image):
             self.opencv_image = cast(
                 "npt.NDArray[np.uint8]",
-                cv.cvtColor(np.array(image), cv.COLOR_RGB2BGR),
+                cv.cvtColor(np.asarray(image, dtype=np.uint8), cv.COLOR_RGB2BGR),
             )
         else:
-            self.opencv_image = image
+            self.opencv_image = np.ascontiguousarray(image)
 
     @check_valid_hwnd
     def refresh(self: Self, *, set_backbuffer: bool = True) -> npt.NDArray[np.uint8] | None:
-        """Captures the current window image and converts it to an OpenCV-compatible format.
-
-        Args:
-            set_backbuffer (bool): When ``True``, persist the capture to ``self.opencv_image``.
-                          If False, returns the captured image.
-
-        Raises:
-            InvalidHandleError: Raised when ``self.hwnd`` is not a valid window handle.
-
-        Returns:
-            npt.NDArray[np.uint8] | None: Captured frame when ``set_backbuffer`` is ``False``; ``None`` otherwise.
-        """
-        # Get window dimensions.
+        """Capture the active window and return or persist the frame."""
         left, top, right, bottom = win32gui.GetWindowRect(self.hwnd)
         width = right - left
         height = bottom - top
 
-        # Get device context and compatible bitmap.
         window_dc = win32gui.GetWindowDC(self.hwnd)
         mem_dc = win32ui.CreateDCFromHandle(window_dc)
-        bmp_dc = mem_dc.CreateCompatibleDC()
-        bitmap = win32ui.CreateBitmap()
-        bitmap.CreateCompatibleBitmap(mem_dc, width, height)
-        bmp_dc.SelectObject(bitmap)
+        try:
+            bmp_dc = mem_dc.CreateCompatibleDC()
+            bitmap = win32ui.CreateBitmap()
+            try:
+                bitmap.CreateCompatibleBitmap(mem_dc, width, height)
+                bmp_dc.SelectObject(bitmap)
+                bmp_dc.BitBlt((0, 0), (width, height), mem_dc, (0, 0), win32con.SRCCOPY)
 
-        # Copy window image data onto bitmap.
-        bmp_dc.BitBlt((0, 0), (width, height), mem_dc, (0, 0), win32con.SRCCOPY)
+                raw = bitmap.GetBitmapBits(True)
+                img = np.frombuffer(raw, dtype="uint8").reshape((height, width, 4))
+            finally:
+                bmp_dc.DeleteDC()
+                win32gui.DeleteObject(bitmap.GetHandle())
+        finally:
+            mem_dc.DeleteDC()
+            win32gui.ReleaseDC(self.hwnd, window_dc)
 
-        # Convert raw data into a format that OpenCV can read.
-        signed_ints_array = bitmap.GetBitmapBits(True)
-        img = np.frombuffer(signed_ints_array, dtype="uint8")
-        img.shape = (height, width, 4)
-
-        # Free resources.
-        mem_dc.DeleteDC()
-        bmp_dc.DeleteDC()
-        win32gui.ReleaseDC(self.hwnd, window_dc)
-        win32gui.DeleteObject(bitmap.GetHandle())
-
-        # Ensure the image is contiguous and drop the alpha channel.
         image = np.ascontiguousarray(img[..., :3])
 
         if set_backbuffer:
@@ -193,7 +189,7 @@ class Vision(WindowCapture):
         img = cv.bilateralFilter(resized_img, 9, 75, 75)
 
         # Convert to grayscale and apply thresholding.
-        if len(img.shape) == GRESCALE_CHANNELS and img.shape[-1] == GRESCALE_CHANNELS:
+        if len(img.shape) == GRAYSCALE_CHANNELS and img.shape[-1] == GRAYSCALE_CHANNELS:
             img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
         img = cv.threshold(img, 0, MAX_COLOR_VALUE, cv.THRESH_BINARY + cv.THRESH_OTSU)[1]
         img = cv.bitwise_not(img)
@@ -416,8 +412,8 @@ class Vision(WindowCapture):
         unique, counts = np.unique(reshaped_image, axis=0, return_counts=True)
         sorted_indices = np.argsort(counts)[::-1]
         desired_index = min(index - 1, len(sorted_indices) - 1)
-        most_common_color = unique[sorted_indices[desired_index]][::-1]
-        return (int(most_common_color[0]), int(most_common_color[1]), int(most_common_color[2]))
+        most_common_bgr = unique[sorted_indices[desired_index]]
+        return _bgr_to_rgb(most_common_bgr)
 
     @check_valid_image
     def get_count_of_color(
@@ -461,10 +457,7 @@ class Vision(WindowCapture):
         sorted_indices = np.argsort(counts)[::-1]
         sorted_unique = unique[sorted_indices]
         sorted_counts = counts[sorted_indices]
-        return [
-            ((int(bgr[2]), int(bgr[1]), int(bgr[0])), int(c))
-            for bgr, c in zip(sorted_unique, sorted_counts, strict=False)
-        ]
+        return [(_bgr_to_rgb(bgr), int(c)) for bgr, c in zip(sorted_unique, sorted_counts, strict=False)]
 
     @check_valid_image
     def get_median_color(self: Self, rect: tuple[int, int, int, int] | None = None) -> tuple[int, int, int]:
@@ -480,7 +473,7 @@ class Vision(WindowCapture):
         cropped_image = self._crop_image(rect)
         reshaped_image = cropped_image.reshape(-1, 3)
         median_color = np.median(reshaped_image, axis=0).astype(np.uint8)
-        return tuple(median_color[::-1].tolist())
+        return _bgr_to_rgb(median_color)
 
     @staticmethod
     def _get_dominant_color(image: npt.NDArray[np.uint8]) -> npt.NDArray[np.uint8]:
@@ -514,16 +507,18 @@ class Vision(WindowCapture):
             tuple[tuple[int, int, int], int]: Matched RGB colour and the tolerance applied.
         """
         cropped_image = self._crop_image(rect)
-        dominant_color = cast("tuple[int, int, int]", tuple(int(x) for x in self._get_dominant_color(cropped_image)))
+        dominant_color_bgr = cast(
+            "tuple[int, int, int]", tuple(int(channel) for channel in self._get_dominant_color(cropped_image))
+        )
         best_color, best_tolerance = self._find_best_color_match(
-            cropped_image, dominant_color, initial_tolerance, tolerance_step
+            cropped_image, dominant_color_bgr, initial_tolerance, tolerance_step
         )
         return best_color, best_tolerance
 
     def _find_best_color_match(
         self: Self,
         cropped_image: npt.NDArray[np.uint8],
-        dominant_color: tuple[int, int, int],
+        dominant_color_bgr: tuple[int, int, int],
         initial_tolerance: int,
         tolerance_step: int,
     ) -> tuple[tuple[int, int, int], int]:
@@ -531,7 +526,7 @@ class Vision(WindowCapture):
 
         Args:
             cropped_image (npt.NDArray[np.uint8]): Image region under evaluation.
-            dominant_color (tuple[int, int, int]): Dominant colour used for comparison.
+            dominant_color_bgr (tuple[int, int, int]): Dominant colour used for comparison, provided in BGR order.
             initial_tolerance (int): Starting tolerance before decrements.
             tolerance_step (int): Amount to reduce the tolerance between attempts.
 
@@ -545,7 +540,7 @@ class Vision(WindowCapture):
         outer_total_pixels = (self.opencv_image.size // 3) - inner_total_pixels
 
         while tolerance >= 0:
-            lower_bound, upper_bound = self._get_color_bounds(dominant_color, tolerance)
+            lower_bound, upper_bound = self._get_color_bounds(dominant_color_bgr, tolerance)
             pixel_count, outside_pixel_count = self._get_pixel_counts(cropped_image, lower_bound, upper_bound)
             inner_ratio = pixel_count / inner_total_pixels
             outer_ratio = outside_pixel_count / outer_total_pixels
@@ -555,17 +550,16 @@ class Vision(WindowCapture):
                 best_tolerance = tolerance
             tolerance -= tolerance_step
 
-        best_color_rgb = (dominant_color[2], dominant_color[1], dominant_color[0])  # Convert BGR to RGB.
-        return best_color_rgb, best_tolerance
+        return _bgr_to_rgb(dominant_color_bgr), best_tolerance
 
     @staticmethod
     def _get_color_bounds(
-        dominant_color: tuple[int, int, int], tolerance: int
+        dominant_color_bgr: tuple[int, int, int], tolerance: int
     ) -> tuple[npt.NDArray[np.uint8], npt.NDArray[np.uint8]]:
         """Calculates lower and upper bounds for a color given a tolerance.
 
         Args:
-            dominant_color (tuple[int, int, int]): Target colour used to refine matches.
+            dominant_color_bgr (tuple[int, int, int]): Target colour used to refine matches, provided in BGR order.
             tolerance (int): Channel tolerance currently applied to the search.
 
         Returns:
@@ -573,16 +567,16 @@ class Vision(WindowCapture):
         """
         lower_bound = np.array(
             [
-                max(dominant_color[0] - tolerance, 0),
-                max(dominant_color[1] - tolerance, 0),
-                max(dominant_color[2] - tolerance, 0),
+                max(dominant_color_bgr[0] - tolerance, 0),
+                max(dominant_color_bgr[1] - tolerance, 0),
+                max(dominant_color_bgr[2] - tolerance, 0),
             ]
         )
         upper_bound = np.array(
             [
-                min(dominant_color[0] + tolerance, 255),
-                min(dominant_color[1] + tolerance, 255),
-                min(dominant_color[2] + tolerance, 255),
+                min(dominant_color_bgr[0] + tolerance, 255),
+                min(dominant_color_bgr[1] + tolerance, 255),
+                min(dominant_color_bgr[2] + tolerance, 255),
             ]
         )
         return lower_bound, upper_bound
@@ -856,14 +850,13 @@ class Vision(WindowCapture):
         points: Sequence[tuple[int, int]],
         color: tuple[int, int, int] = (MAX_COLOR_VALUE, 0, 0),
     ) -> None:
-        """Draws points on the backbuffer image.
+        """Draws points on the backbuffer image."""
+        if len(points) == 0:
+            return
 
-        Args:
-            points (Sequence[tuple[int, int]]): Coordinates to mark on the backbuffer.
-            color (tuple[int, int, int]): Drawing colour (RGB). Defaults to red.
-        """
-        points_arr = np.array(points)
-        self.opencv_image[points_arr[:, 1], points_arr[:, 0]] = color[::-1]
+        points_arr = np.asarray(points, dtype=np.intp)
+        bgr_color = _to_bgr(color)
+        self.opencv_image[points_arr[:, 1], points_arr[:, 0]] = bgr_color
 
     @check_valid_image
     def draw_contours(
@@ -877,7 +870,7 @@ class Vision(WindowCapture):
             contours (tuple[tuple[tuple[tuple[int, int]]]]): Contour sequences as produced by OpenCV.
             color (tuple[int, int, int]): Drawing colour (RGB). Defaults to red.
         """
-        cv.drawContours(self.opencv_image, contours, -1, color[::-1], 2)  # type: ignore[arg-type]
+        cv.drawContours(self.opencv_image, contours, -1, _to_bgr(color), 2)  # type: ignore[arg-type]
 
     @check_valid_image
     def draw_circle(
@@ -892,7 +885,7 @@ class Vision(WindowCapture):
             color (tuple[int, int, int]): Drawing colour (RGB). Defaults to red.
         """
         x, y, r = circle
-        cv.circle(self.opencv_image, (x, y), r, color[::-1], 2, cv.LINE_4)
+        cv.circle(self.opencv_image, (x, y), r, _to_bgr(color), 2, cv.LINE_4)
 
     @check_valid_image
     def draw_rectangle(
@@ -907,7 +900,7 @@ class Vision(WindowCapture):
             color (tuple[int, int, int]): Drawing colour (RGB). Defaults to red.
         """
         x, y, w, h = rect
-        cv.rectangle(self.opencv_image, (x, y), (x + w, y + h), color[::-1], 2, cv.LINE_4)
+        cv.rectangle(self.opencv_image, (x, y), (x + w, y + h), _to_bgr(color), 2, cv.LINE_4)
 
     @check_valid_image
     def filter_colors(

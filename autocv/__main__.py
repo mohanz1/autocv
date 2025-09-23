@@ -1,7 +1,7 @@
-"""Provides a command-line entry point that shows the library version and then exits."""
+"""Entry point for running `python -m autocv`."""
 
 from __future__ import annotations
 
-from autocv import cli
+from . import cli
 
 cli.main()

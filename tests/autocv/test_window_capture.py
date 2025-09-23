@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 from mock import patch, MagicMock
 from autocv import AutoCV
+from autocv.utils import filtering
 
 
 @pytest.fixture
@@ -47,3 +48,21 @@ class TestAutoCVWindowCapture:
         success = autocv.set_inner_hwnd_by_title("Child")
         assert success is True
         assert autocv.hwnd == 5678
+
+    @patch.object(AutoCV, "get_windows_with_hwnds", return_value=[(111, "FooBar"), (222, "Baz")])
+    def test_get_hwnd_by_title_variants(self, mock_windows, autocv):
+        assert autocv.get_hwnd_by_title("Foo") == 111
+        assert autocv.get_hwnd_by_title("foo") is None
+        assert autocv.get_hwnd_by_title("foo", case_insensitive=True) == 111
+
+    @patch.object(AutoCV, "get_child_windows", return_value=[(1, ""), (2, "ChildPanel")])
+    def test_find_child_by_class_skips_empty(self, mock_children, autocv):
+        with patch("autocv.utils.filtering.find_first", wraps=filtering.find_first) as wrapped:
+            result = autocv._find_child_by_class(lambda name: "Child" in name)
+        assert result == 2
+        assert wrapped.called
+
+    @patch.object(AutoCV, "get_child_windows", return_value=[])
+    @patch("autocv.utils.filtering.find_first", return_value=None)
+    def test_set_inner_hwnd_by_title_failure(self, mock_find, mock_children, autocv):
+        assert autocv.set_inner_hwnd_by_title("Missing") is False

@@ -1,24 +1,28 @@
-"""Provides the `python -m autocv` and `autocv` commands to the shell."""
+"""Command-line interface for reporting package metadata."""
 
 from __future__ import annotations
 
-import pathlib
 import platform
 import sys
+from pathlib import Path
 
-from autocv import _about
+from . import _about
+
+
+def _format_lines() -> list[str]:
+    lines: list[str] = []
+    path = Path(_about.__file__).resolve().parent
+    sha1 = _about.__git_sha1__[:8]
+    version = _about.__version__
+    uname = " ".join(part.strip() for part in platform.uname() if part and part.strip())
+    lines.append(f"autocv {version} [{sha1}]")
+    lines.append(f"located at {path}")
+    lines.append(f"{platform.python_implementation()} {platform.python_version()} {platform.python_compiler()}")
+    if uname:
+        lines.append(uname)
+    return lines
 
 
 def main() -> None:
-    """Print package info and exit."""
-    path = str(pathlib.Path(_about.__file__).resolve().parent)
-    sha1 = _about.__git_sha1__[:8]
-    version = _about.__version__
-    py_impl = platform.python_implementation()
-    py_ver = platform.python_version()
-    py_compiler = platform.python_compiler()
-
-    sys.stderr.write(f"autocv ({version}) [{sha1}]\n")
-    sys.stderr.write(f"located at {path}\n")
-    sys.stderr.write(f"{py_impl} {py_ver} {py_compiler}\n")
-    sys.stderr.write(" ".join(frag.strip() for frag in platform.uname() if frag and frag.strip()) + "\n")
+    """Emit package metadata to standard output."""
+    sys.stdout.write("\n".join(_format_lines()) + "\n")

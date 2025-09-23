@@ -1,8 +1,4 @@
-"""Exception classes used across AutoCV.
-
-These lightweight subclasses communicate invalid state encountered while
-validating window handles, image buffers, or sequence lengths.
-"""
+"""Domain-specific exception types used across AutoCV."""
 
 from __future__ import annotations
 
@@ -12,46 +8,35 @@ __all__ = (
     "InvalidLengthError",
 )
 
-from typing_extensions import Self
+
+class InvalidHandleError(ValueError):
+    """Raised when a window handle is missing or invalid."""
+
+    __slots__ = ("hwnd",)
+
+    def __init__(self, hwnd: int) -> None:
+        """Store the offending handle for later inspection."""
+        self.hwnd = hwnd
+        super().__init__(f"Invalid window handle: {hwnd}.")
 
 
-class InvalidHandleError(Exception):
-    """Raised when a window handle is missing or otherwise unusable.
+class InvalidImageError(RuntimeError):
+    """Raised when an OpenCV image buffer has not been initialised."""
 
-    Attributes:
-        hwnd (int): Handle value that failed validation.
-    """
+    __slots__ = ()
 
-    def __init__(self: Self, hwnd: int) -> None:
-        """Initialise the error with the offending handle.
-
-        Args:
-            hwnd (int): Handle value that triggered the error.
-        """
-        super().__init__(f"Invalid handle: {hwnd}. Please set handle before calling this method.")
+    def __init__(self) -> None:
+        """Explain that callers must refresh the buffer before use."""
+        super().__init__("Invalid image buffer; call refresh() before accessing image data.")
 
 
-class InvalidImageError(Exception):
-    """Raised when an OpenCV image buffer is empty or unset."""
+class InvalidLengthError(ValueError):
+    """Raised when an iterable does not contain the expected number of items."""
 
-    def __init__(self: Self) -> None:
-        """Initialise the error for a missing or empty image buffer."""
-        super().__init__("Invalid image. Please call refresh() before calling this method.")
+    __slots__ = ("expected", "received")
 
-
-class InvalidLengthError(Exception):
-    """Raised when iterable length mismatches the expected size.
-
-    Attributes:
-        expected (int): Target number of items required by the caller.
-        received (int): Number of items supplied by the caller.
-    """
-
-    def __init__(self: Self, expected: int, received: int) -> None:
-        """Initialise the error with the expected versus received lengths.
-
-        Args:
-            expected (int): Number of items the routine requires.
-            received (int): Number of items provided.
-        """
-        super().__init__(f"Expected length {expected}. Instead received length {received}.")
+    def __init__(self, expected: int, received: int) -> None:
+        """Record expected versus received item counts."""
+        self.expected = expected
+        self.received = received
+        super().__init__(f"Expected {expected} items but received {received}.")

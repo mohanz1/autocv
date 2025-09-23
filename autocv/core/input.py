@@ -12,7 +12,7 @@ __all__ = ("Input",)
 import logging
 import math
 import time
-from typing import Final
+from dataclasses import dataclass
 
 import numpy as np
 import win32api
@@ -20,11 +20,25 @@ import win32con
 import win32gui
 from typing_extensions import Self
 
-from . import check_valid_hwnd
+from .decorators import check_valid_hwnd
 from .vision import Vision
 
 logger = logging.getLogger(__name__)
 
+
+@dataclass(frozen=True)
+class MouseMotionConfig:
+    speed: int
+    gravity: float
+    wind: float
+
+
+BUTTON_DOWN_MESSAGES: dict[int, int] = {
+    1: win32con.WM_LBUTTONDOWN,
+    2: win32con.WM_RBUTTONDOWN,
+    3: win32con.WM_MBUTTONDOWN,
+}
+MOUSE_UP_OFFSET = 1
 
 THREE = 3
 HALF = 0.5
@@ -46,10 +60,11 @@ class Input(Vision):
         super().__init__(hwnd)
         self._last_moved_point: tuple[int, int] = (0, 0)
         self._rng = np.random.default_rng()
-
-        self.__speed: Final[int] = 16
-        self.__gravity: Final[float] = 8 + self._rng.random() / 2
-        self.__wind: Final[float] = 4 + self._rng.random() / 2
+        self._mouse_motion = MouseMotionConfig(
+            speed=16,
+            gravity=8 + self._rng.random() / 2,
+            wind=4 + self._rng.random() / 2,
+        )
 
     def get_last_moved_point(self: Self) -> tuple[int, int]:
         """Returns the last point where the mouse cursor was moved.
@@ -83,31 +98,29 @@ class Input(Vision):
         """
         return (y << 16) | (x & 0xFFFF)
 
+    def _sleep_ms(self: Self, low: int, high: int) -> None:
+        """Pause execution for a random duration in milliseconds."""
+        if low > high:
+            low, high = high, low
+        delay_ms = int(self._rng.integers(low, high + 1))
+        time.sleep(delay_ms / 1_000)
+
     @check_valid_hwnd
     def move_mouse(self: Self, x: int, y: int, *, human_like: bool = True, ghost_mouse: bool = True) -> None:
-        """Moves the mouse cursor to the specified (x, y) coordinates.
-
-        The movement is relative to the client area of the target window. If `human_like` is True,
-        the movement will simulate natural motion.
-
-        Args:
-            x (int): Target x-coordinate inside the client area.
-            y (int): Target y-coordinate inside the client area.
-            human_like (bool): When ``True``, simulate human-like mouse motion.
-            ghost_mouse (bool): When ``True``, rely on ghost mouse behaviour; otherwise emit OS cursor updates.
-        """
+        """Move the cursor to client coordinates, optionally simulating human motion."""
         if not human_like:
             self._move_mouse(x, y, ghost_mouse=ghost_mouse)
             return
 
         # Determine a random speed factor.
         speed = (self._rng.random() * 15 + 30) / 10
+        config = self._mouse_motion
         self._wind_mouse(
             *self._last_moved_point,
             x,
             y,
-            gravity=9,
-            wind=3,
+            gravity=config.gravity,
+            wind=config.wind,
             min_wait=5 / speed,
             max_wait=10 / speed,
             max_step=10 * speed,
@@ -238,20 +251,9 @@ class Input(Vision):
 
     @check_valid_hwnd
     def click_mouse(self: Self, button: int = 1, *, send_message: bool = False) -> None:
-        """Simulates a mouse click at the last moved position.
-
-        Args:
-            button (int): Mouse button identifier (1=left, 2=right, 3=middle).
-            send_message (bool): When ``True``, dispatches ``SendMessage`` instead of ``PostMessage``.
-
-        """
+        """Simulate a mouse click at the last recorded position."""
         screen_point = win32gui.ClientToScreen(self.hwnd, self._last_moved_point)
-        button_messages = {
-            1: win32con.WM_LBUTTONDOWN,
-            2: win32con.WM_RBUTTONDOWN,
-            3: win32con.WM_MBUTTONDOWN,
-        }
-        button_to_press = button_messages.get(button, win32con.WM_LBUTTONDOWN)
+        button_to_press = BUTTON_DOWN_MESSAGES.get(button, win32con.WM_LBUTTONDOWN)
         screen_lparam = self._make_lparam(*screen_point)
         result = win32gui.SendMessage(self.hwnd, win32con.WM_NCHITTEST, 0, screen_lparam)
         client_lparam = self._make_lparam(*self._last_moved_point)
@@ -272,21 +274,16 @@ class Input(Vision):
         if send_message:
             last_moved_point_lparam = win32api.MAKELONG(*self._last_moved_point)  # type: ignore[no-untyped-call]
             win32gui.SendMessage(self.hwnd, button_to_press, button, last_moved_point_lparam)
-            time.sleep(self._rng.integers(10, 50).astype(int) / 1_000)
-            win32gui.SendMessage(self.hwnd, button_to_press + 1, 0, last_moved_point_lparam)
+            self._sleep_ms(10, 49)
+            win32gui.SendMessage(self.hwnd, button_to_press + MOUSE_UP_OFFSET, 0, last_moved_point_lparam)
         else:
             win32gui.PostMessage(self.hwnd, button_to_press, button, screen_lparam)
-            time.sleep(self._rng.integers(10, 50).astype(int) / 1_000)
-            win32gui.PostMessage(self.hwnd, button_to_press + 1, 0, screen_lparam)
+            self._sleep_ms(10, 49)
+            win32gui.PostMessage(self.hwnd, button_to_press + MOUSE_UP_OFFSET, 0, screen_lparam)
 
     @check_valid_hwnd
     def press_vk_key(self: Self, vk_code: int) -> None:
-        """Simulates pressing a virtual key.
-
-        Args:
-            vk_code (int): Virtual-key code to press.
-
-        """
+        """Press a virtual key by sending the corresponding window messages."""
         scan_code = win32api.MapVirtualKey(vk_code, 0)  # type: ignore[no-untyped-call]
         l_param = (scan_code << 16) | 1
         win32api.SendMessage(self.hwnd, win32con.WM_ACTIVATE, 1, self.hwnd)  # type: ignore[arg-type]
@@ -296,12 +293,7 @@ class Input(Vision):
 
     @check_valid_hwnd
     def release_vk_key(self: Self, vk_code: int) -> None:
-        """Simulates releasing a virtual key.
-
-        Args:
-            vk_code (int): Virtual-key code to release.
-
-        """
+        """Release a virtual key that was previously pressed."""
         scan_code = win32api.MapVirtualKey(vk_code, 0)  # type: ignore[no-untyped-call]
         l_param = (scan_code << 16) | 1
         l_param |= 0xC0000000
@@ -311,14 +303,9 @@ class Input(Vision):
 
     @check_valid_hwnd
     def send_vk_key(self: Self, vk_code: int) -> None:
-        """Sends a virtual key by simulating a press and release.
-
-        Args:
-            vk_code (int): Virtual-key code to send.
-
-        """
+        """Press and release a virtual key with a short delay."""
         self.press_vk_key(vk_code)
-        time.sleep(self._rng.integers(3, 5).astype(int) / 1_000)
+        self._sleep_ms(3, 4)
         self.release_vk_key(vk_code)
 
     @staticmethod
@@ -335,12 +322,7 @@ class Input(Vision):
 
     @check_valid_hwnd
     def send_keys(self: Self, characters: str) -> None:
-        """Sends a sequence of keystrokes to the active window.
-
-        Args:
-            characters (str): Characters to emit sequentially.
-
-        """
+        """Emit each character in sequence to the active window."""
         win32api.SendMessage(self.hwnd, win32con.WM_ACTIVATE, 1, self.hwnd)  # type: ignore[arg-type]
 
         for c in characters:
@@ -349,8 +331,8 @@ class Input(Vision):
             l_param = (scan_code << 16) | 1
             win32api.SendMessage(self.hwnd, win32con.WM_KEYDOWN, vk, l_param)
             win32api.SendMessage(self.hwnd, win32con.WM_CHAR, ord(c), l_param)  # type: ignore[arg-type]
-            time.sleep(self._rng.integers(3, 5).astype(int) / 1_000)
+            self._sleep_ms(3, 4)
             l_param |= 0xC0000000
             win32api.SendMessage(self.hwnd, win32con.WM_KEYUP, vk, l_param)
-            time.sleep(self._rng.integers(20, 60).astype(int) / 1_000)
+            self._sleep_ms(20, 59)
         win32api.SendMessage(self.hwnd, win32con.WM_ACTIVATE, 0, self.hwnd)  # type: ignore[arg-type]

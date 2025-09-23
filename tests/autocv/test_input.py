@@ -1,3 +1,4 @@
+import time
 import numpy as np
 import pytest
 from mock import patch, MagicMock
