@@ -20,22 +20,25 @@ R = t.TypeVar("R")
 WindowCaptureT = t.TypeVar("WindowCaptureT", bound="WindowCapture")
 VisionT = t.TypeVar("VisionT", bound="Vision")
 
-WindowMethod = t.Callable[t.Concatenate[WindowCaptureT, P], R]
-VisionMethod = t.Callable[t.Concatenate[VisionT, P], R]
-
 
 if t.TYPE_CHECKING:
 
-    def check_valid_hwnd(func: WindowMethod) -> WindowMethod:
+    def check_valid_hwnd(
+        func: t.Callable[t.Concatenate[WindowCaptureT, P], R],
+    ) -> t.Callable[t.Concatenate[WindowCaptureT, P], R]:
         """Identity decorator hint for static type checkers."""
         return func
 
-    def check_valid_image(func: VisionMethod) -> VisionMethod:
+    def check_valid_image(
+        func: t.Callable[t.Concatenate[VisionT, P], R],
+    ) -> t.Callable[t.Concatenate[VisionT, P], R]:
         """Identity decorator hint for static type checkers."""
         return func
 else:
 
-    def check_valid_hwnd(func: WindowMethod) -> WindowMethod:
+    def check_valid_hwnd(
+        func: t.Callable[t.Concatenate[WindowCaptureT, P], R],
+    ) -> t.Callable[t.Concatenate[WindowCaptureT, P], R]:
         """Ensure the bound instance exposes a valid ``hwnd``."""
 
         @functools.wraps(func)
@@ -44,9 +47,14 @@ else:
                 raise InvalidHandleError(self.hwnd)
             return func(self, *args, **kwargs)
 
-        return t.cast("WindowMethod", wrapper)
+        return t.cast(
+            "t.Callable[t.Concatenate[WindowCaptureT, P], R]",
+            wrapper,
+        )
 
-    def check_valid_image(func: VisionMethod) -> VisionMethod:
+    def check_valid_image(
+        func: t.Callable[t.Concatenate[VisionT, P], R],
+    ) -> t.Callable[t.Concatenate[VisionT, P], R]:
         """Ensure the bound instance exposes a populated ``opencv_image`` buffer."""
 
         @functools.wraps(func)
@@ -56,4 +64,7 @@ else:
                 raise InvalidImageError
             return func(self, *args, **kwargs)
 
-        return t.cast("VisionMethod", wrapper)
+        return t.cast(
+            "t.Callable[t.Concatenate[VisionT, P], R]",
+            wrapper,
+        )

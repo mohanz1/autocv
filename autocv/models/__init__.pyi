@@ -12,4 +12,4 @@ from .exceptions import (
 )
 from .filter_settings import FilterSettings as FilterSettings
 
-__all__ = ["FilterSettings", "InvalidHandleError", "InvalidImageError", "InvalidLengthError"]
+__all__ = ["FilterSettings", "InvalidHandleError", "InvalidImageError", "InvalidLengthError"]

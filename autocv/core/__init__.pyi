@@ -8,4 +8,4 @@ from .input import Input as Input
 from .vision import Vision as Vision
 from .window_capture import WindowCapture as WindowCapture
 
-__all__ = ["Input", "Vision", "WindowCapture", "check_valid_hwnd", "check_valid_image", "filter_colors"]
+__all__ = ["Input", "Vision", "WindowCapture", "check_valid_hwnd", "check_valid_image", "filter_colors"]

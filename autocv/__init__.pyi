@@ -38,18 +38,18 @@ from autocv._about import (
 from .auto_color_aid import AutoColorAid as AutoColorAid
 from .autocv import AutoCV as AutoCV
 
-__all__ = [
-    "AutoCV",
-    "AutoColorAid",
-    "__author__",
-    "__ci__",
-    "__copyright__",
-    "__docs__",
-    "__email__",
-    "__git_sha1__",
-    "__issue_tracker__",
-    "__license__",
-    "__maintainer__",
-    "__url__",
-    "__version__",
-]
+__all__ = [
+    "AutoCV",
+    "AutoColorAid",
+    "__author__",
+    "__ci__",
+    "__copyright__",
+    "__docs__",
+    "__email__",
+    "__git_sha1__",
+    "__issue_tracker__",
+    "__license__",
+    "__maintainer__",
+    "__url__",
+    "__version__",
+]

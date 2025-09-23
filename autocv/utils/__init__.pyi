@@ -7,4 +7,4 @@ from .geometry import get_center as get_center
 from .geometry import get_random_point as get_random_point
 from .geometry import sort_shapes as sort_shapes
 
-__all__ = ["find_first", "get_center", "get_first", "get_random_point", "sort_shapes"]
+__all__ = ["find_first", "get_center", "get_first", "get_random_point", "sort_shapes"]
