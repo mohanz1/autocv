@@ -124,6 +124,15 @@ jobs:
         run: |
           uv sync --frozen --only-group nox
 
+      - name: Check stubs
+        if: always() && !cancelled()
+        run: |
+          nox -s generate-stubs
+          if [ "$(git status --short)" ]; then
+            echo "Stubs were not updated accordingly to the changes. Please run 'nox -s generate-stubs' and commit the changes to fix this."
+            exit 1
+          fi
+
       - name: Audit
         if: always() && !cancelled()
         run: |

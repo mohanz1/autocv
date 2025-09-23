@@ -265,3 +265,9 @@ warn_unused_ignores = true
 [[tool.mypy.overrides]]
 module = ["tesserocr.*"]
 ignore_missing_imports = true
+
+[tool.hatch.build.targets.wheel]
+include = ["autocv/py.typed"]
+
+[tool.hatch.build.targets.sdist]
+include = ["autocv/py.typed"]
