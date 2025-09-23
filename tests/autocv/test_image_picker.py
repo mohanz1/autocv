@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 from mock import MagicMock, patch
-from tkinter import Tk
+from tkinter import Tk, TclError
 from autocv.image_picker import ImagePicker
 
 
@@ -16,9 +16,14 @@ def image_picker():
         patch("autocv.image_picker.win32gui.SetForegroundWindow"),
     ):
         mock_canvas.return_value.bind = MagicMock()
-        picker = ImagePicker(hwnd=1234, master=Tk())
+        try:
+            master = Tk()
+        except TclError:
+            pytest.skip("Tk not available on this system")
+        picker = ImagePicker(hwnd=1234, master=master)
         picker.snip_surface = mock_canvas.return_value
-        return picker
+        yield picker
+        master.destroy()
 
 
 def test_on_button_press_creates_rectangle(image_picker):

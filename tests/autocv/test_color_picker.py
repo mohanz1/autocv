@@ -51,7 +51,10 @@ def test_on_tick_handles_valid_image(mock_stc, mock_cursor, mock_photo, dummy_co
     import tkinter as tk
 
     # Set up a root window to allow PhotoImage to work
-    root = tk.Tk()
+    try:
+        root = tk.Tk()
+    except tk.TclError:
+        pytest.skip("Tk not available on this system")
     root.withdraw()
 
     dummy_color_picker.snip_surface = MagicMock()
