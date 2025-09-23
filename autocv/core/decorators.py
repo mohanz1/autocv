@@ -8,38 +8,34 @@ __all__ = (
 )
 
 import functools
-import typing
-from typing import TYPE_CHECKING, Concatenate, ParamSpec, TypeVar, cast
+import typing as t
 
 from autocv.models import InvalidHandleError, InvalidImageError
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from autocv.core import Vision, WindowCapture
 
-P = ParamSpec("P")
-R = TypeVar("R")
-WindowCaptureT = TypeVar("WindowCaptureT", bound="WindowCapture")
-VisionT = TypeVar("VisionT", bound="Vision")
+P = t.ParamSpec("P")
+R = t.TypeVar("R")
+WindowCaptureT = t.TypeVar("WindowCaptureT", bound="WindowCapture")
+VisionT = t.TypeVar("VisionT", bound="Vision")
+
+WindowMethod = t.Callable[t.Concatenate[WindowCaptureT, P], R]
+VisionMethod = t.Callable[t.Concatenate[VisionT, P], R]
 
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
 
-    def check_valid_hwnd(
-        func: typing.Callable[Concatenate[WindowCaptureT, P], R],
-    ) -> typing.Callable[Concatenate[WindowCaptureT, P], R]:
+    def check_valid_hwnd(func: WindowMethod) -> WindowMethod:
         """Identity decorator hint for static type checkers."""
         return func
 
-    def check_valid_image(
-        func: typing.Callable[Concatenate[VisionT, P], R],
-    ) -> typing.Callable[Concatenate[VisionT, P], R]:
+    def check_valid_image(func: VisionMethod) -> VisionMethod:
         """Identity decorator hint for static type checkers."""
         return func
 else:
 
-    def check_valid_hwnd(
-        func: typing.Callable[Concatenate[WindowCaptureT, P], R],
-    ) -> typing.Callable[Concatenate[WindowCaptureT, P], R]:
+    def check_valid_hwnd(func: WindowMethod) -> WindowMethod:
         """Ensure the bound instance exposes a valid ``hwnd``."""
 
         @functools.wraps(func)
@@ -48,11 +44,9 @@ else:
                 raise InvalidHandleError(self.hwnd)
             return func(self, *args, **kwargs)
 
-        return cast("typing.Callable[Concatenate[WindowCaptureT, P], R]", wrapper)
+        return t.cast("WindowMethod", wrapper)
 
-    def check_valid_image(
-        func: typing.Callable[Concatenate[VisionT, P], R],
-    ) -> typing.Callable[Concatenate[VisionT, P], R]:
+    def check_valid_image(func: VisionMethod) -> VisionMethod:
         """Ensure the bound instance exposes a populated ``opencv_image`` buffer."""
 
         @functools.wraps(func)
@@ -62,4 +56,4 @@ else:
                 raise InvalidImageError
             return func(self, *args, **kwargs)
 
-        return cast("typing.Callable[Concatenate[VisionT, P], R]", wrapper)
+        return t.cast("VisionMethod", wrapper)
