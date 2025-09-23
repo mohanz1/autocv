@@ -1,3 +1,4 @@
+
 name: CI
 
 on:
@@ -16,8 +17,45 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      source: ${{ steps.filter.outputs.source }}
+      docs: ${{ steps.filter.outputs.docs }}
+      stubs: ${{ steps.filter.outputs.stubs }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Detect file changes
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            source:
+              - 'autocv/**'
+              - 'pipelines/**'
+              - 'tests/**'
+              - 'pyproject.toml'
+              - 'uv.lock'
+            docs:
+              - 'docs/**'
+              - 'public/docs/**'
+            stubs:
+              - 'autocv/**/*.py'
+              - 'autocv/**/*.pyi'
+              - 'pipelines/mypy.nox.py'
+              - 'pyproject.toml'
+
   test:
+    needs: [changes]
+    if: ${{ needs.changes.outputs.source == 'true' || github.event_name != 'pull_request' }}
     runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
     strategy:
       fail-fast: false
       matrix:
@@ -26,23 +64,24 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Setup uv
         uses: astral-sh/setup-uv@v6
         with:
           python-version: ${{ matrix.python-version }}
           activate-environment: true
-          # TODO(https://github.com/astral-sh/setup-uv/issues/226): Remove this.
-          prune-cache: ${{ matrix.os != 'windows-latest' }}
+          cache: true
+          cache-dependency-path: uv.lock
+          prune-cache: false
 
       - name: Test Installation
-        shell: bash
         run: |
           uv pip install .
           uv pip uninstall autocv
 
       - name: Run tests
-        shell: bash
         run: |
           uv sync --frozen --only-group nox
 
@@ -60,18 +99,23 @@ jobs:
           include-hidden-files: true
 
   upload-coverage:
-    needs: [ test ]
+    needs: [changes, test]
+    if: ${{ needs.test.result == 'success' }}
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Setup uv
         uses: astral-sh/setup-uv@v6
         with:
           python-version: "3.10"
           activate-environment: true
+          cache: true
+          cache-dependency-path: uv.lock
 
       - name: Download coverage
         uses: actions/download-artifact@v5
@@ -79,11 +123,6 @@ jobs:
           path: coverages/
           # Not specifying any name will lead to the download of all available artifacts
 
-      # Since artifacts v2, we can no longer upload multiple artifacts
-      # with the same name and have them re-download as if it were a directory.
-      # For this reason, we need to download all available artifacts, filter
-      # out for only coverage files and then place them in the root directory
-      # with the name of the artifact
       - name: Extract individual coverage files
         run: |
           cd coverages
@@ -97,28 +136,35 @@ jobs:
 
       - name: Combine coverage
         run: |
-          uv sync --frozen --only-group coverage
-
-          coverage combine
-          coverage xml
-          coverage report
+          uv tool run --with coverage[toml] coverage combine
+          uv tool run coverage xml
+          uv tool run coverage report
 
       - name: Upload coverage to codecov
         uses: codecov/codecov-action@v5
 
-
   linting:
+    needs: [changes]
+    if: ${{ needs.changes.outputs.source == 'true' || needs.changes.outputs.stubs == 'true' || github.event_name != 'pull_request' }}
     runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Setup uv
         uses: astral-sh/setup-uv@v6
         with:
           python-version: "3.10"
           activate-environment: true
+          cache: true
+          cache-dependency-path: uv.lock
+          prune-cache: false
 
       - name: Install nox
         run: |
@@ -127,9 +173,22 @@ jobs:
       - name: Check stubs
         if: always() && !cancelled()
         run: |
+          if [[ "${{ github.event_name }}" == "pull_request" && -n "${{ github.base_ref }}" ]]; then
+            git fetch origin ${{ github.base_ref }} --depth=1
+            DIFF_TARGET="origin/${{ github.base_ref }}"
+          else
+            DIFF_TARGET="HEAD^"
+          fi
+
+          if git rev-parse "$DIFF_TARGET" >/dev/null 2>&1 && git diff --quiet "$DIFF_TARGET"...HEAD -- 'autocv/**/*.py'; then
+            echo "Skipping stub generation; no Python changes under autocv/."
+            exit 0
+          fi
+
           nox -s generate-stubs
           if [ "$(git status --short)" ]; then
             echo "Stubs were not updated accordingly to the changes. Please run 'nox -s generate-stubs' and commit the changes to fix this."
+            git status --short
             exit 1
           fi
 
@@ -159,17 +218,27 @@ jobs:
           nox -s check-trailing-whitespaces
 
   docs:
+    needs: [changes]
+    if: ${{ needs.changes.outputs.docs == 'true' || github.event_name != 'pull_request' }}
     runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Setup uv
         uses: astral-sh/setup-uv@v6
         with:
           activate-environment: true
           python-version: 3.13
+          cache: true
+          cache-dependency-path: uv.lock
+          prune-cache: false
 
       - name: Install docs deps
         run: uv sync --frozen --only-group nox
@@ -194,32 +263,31 @@ jobs:
           force_orphan: true
 
   auto-merge:
-    needs: [ upload-coverage, linting, docs ]
+    needs: [upload-coverage, linting, docs]
     if: ${{ github.actor == 'dependabot[bot]' }}
     runs-on: ubuntu-latest
     steps:
       - name: Upload artifacts
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Auto merge
         uses: ahmadnassri/action-dependabot-auto-merge@v2
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-  # Allows us to add this as a required check in Github branch rules, as all the other jobs are subject to change
   ci-done:
-    needs: [ upload-coverage, linting, docs ]
+    needs: [upload-coverage, linting, docs]
     if: always() && !cancelled()
-
     runs-on: ubuntu-latest
-
     steps:
       - name: Set status based on required jobs
         env:
           RESULTS: ${{ join(needs.*.result, ' ') }}
         run: |
           for result in $RESULTS; do
-            if [ "$result" != "success" ]; then
+            if [ "$result" != "success" ] && [ "$result" != "skipped" ]; then
               exit 1
             fi
           done

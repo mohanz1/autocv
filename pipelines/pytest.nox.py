@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import typing
 
 from pipelines import config, nox
@@ -35,7 +36,10 @@ def _pytest(
 ) -> None:
     nox.sync(session, self=True, extras=extras_install, groups=["pytest"])
 
-    flags = RUN_FLAGS
+    flags = list(RUN_FLAGS)
+
+    if os.getenv("CI") and "-n" not in session.posargs:
+        flags.extend(["-n", "auto"])
 
     if "--coverage" in session.posargs:
         session.posargs.remove("--coverage")

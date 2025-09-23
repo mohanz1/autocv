@@ -65,6 +65,7 @@ pytest = [
     "mock >=5.2.0,<6",
     "pytest >=8.4.1,<9",
     "pytest-cov >=6.2.1,<7",
+    "pytest-xdist >=3.6,<4",
     { include-group = "coverage" },
 ]
 ruff = ["ruff >=0.11.13,<1"]
