@@ -2021,7 +2021,7 @@ wheels = [
 
 [[package]]
 name = "uv-secure"
-version = "0.13.0"
+version = "0.14.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
@@ -2037,9 +2037,9 @@ dependencies = [
     { name = "tomli", marker = "python_full_version < '3.11'" },
     { name = "typer" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ac/c2/64bbd598fa7990602980a406892d64fde2bd8f9375dec426def332cdad70/uv_secure-0.13.0.tar.gz", hash = "sha256:6f1181b8112c9261d59df80a69b3de3a83a3ce203d069f3c7ff288d3e07f967c", size = 23005, upload-time = "2025-08-18T13:14:06.399Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e5/06/72a836b1016b68919980ab0fb2c0f249cec2e11b122ef8616daa2f9c6bbe/uv_secure-0.14.1.tar.gz", hash = "sha256:d1ceb544819b28a3dc51377fcb1114c596e28bcb9c56160ba32844510ef008a3", size = 25244, upload-time = "2025-10-02T12:58:44.397Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/06/ae/d45032cdf3c61cbd1416f9be8e334acc2efd7f045af803406e93dec40b57/uv_secure-0.13.0-py3-none-any.whl", hash = "sha256:312279d8fc2b523fc0eab8372a587804598f5fa6a7651531732709358f632256", size = 28244, upload-time = "2025-08-18T13:14:05.418Z" },
+    { url = "https://files.pythonhosted.org/packages/31/66/08b9e3632937d5ca905bec3dfa5d415da5bccfd7e84a01e50dccc8ba66e2/uv_secure-0.14.1-py3-none-any.whl", hash = "sha256:5e70920056b055b39cf171fe99ef7718fd7d031346c813c070e86413bf32d5a5", size = 32808, upload-time = "2025-10-02T12:58:43.159Z" },
 ]
 
 [[package]]
