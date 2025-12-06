@@ -12,6 +12,7 @@ __all__ = ("ColorPicker",)
 
 from pathlib import Path
 from tkinter import NW, Canvas, Tk, Toplevel
+from typing import Protocol, Self
 
 import cv2 as cv
 import numpy as np
@@ -21,34 +22,72 @@ import win32con
 import win32gui
 from PIL import Image, ImageDraw, ImageFont, ImageTk
 from PIL.ImageTk import PhotoImage
-from typing_extensions import Self
 
 from .core import Vision
 
 # Constants for sampling and magnification
 PIXELS = 1
 ZOOM = 40
+REFRESH_DELAY_MS = 5
+_DEFAULT_CANVAS_COLOR: int = 217
+_FONT_PATH = Path(__file__).parent / "data" / "Helvetica.ttf"
+
+
+class ColorPickerController:
+    """Encapsulate Vision interactions for sampling cursor-colour patches."""
+
+    def __init__(self, hwnd: int, default_canvas: npt.NDArray[np.uint8]) -> None:
+        self.hwnd = hwnd
+        self.vision = Vision(hwnd)
+        self.default_canvas = default_canvas
+
+    def capture_cursor_patch(self) -> tuple[npt.NDArray[np.uint8], int, int, tuple[int, int]]:
+        """Capture a small patch around the current cursor; fall back to default canvas when out of bounds."""
+        cursor_pos = win32gui.GetCursorPos()
+        x, y = win32gui.ScreenToClient(self.hwnd, cursor_pos)
+
+        self.vision.refresh()
+        frame = self.vision.opencv_image
+        if frame.size == 0:
+            return self.default_canvas, x, y, cursor_pos
+
+        cropped = frame[y - PIXELS : y + PIXELS + 1, x - PIXELS : x + PIXELS + 1, ::-1]
+        if x < 0 or y < 0 or cropped.size == 0:
+            return self.default_canvas, x, y, cursor_pos
+        return cropped, x, y, cursor_pos
+
+    @property
+    def frame(self) -> npt.NDArray[np.uint8]:
+        """Latest captured frame."""
+        return self.vision.opencv_image
+
+
+class MouseEvent(Protocol):
+    """Protocol for tkinter mouse events carrying x/y coordinates."""
+
+    x: int
+    y: int
 
 
 class ColorPicker:
     """Interactive magnifier that returns pixel samples from a target window.
 
     Attributes:
-        hwnd (int): Window handle that supplies frames for sampling.
-        master (Tk): Root Tk instance responsible for lifecycle management.
-        size (int): Side length (in pixels) of the magnifier canvas.
-        snip_surface (Canvas): Canvas displaying the magnified cursor region.
-        result (tuple[tuple[int, int, int], tuple[int, int]] | None): Latest sampled RGB colour and screen coordinate.
-        prev_state (int): Cached state of the left mouse button for edge detection.
-        vision (Vision): AutoCV vision wrapper used to capture frames.
+        hwnd: Window handle that supplies frames for sampling.
+        master: Root Tk instance responsible for lifecycle management.
+        size: Side length (in pixels) of the magnifier canvas.
+        snip_surface: Canvas displaying the magnified cursor region.
+        result: Latest sampled RGB colour and screen coordinate.
+        prev_state: Cached state of the left mouse button for edge detection.
+        controller: Capture controller used to retrieve frames.
     """
 
     def __init__(self: Self, hwnd: int, master: Tk) -> None:
-        """Creates a ColorPicker instance and sets up the interactive overlay.
+        """Create a ColorPicker instance and set up the interactive overlay.
 
         Args:
-            hwnd (int): The handle of the window to pick colors from.
-            master (Tk): The parent Tkinter window.
+            hwnd: Handle of the window to pick colors from.
+            master: Parent Tkinter window.
         """
         self.hwnd = hwnd
         self.master = master
@@ -63,11 +102,13 @@ class ColorPicker:
         # Get the initial state of the left mouse button.
         self.prev_state = win32api.GetKeyState(win32con.VK_LBUTTON)
 
-        # Create a Vision instance for screen capture.
-        self.vision = Vision(self.hwnd)
-
         # Create a default canvas image (a neutral gray background) for when the cursor is outside bounds.
-        self.default_canvas = (np.ones((PIXELS * 2 + 1, PIXELS * 2 + 1, 3), dtype=np.uint8) * 217).astype(np.uint8)
+        self.default_canvas = (
+            np.ones((PIXELS * 2 + 1, PIXELS * 2 + 1, 3), dtype=np.uint8) * _DEFAULT_CANVAS_COLOR
+        ).astype(np.uint8)
+
+        # Controller encapsulating capture logic.
+        self.controller = ColorPickerController(hwnd, self.default_canvas)
 
         self.master.title("AutoCV Color Picker")
         self.master_screen = Toplevel(master)
@@ -75,11 +116,10 @@ class ColorPicker:
         self.create_screen_canvas()
 
     def set_geometry(self: Self, cursor_pos: tuple[int, int] | None = None) -> None:
-        """Sets the position and size of the color picker window.
+        """Set the position and size of the color picker window.
 
         Args:
-            cursor_pos (tuple[int, int], optional): The current screen coordinates of the cursor.
-                If not provided, the current cursor position is obtained from Win32 APIs.
+            cursor_pos: Current screen coordinates of the cursor. Defaults to the current cursor position.
         """
         if not self.master_screen or not self.master_screen.winfo_exists():
             return
@@ -88,10 +128,7 @@ class ColorPicker:
         self.master_screen.geometry(f"{self.size}x{self.size}+{x}+{y}")
 
     def create_screen_canvas(self: Self) -> None:
-        """Creates the Tkinter canvas and overlay window for the color picker.
-
-        This method sets up a transparent overlay window, places a canvas on it, and binds the necessary mouse events.
-        """
+        """Create the Tkinter canvas and overlay window for the color picker."""
         self.master_screen.withdraw()
         self.master.withdraw()
 
@@ -114,25 +151,12 @@ class ColorPicker:
         self.master.after(0, self.on_tick)
 
     def on_tick(self: Self) -> None:
-        """Periodically updates the color picker canvas based on the current cursor position.
-
-        Captures a small region around the cursor, magnifies it, draws cursor coordinates and a center marker,
-        and checks for mouse clicks to pick a color.
-        """
+        """Update the color picker canvas based on the current cursor position."""
         if not self.master_screen:
             return
 
-        # Refresh the screen capture.
-        self.vision.refresh()
-        cursor_pos = win32gui.GetCursorPos()
-        x, y = win32gui.ScreenToClient(self.hwnd, cursor_pos)
-
+        cropped_image, x, y, cursor_pos = self.controller.capture_cursor_patch()
         self.set_geometry(cursor_pos)
-        # Crop a small region around the cursor.
-        cropped_image = self.vision.opencv_image[y - PIXELS : y + PIXELS + 1, x - PIXELS : x + PIXELS + 1, ::-1]
-        # Use default canvas if the cropped image is empty or the cursor is out of bounds.
-        if x < 0 or y < 0 or not cropped_image.any():
-            cropped_image = self.default_canvas
 
         # Resize the cropped image to create a magnified view.
         resized_img = cv.resize(cropped_image, None, fx=ZOOM, fy=ZOOM, interpolation=cv.INTER_NEAREST)
@@ -155,24 +179,23 @@ class ColorPicker:
 
         # Schedule the next update.
         if self.master:
-            self.master.after(5, self.on_tick)
+            self.master.after(REFRESH_DELAY_MS, self.on_tick)
 
     def draw_cursor_coordinates(self: Self, img: Image.Image, x: int, y: int) -> Image.Image:
-        """Draws the current cursor coordinates onto the magnified image.
+        """Draw the current cursor coordinates onto the magnified image.
 
         Args:
-            img (Image.Image): The magnified image.
-            x (int): The x-coordinate of the cursor.
-            y (int): The y-coordinate of the cursor.
+            img: Magnified image.
+            x: X-coordinate of the cursor.
+            y: Y-coordinate of the cursor.
 
         Returns:
-            Image.Image: The updated image with cursor coordinates drawn.
+            Image.Image: Updated image with cursor coordinates drawn.
         """
         draw = ImageDraw.Draw(img)
-        font_path = Path(__file__).parent / "data" / "Helvetica.ttf"
-        font = ImageFont.truetype(str(font_path), 8)
+        font = ImageFont.truetype(str(_FONT_PATH), 8)
         try:
-            color = self.vision.opencv_image[y + PIXELS, x, ::-1]
+            color = self.controller.frame[y + PIXELS, x, ::-1]
         except IndexError:
             color = np.zeros(3, dtype=np.uint8)
         inverse_color = 255 - color
@@ -187,12 +210,12 @@ class ColorPicker:
         return img
 
     def draw_center_rectangle(self: Self, cropped_image: npt.NDArray[np.uint8]) -> None:
-        """Draws a center rectangle on the color picker canvas as a visual marker.
+        """Draw a center rectangle on the color picker canvas as a visual marker.
 
         The rectangle's outline color is determined by the inverse of the average color of the cropped region.
 
         Args:
-            cropped_image (npt.NDArray[np.uint8]): The cropped image around the cursor.
+            cropped_image: Cropped image around the cursor.
         """
         average_color_row = np.nanmean(cropped_image, axis=0)
         average_color = np.round(np.average(average_color_row, axis=0)).astype(int)
@@ -212,14 +235,14 @@ class ColorPicker:
         )
 
     def handle_button_press(self: Self, x: int, y: int) -> None:
-        """Handles a mouse click to pick a color from the screen.
+        """Handle a mouse click to pick a color from the screen.
 
         The method retrieves the color of the pixel at the given coordinates. If the coordinates are
         outside the bounds of the captured image, a default error value is stored.
 
         Args:
-            x (int): The x-coordinate of the picked pixel.
-            y (int): The y-coordinate of the picked pixel.
+            x: X-coordinate of the picked pixel.
+            y: Y-coordinate of the picked pixel.
         """
         if x < 0 or x >= self.vision.opencv_image.shape[1] or y < 0 or y >= self.vision.opencv_image.shape[0]:
             self.result = ((-1, -1, -1), (-1, -1))
@@ -230,3 +253,8 @@ class ColorPicker:
 
         self.master_screen.destroy()
         self.master_screen.quit()
+
+    @property
+    def vision(self) -> Vision:
+        """Expose the underlying Vision instance for compatibility."""
+        return self.controller.vision

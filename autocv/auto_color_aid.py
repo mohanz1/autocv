@@ -10,19 +10,145 @@ from __future__ import annotations
 __all__ = ("AutoColorAid",)
 
 import tkinter as tk
+from dataclasses import dataclass, field
 from tkinter import ttk
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Final, NamedTuple, Protocol, Self
 
 import cv2
 import numpy as np
 import sv_ttk
 from PIL import Image, ImageDraw, ImageTk
-from typing_extensions import Self
 
 from autocv import AutoCV
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
+
+Color = tuple[int, int, int]
+PixelSample = tuple[int, int, int, int, int]  # row, col, R, G, B
+_REFRESH_DELAY_MS: Final[int] = 5
+_ZOOM: Final[int] = 40
+_PIXELS: Final[int] = 1
+_FALLBACK_COLOR: Final[int] = 217
+_LISTBOX_BEST_COLOR_TEXT = "best color: ???"
+_LISTBOX_BEST_TOLERANCE_TEXT = "best tolerance: ???"
+_PLACEHOLDER_IMAGE_TEXT = "Image goes here"
+_NO_CAPTURE_TEXT = "No image captured"
+
+
+class _FrameShape(NamedTuple):
+    height: int
+    width: int
+    channels: int
+
+
+class MouseEvent(Protocol):
+    """Protocol for tkinter mouse events carrying x/y coordinates."""
+
+    x: int
+    y: int
+
+
+@dataclass(slots=True)
+class ColorSelectionState:
+    """Track selected pixels and compute aggregate colour statistics."""
+
+    pixels: list[PixelSample] = field(default_factory=list)
+    best_color: Color = (0, 0, 0)
+    best_tolerance: int = -1
+
+    def add(self, sample: PixelSample) -> None:
+        """Append a pixel sample to the collection."""
+        self.pixels.append(sample)
+        self._recompute()
+
+    def remove_indices(self, indices: set[int]) -> None:
+        """Remove samples whose indices are in ``indices`` and recompute state."""
+        if not indices:
+            return
+        self.pixels = [sample for idx, sample in enumerate(self.pixels) if idx not in indices]
+        self._recompute()
+
+    def _recompute(self) -> None:
+        """Recalculate best color and tolerance from the current pixel set."""
+        if not self.pixels:
+            self.best_color = (0, 0, 0)
+            self.best_tolerance = -1
+            return
+
+        colors = np.array([(r, g, b) for (_, _, r, g, b) in self.pixels], dtype=np.uint16)
+        max_color = np.amax(colors, axis=0)
+        min_color = np.amin(colors, axis=0)
+        best_color = ((max_color + min_color) // 2).astype(np.uint8)
+        self.best_tolerance = int((max_color - min_color).max() + 1)
+        self.best_color = tuple(best_color.tolist())
+
+
+class AutoColorAidController:
+    """Encapsulate AutoCV interactions and colour selection state."""
+
+    def __init__(self) -> None:
+        self.autocv = AutoCV()
+        self.state = ColorSelectionState()
+
+    def refresh_frame(self) -> None:
+        """Refresh the underlying AutoCV backbuffer."""
+        self.autocv.refresh()
+
+    @property
+    def frame(self) -> np.ndarray:
+        """Return the current OpenCV frame."""
+        return self.autocv.opencv_image
+
+    def window_titles(self) -> list[str]:
+        """Return available top-level window titles."""
+        return [name for _, name in self.autocv.get_windows_with_hwnds()]
+
+    def child_titles(self) -> list[str]:
+        """Return titles of child windows for the current main window."""
+        return [name for _, name in self.autocv.get_child_windows()]
+
+    def attach_main(self, title: str) -> bool:
+        """Attach to a main window by title."""
+        return self.autocv.set_hwnd_by_title(title)
+
+    def attach_child(self, class_name: str) -> bool:
+        """Attach to a child window by class title."""
+        return self.autocv.set_inner_hwnd_by_title(class_name)
+
+    def add_sample(self, row: int, col: int, bgr: tuple[int, int, int]) -> None:
+        """Record a pixel sample in RGB order."""
+        b, g, r = bgr
+        self.state.add((row, col, r, g, b))
+
+    def remove_samples(self, indices: set[int]) -> None:
+        """Remove pixel samples by index."""
+        self.state.remove_indices(indices)
+
+    @property
+    def best_color(self) -> Color:
+        """Best computed colour in RGB."""
+        return self.state.best_color
+
+    @property
+    def best_tolerance(self) -> int:
+        """Best computed tolerance."""
+        return self.state.best_tolerance
+
+    def draw_markers(self, *, mark_best_only: bool) -> None:
+        """Draw either best colour matches or all sampled colours."""
+        if not self.state.pixels:
+            return
+        if mark_best_only:
+            points = self.autocv.find_color(self.best_color, tolerance=self.best_tolerance)
+            if points:
+                self.autocv.draw_points(points)
+            return
+
+        for _, _, r_, g_, b_ in self.state.pixels:
+            points = self.autocv.find_color((r_, g_, b_))
+            if points:
+                self.autocv.draw_points(points)
 
 
 class AutoColorAid(tk.Tk):
@@ -37,24 +163,24 @@ class AutoColorAid(tk.Tk):
         super().__init__()
         self.title("Auto Color Aid")
 
-        # Create an instance of AutoCV for capturing frames.
-        self.autocv = AutoCV()
+        # Controller encapsulates AutoCV and colour state.
+        self.controller = AutoColorAidController()
 
         # Internal attributes to hold PhotoImage references (to prevent garbage collection).
-        self._photo_image: ImageTk.PhotoImage
+        self._photo_image: ImageTk.PhotoImage | None = None
         self._pixel_region_photoimage: ImageTk.PhotoImage | None = None
-        self._last_mouse_pos = (-1, -1)
+        self._last_mouse_pos: tuple[int, int] = (-1, -1)
 
         # Flags to track if main and child windows are set.
         self._has_valid_main = False
         self._has_valid_child = False
 
         # Store selected pixel data as a list of tuples: (row, col, R, G, B).
-        self.selected_pixels: list[tuple[int, int, int, int, int]] = []
+        self._color_state = self.controller.state
 
         # Track best color and tolerance computed from selected pixels.
-        self._best_color = (0, 0, 0)
-        self._best_tolerance = -1
+        self._best_color: Color = self._color_state.best_color
+        self._best_tolerance: int = self._color_state.best_tolerance
 
         # Build UI widgets and bind events.
         self._create_widgets()
@@ -70,7 +196,7 @@ class AutoColorAid(tk.Tk):
         self.mainloop()
 
     def _create_widgets(self) -> None:
-        """Creates and lays out all UI widgets using grid geometry.
+        """Create and lay out all UI widgets using grid geometry.
 
         The UI consists of a top bar (with window pickers and a refresh button),
         a main image display area, and a right panel for pixel preview and a list of selected colors.
@@ -90,8 +216,7 @@ class AutoColorAid(tk.Tk):
         # Main window picker.
         main_label = ttk.Label(top_bar, text="Main Window:")
         main_label.pack(side="left", padx=(0, 5))
-        windows_with_hwnds = self.autocv.get_windows_with_hwnds()
-        windows = [name for (_, name) in windows_with_hwnds]
+        windows = self.controller.window_titles()
         self.main_window_picker = ttk.Combobox(top_bar, values=windows, state="readonly", width=25)
         self.main_window_picker.set("Select a main window")
         self.main_window_picker.pack(side="left", padx=(0, 5))
@@ -131,37 +256,30 @@ class AutoColorAid(tk.Tk):
         self.colors_listbox.pack(fill="both", expand=True, padx=5, pady=5)
         delete_button = ttk.Button(right_frame, text="Delete Selected", command=self._on_delete_selected)
         delete_button.pack(pady=(0, 10))
-        self.info_label = ttk.Label(right_frame, text="best color: ???\nbest tolerance: ???")
+        self.info_label = ttk.Label(right_frame, text=f"{_LISTBOX_BEST_COLOR_TEXT}\n{_LISTBOX_BEST_TOLERANCE_TEXT}")
         self.info_label.pack()
 
     def _bind_events(self) -> None:
-        """Binds events for widget interactions to their handlers."""
+        """Bind events for widget interactions to their handlers."""
         self.main_window_picker.bind("<<ComboboxSelected>>", self._on_main_window_selected)
         self.child_window_picker.bind("<<ComboboxSelected>>", self._on_child_window_selected)
 
     def _refresh_main_windows(self) -> None:
         """Refresh the list of top-level windows and populate the picker."""
-        windows_with_hwnds = self.autocv.get_windows_with_hwnds()
-        windows = [name for (_, name) in windows_with_hwnds]
-        self.main_window_picker["values"] = windows
+        self.main_window_picker["values"] = self.controller.window_titles()
         self.main_window_picker.set("Select a main window")
 
     def _on_main_window_selected(self, _: tk.Event[ttk.Combobox]) -> None:
-        """Handle selection events from the main-window picker.
-
-        Args:
-            _ (tk.Event): The event object (unused).
-        """
+        """Handle selection events from the main-window picker."""
         selected_main_window = self.main_window_picker.get()
         if not selected_main_window:
             return
 
-        self.autocv.set_hwnd_by_title(selected_main_window)
+        self.controller.attach_main(selected_main_window)
         self._has_valid_main = True
 
         # Update child window picker based on the selected main window.
-        child_windows = self.autocv.get_child_windows()
-        child_windows_names = [name for (_, name) in child_windows]
+        child_windows_names = self.controller.child_titles()
         if child_windows_names:
             self.child_window_picker["values"] = child_windows_names
             self.child_window_picker.set("Select a child window")
@@ -171,131 +289,91 @@ class AutoColorAid(tk.Tk):
             self._has_valid_child = False
 
     def _on_child_window_selected(self, _: tk.Event[ttk.Combobox]) -> None:
-        """Handle selection events from the child-window picker.
-
-        Args:
-            _ (tk.Event): The event object (unused).
-        """
+        """Handle selection events from the child-window picker."""
         selected_child_window = self.child_window_picker.get()
         if not selected_child_window:
             return
 
-        while self.autocv.set_inner_hwnd_by_title(selected_child_window):
+        while self.controller.attach_child(selected_child_window):
             pass
         self._has_valid_child = True
 
     def _on_delete_selected(self) -> None:
-        """Deletes selected items from the colors listbox and updates the selected pixels list.
+        """Delete selected items from the colors listbox and refresh best-color computation."""
+        children = list(self.colors_listbox.get_children(""))
+        selected_ids = set(self.colors_listbox.selection())
 
-        Rebuilds the list of selected pixels by excluding deleted items, then refreshes the best-color computation.
-        """
-        selected_items = self.colors_listbox.selection()
-        remaining = []
-        all_items = self.colors_listbox.get_children("")
+        removed_indices = {idx for idx, child in enumerate(children) if child in selected_ids}
 
-        for child in all_items:
-            if child not in selected_items:
-                text = self.colors_listbox.item(child, "text")
-                color_part, coord_part = text.split("@")
-                color_str = color_part.strip().strip("()")
-                coords_str = coord_part.strip().strip("()")
-                r_, g_, b_ = [int(x) for x in color_str.split(",")]
-                row, col = [int(x) for x in coords_str.split(",")]
-                remaining.append((row, col, r_, g_, b_))
+        self._color_state.remove_indices(removed_indices)
 
-        self.colors_listbox.delete(*all_items)
-        self.selected_pixels = []
-        for row, col, r_, g_, b_ in remaining:
+        self.colors_listbox.delete(*children)
+        for row, col, r_, g_, b_ in self._color_state.pixels:
             self._insert_listbox_item(row, col, r_, g_, b_)
-        self._update_best_color()
+        self._refresh_best_color_display()
 
     def _update_best_color(self) -> None:
-        """Computes the best color from selected pixels and updates the info display.
+        """Compute the best color from selected pixels and update the info display."""
+        self._best_color = self._color_state.best_color
+        self._best_tolerance = self._color_state.best_tolerance
+        self._refresh_best_color_display()
 
-        The best color is computed as the midpoint (per channel) of the minimum and maximum RGB values,
-        and the best tolerance is the maximum difference among any channel plus one.
-        """
-        if not self.selected_pixels:
-            self._best_color = (0, 0, 0)
-            self._best_tolerance = -1
-            self.info_label.config(text="best color: ???\nbest tolerance: ???")
-            return
-
-        colors = np.array([(r, g, b) for (_, _, r, g, b) in self.selected_pixels], dtype=np.uint16)
-        max_color = np.amax(colors, axis=0)
-        min_color = np.amin(colors, axis=0)
-        best_color = ((max_color + min_color) // 2).astype(np.uint8)
-        self._best_tolerance = int((max_color - min_color).max() + 1)
-        self._best_color = tuple(best_color.tolist())
-        self.info_label.config(text=f"best color: {self._best_color}\nbest tolerance: {self._best_tolerance}")
+    def _refresh_best_color_display(self) -> None:
+        """Update the best-colour label from the cached state."""
+        if self._best_tolerance == -1:
+            text = f"{_LISTBOX_BEST_COLOR_TEXT}\n{_LISTBOX_BEST_TOLERANCE_TEXT}"
+        else:
+            text = f"best color: {self._best_color}\nbest tolerance: {self._best_tolerance}"
+        self.info_label.config(text=text)
 
     def _insert_listbox_item(self, row: int, col: int, r_: int, g_: int, b_: int) -> None:
-        """Inserts a color and coordinate entry into the colors listbox and records it.
-
-        Args:
-            row (int): The y-coordinate of the pixel.
-            col (int): The x-coordinate of the pixel.
-            r_ (int): Red channel value.
-            g_ (int): Green channel value.
-            b_ (int): Blue channel value.
-        """
+        """Insert a color and coordinate entry into the colors listbox and record it."""
         text = f"({r_}, {g_}, {b_}) @ ({row}, {col})"
         self.colors_listbox.insert("", tk.END, text=text)
-        self.selected_pixels.append((row, col, r_, g_, b_))
+        self._color_state.add((row, col, r_, g_, b_))
 
     def _update_image(self) -> None:
-        """Refreshes the displayed image and schedules the next update.
-
-        Updates the main image display with the latest frame captured via AutoCV,
-        draws markers for selected pixels, updates the zoomed 3x3 region preview,
-        and reschedules the update.
-        """
+        """Refresh the displayed image and schedule the next update."""
         if self._has_valid_main and self._has_valid_child:
-            self.autocv.refresh()
-            if self.autocv.opencv_image.size > 0:
+            self.controller.refresh_frame()
+            frame = self.controller.frame
+            if frame.size > 0:
                 self._draw_color_markers()
-                image_rgb = Image.fromarray(self.autocv.opencv_image[..., ::-1])
+                image_rgb = Image.fromarray(frame[..., ::-1])
                 self._photo_image = ImageTk.PhotoImage(image_rgb)
                 self.image_label.config(image=self._photo_image, text="")
             else:
-                self.image_label.config(text="No image captured", image="")
+                self.image_label.config(text=_NO_CAPTURE_TEXT, image="")
         else:
-            self.image_label.config(text="Image goes here", image="")
+            self.image_label.config(text=_PLACEHOLDER_IMAGE_TEXT, image="")
 
         self._show_3x3_region()
-        self.after(5, self._update_image)
+        self.after(_REFRESH_DELAY_MS, self._update_image)
 
     def _draw_color_markers(self: Self) -> None:
         """Overlay markers for either the best colour or every sampled colour."""
-        if not self.selected_pixels:
+        if not self._color_state.pixels:
             return
 
         if self.mark_best_color_var.get():
-            points = self.autocv.find_color(self._best_color, tolerance=self._best_tolerance)
+            points = self.controller.autocv.find_color(self._best_color, tolerance=self._best_tolerance)
             if points:
-                self.autocv.draw_points(points)
+                self.controller.autocv.draw_points(points)
         else:
-            for _, _, r_, g_, b_ in self.selected_pixels:
-                points = self.autocv.find_color((r_, g_, b_))
+            for _, _, r_, g_, b_ in self._color_state.pixels:
+                points = self.controller.autocv.find_color((r_, g_, b_))
                 if points:
-                    self.autocv.draw_points(points)
+                    self.controller.autocv.draw_points(points)
 
-    def _get_mouse_coords_in_frame(self, event: tk.Event[ttk.Label]) -> tuple[int | None, int | None]:
-        """Converts mouse coordinates from the image label to frame coordinates in the captured image.
-
-        Args:
-            event (tk.Event[ttk.Label]): Mouse event carrying the label-relative coordinates.
-
-        Returns:
-            tuple[int | None, int | None]: The (row, col) coordinates in the frame, or (None, None) if out of bounds.
-        """
+    def _get_mouse_coords_in_frame(self, event: MouseEvent) -> tuple[int | None, int | None]:
+        """Convert mouse coordinates from the image label to frame coordinates."""
         if not (self._has_valid_main and self._has_valid_child):
             return None, None
-        if not hasattr(self, "_photo_image") or self.autocv.opencv_image.size == 0:
+        if self._photo_image is None or self.controller.frame.size == 0:
             return None, None
 
-        frame = self.autocv.opencv_image
-        frame_height, frame_width, _ = frame.shape
+        frame = self.controller.frame
+        frame_height, frame_width, _ = _FrameShape(*frame.shape)
         disp_w = self._photo_image.width()
         disp_h = self._photo_image.height()
 
@@ -312,24 +390,21 @@ class AutoColorAid(tk.Tk):
         return None, None
 
     def _show_3x3_region(self) -> None:
-        """Render a magnified 3x3 pixel preview around the last mouse position.
-
-        Displays a neutral gray image when the cursor sample falls outside the frame.
-        """
-        if self.autocv.opencv_image.size == 0:
+        """Render a magnified 3x3 pixel preview around the last mouse position."""
+        frame = self.controller.frame
+        if frame.size == 0:
             self._pixel_region_photoimage = None
             self.pixel_region_label.config(image="", text="No region")
             return
 
-        zoom = 40
-        pixels = 1
+        zoom = _ZOOM
+        pixels = _PIXELS
         y, x = self._last_mouse_pos
-        frame = self.autocv.opencv_image
         h, w, _ = frame.shape
 
         cropped_image: NDArray[Any]
         if x - pixels < 0 or y - pixels < 0 or x + pixels >= w or y + pixels >= h:
-            cropped_image = np.ones((3, 3, 3), dtype=np.uint8) * 217
+            cropped_image = np.ones((3, 3, 3), dtype=np.uint8) * _FALLBACK_COLOR
         else:
             cropped_image = np.array(
                 frame[y - pixels : y + pixels + 1, x - pixels : x + pixels + 1, ::-1],
@@ -355,27 +430,27 @@ class AutoColorAid(tk.Tk):
         self._pixel_region_photoimage = ImageTk.PhotoImage(img)
         self.pixel_region_label.config(image=self._pixel_region_photoimage, text="")
 
-    def _on_mouse_move(self, event: tk.Event[ttk.Label]) -> None:
+    def _on_mouse_move(self, event: MouseEvent) -> None:
         """Handle pointer motion to refresh the magnified pixel preview.
 
         Args:
-            event (tk.Event[ttk.Label]): Mouse move event from the preview label.
+            event: Mouse move event from the preview label.
         """
         row, col = self._get_mouse_coords_in_frame(event)
         if row is not None and col is not None:
             self._last_mouse_pos = (row, col)
             self._show_3x3_region()
 
-    def _on_mouse_click(self, event: tk.Event[ttk.Label]) -> None:
+    def _on_mouse_click(self, event: MouseEvent) -> None:
         """Persist the colour under the cursor when the preview is clicked.
 
         Args:
-            event (tk.Event[ttk.Label]): Mouse click event from the preview label.
+            event: Mouse click event from the preview label.
         """
         row, col = self._get_mouse_coords_in_frame(event)
         if row is None or col is None:
             return
-        frame = self.autocv.opencv_image
+        frame = self.controller.frame
         b, g, r_ = frame[row, col]
         self._insert_listbox_item(row, col, r_, g, b)
         self._update_best_color()

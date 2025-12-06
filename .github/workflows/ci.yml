@@ -59,7 +59,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [ "3.10", 3.11, 3.12, 3.13 ]
+        python-version: [ 3.11, 3.12, 3.13, 3.14 ]
 
     steps:
       - name: Checkout repository
@@ -111,7 +111,7 @@ jobs:
       - name: Setup uv
         uses: astral-sh/setup-uv@v7
         with:
-          python-version: "3.10"
+          python-version: "3.11"
           activate-environment: true
           enable-cache: true
 
@@ -160,7 +160,7 @@ jobs:
       - name: Setup uv
         uses: astral-sh/setup-uv@v7
         with:
-          python-version: "3.10"
+          python-version: "3.11"
           activate-environment: true
           enable-cache: true
           prune-cache: false

@@ -12,22 +12,130 @@ __all__ = ("Input",)
 import logging
 import math
 import time
-from typing import Final
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Final, Self
 
 import numpy as np
 import win32api
 import win32con
 import win32gui
-from typing_extensions import Self
+
+from autocv import constants
 
 from . import check_valid_hwnd
 from .vision import Vision
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 logger = logging.getLogger(__name__)
 
 
 THREE = 3
 HALF = 0.5
+
+
+@dataclass(frozen=True, slots=True)
+class _MotionConfig:
+    """Tunable parameters for human-like mouse motion."""
+
+    speed_base: int = constants.MOTION_SPEED_BASE
+    gravity_min: float = constants.MOTION_GRAVITY_MIN
+    gravity_jitter: float = constants.MOTION_GRAVITY_JITTER
+    wind_min: float = constants.MOTION_WIND_MIN
+    wind_jitter: float = constants.MOTION_WIND_JITTER
+    timeout_seconds: float = constants.MOTION_TIMEOUT_SECONDS
+
+
+def wind_mouse(
+    rng: np.random.Generator,
+    mover: Callable[[int, int], None],
+    start: tuple[float, float],
+    end: tuple[float, float],
+    *,
+    gravity: float,
+    wind: float,
+    min_wait: float,
+    max_wait: float,
+    max_step: float,
+    target_area: float,
+    timeout_seconds: float,
+) -> None:
+    """Move a point from start to end using wind/gravity-inspired motion.
+
+    Args:
+        rng: Random generator for jitter and timing.
+        mover: Callable that moves the cursor to integer coordinates.
+        start: Starting coordinates.
+        end: Destination coordinates.
+        gravity: Pull toward destination.
+        wind: Randomness factor.
+        min_wait: Minimum wait between steps (ms).
+        max_wait: Maximum wait between steps (ms).
+        max_step: Maximum step length per iteration.
+        target_area: Threshold under which the cursor eases into the target.
+        timeout_seconds: Hard timeout for the movement.
+
+    Raises:
+        TimeoutError: If movement exceeds ``timeout_seconds``.
+    """
+    timeout = time.perf_counter() + timeout_seconds
+    sqrt_3 = math.sqrt(3)
+    sqrt_5 = math.sqrt(5)
+
+    xs, ys = start
+    xe, ye = end
+    x, y = xs, ys
+    velo_x = 0.0
+    velo_y = 0.0
+    wind_x = 0.0
+    wind_y = 0.0
+
+    while True:
+        if time.perf_counter() > timeout:
+            raise TimeoutError
+
+        if rng.random() < HALF:
+            wind_x = wind_x / sqrt_3 + (rng.random() * (round(wind) * 2 + 1) - wind) / sqrt_5
+            wind_y = wind_y / sqrt_3 + (rng.random() * (round(wind) * 2 + 1) - wind) / sqrt_5
+
+        traveled_distance = math.hypot(x - xs, y - ys)
+        remaining_distance = math.hypot(x - xe, y - ye)
+
+        if remaining_distance <= 1:
+            break
+
+        if remaining_distance < target_area:
+            step = (remaining_distance / 2) + (rng.random() * 6 - 3)
+        elif traveled_distance < target_area:
+            if traveled_distance < THREE:
+                traveled_distance = 10 * rng.random()
+            step = traveled_distance * (1 + rng.random() * 3)
+        else:
+            step = max_step
+
+        step = min(step, max_step)
+        if step < THREE:
+            step = 3 + (rng.random() * 3)
+
+        velo_x += wind_x + gravity * (xe - x) / remaining_distance
+        velo_y += wind_y + gravity * (ye - y) / remaining_distance
+
+        velo_mag = math.hypot(velo_x, velo_y)
+        if velo_mag > step:
+            random_dist = step / 3.0 + (step / 2 * rng.random())
+            velo_x = (velo_x / velo_mag) * random_dist
+            velo_y = (velo_y / velo_mag) * random_dist
+
+        idle = (max_wait - min_wait) * (math.hypot(velo_x, velo_y) / max_step) + min_wait
+
+        x += velo_x
+        y += velo_y
+
+        mover(round(x), round(y))
+        time.sleep(idle / 100)
+
+    mover(round(xe), round(ye))
 
 
 class Input(Vision):
@@ -47,9 +155,12 @@ class Input(Vision):
         self._last_moved_point: tuple[int, int] = (0, 0)
         self._rng = np.random.default_rng()
 
-        self.__speed: Final[int] = 16
-        self.__gravity: Final[float] = 8 + self._rng.random() / 2
-        self.__wind: Final[float] = 4 + self._rng.random() / 2
+        self._motion_config = _MotionConfig()
+        self.__speed: Final[int] = self._motion_config.speed_base
+        self.__gravity: Final[float] = (
+            self._motion_config.gravity_min + self._rng.random() * self._motion_config.gravity_jitter
+        )
+        self.__wind: Final[float] = self._motion_config.wind_min + self._rng.random() * self._motion_config.wind_jitter
 
     def get_last_moved_point(self: Self) -> tuple[int, int]:
         """Returns the last point where the mouse cursor was moved.
@@ -102,112 +213,21 @@ class Input(Vision):
 
         # Determine a random speed factor.
         speed = (self._rng.random() * 15 + 30) / 10
-        self._wind_mouse(
-            *self._last_moved_point,
-            x,
-            y,
+        wind_mouse(
+            rng=self._rng,
+            mover=lambda xi, yi: self._move_mouse(xi, yi, ghost_mouse=ghost_mouse),
+            start=(*self._last_moved_point,),
+            end=(x, y),
             gravity=9,
             wind=3,
             min_wait=5 / speed,
             max_wait=10 / speed,
             max_step=10 * speed,
             target_area=8 * speed,
-            ghost_mouse=ghost_mouse,
+            timeout_seconds=self._motion_config.timeout_seconds,
         )
 
-    def _wind_mouse(
-        self: Self,
-        xs: float,
-        ys: float,
-        xe: float,
-        ye: float,
-        gravity: float,
-        wind: float,
-        min_wait: float,
-        max_wait: float,
-        max_step: float,
-        target_area: float,
-        *,
-        ghost_mouse: bool = True,
-    ) -> None:
-        """Moves the mouse using a wind-based, human-like trajectory.
-
-        The movement is influenced by gravity and wind, producing a curved path.
-
-        Args:
-            xs (float): Starting x-coordinate of the cursor.
-            ys (float): Starting y-coordinate of the cursor.
-            xe (float): Destination x-coordinate.
-            ye (float): Destination y-coordinate.
-            gravity (float): Strength of the pull toward the destination.
-            wind (float): Randomness factor to jitter the trajectory.
-            min_wait (float): Minimum wait time between steps, in milliseconds.
-            max_wait (float): Maximum wait time between steps, in milliseconds.
-            max_step (float): Maximum distance covered per iteration.
-            target_area (float): Threshold under which the cursor eases into the target.
-            ghost_mouse (bool): When ``True``, rely on ghost mouse simulation instead of OS cursor updates.
-
-        Raises:
-            TimeoutError: If the movement does not complete within 15 seconds.
-        """
-        # Set a timeout for the entire movement.
-        timeout = time.perf_counter() + 15
-
-        sqrt_3 = math.sqrt(3)
-        sqrt_5 = math.sqrt(5)
-
-        x, y = xs, ys
-        velo_x = 0.0
-        velo_y = 0.0
-        wind_x = 0.0
-        wind_y = 0.0
-
-        while True:
-            if time.perf_counter() > timeout:
-                raise TimeoutError
-
-            # Randomly adjust wind.
-            if self._rng.random() < HALF:
-                wind_x = wind_x / sqrt_3 + (self._rng.random() * (round(wind) * 2 + 1) - wind) / sqrt_5
-                wind_y = wind_y / sqrt_3 + (self._rng.random() * (round(wind) * 2 + 1) - wind) / sqrt_5
-
-            traveled_distance = math.hypot(x - xs, y - ys)
-            remaining_distance = math.hypot(x - xe, y - ye)
-
-            if remaining_distance <= 1:
-                break
-
-            if remaining_distance < target_area:
-                step = (remaining_distance / 2) + (self._rng.random() * 6 - 3)
-            elif traveled_distance < target_area:
-                if traveled_distance < THREE:
-                    traveled_distance = 10 * self._rng.random()
-                step = traveled_distance * (1 + self._rng.random() * 3)
-            else:
-                step = max_step
-
-            step = min(step, max_step)
-            if step < THREE:
-                step = 3 + (self._rng.random() * 3)
-
-            velo_x += wind_x + gravity * (xe - x) / remaining_distance
-            velo_y += wind_y + gravity * (ye - y) / remaining_distance
-
-            if math.hypot(velo_x, velo_y) > step:
-                random_dist = step / 3.0 + (step / 2 * self._rng.random())
-                velo_mag = math.hypot(velo_x, velo_y)
-                velo_x = (velo_x / velo_mag) * random_dist
-                velo_y = (velo_y / velo_mag) * random_dist
-
-            idle = (max_wait - min_wait) * (math.hypot(velo_x, velo_y) / max_step) + min_wait
-
-            x += velo_x
-            y += velo_y
-
-            self._move_mouse(round(x), round(y), ghost_mouse=ghost_mouse)
-            time.sleep(idle / 100)
-
-        self._move_mouse(round(xe), round(ye), ghost_mouse=ghost_mouse)
+        self._last_moved_point = (x, y)
 
     @check_valid_hwnd
     def _move_mouse(self: Self, x: int, y: int, *, ghost_mouse: bool = True) -> None:

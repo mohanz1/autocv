@@ -1,8 +1,4 @@
-"""This module provides the Vision class and related utilities for image capture, processing, and OCR.
-
-It integrates with OpenCV, pytesseract, and other libraries to perform image analysis,
-text extraction, and various image manipulation operations.
-"""
+"""Vision utilities for capture, processing, and OCR."""
 
 from __future__ import annotations
 
@@ -11,18 +7,14 @@ __all__ = ("Vision",)
 import io
 import logging
 import pathlib
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Final, Self, cast
 
 import cv2 as cv
 import numpy as np
 import numpy.typing as npt
 import polars as pl
-import win32con
-import win32gui
-import win32ui
 from PIL import Image
 from tesserocr import OEM, PSM, PyTessBaseAPI
-from typing_extensions import Self
 
 from .decorators import check_valid_hwnd, check_valid_image
 from .image_processing import filter_colors
@@ -31,47 +23,45 @@ from .window_capture import WindowCapture
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-RECTANGLE_SIDES = 4
-GRESCALE_CHANNELS = 3
-MAX_COLOR_VALUE = 255
-ONE_HUNDRED = 100
+Color = tuple[int, int, int]  # RGB channel order
+Point = tuple[int, int]
+Rect = tuple[int, int, int, int]  # x, y, width, height
+Contour = npt.NDArray[np.uintp]
+MaskArray = npt.NDArray[np.uint8]
+
+RGBA_CHANNELS: Final[int] = 4
+RGB_CHANNELS: Final[int] = 3
+MAX_COLOR_VALUE: Final[int] = 255
+PERCENT_SCALE: Final[int] = 100
 
 logger = logging.getLogger(__name__)
 
 
 class Vision(WindowCapture):
-    """A class for image processing and optical character recognition (OCR).
-
-    Extends the WindowCapture class to provide methods for capturing a window,
-    processing the image, and extracting text and color information.
-    """
+    """Capture windows, process images, and perform OCR."""
 
     def __init__(self: Self, hwnd: int = -1) -> None:
-        """Initializes a Vision object.
+        """Initialise a Vision object.
 
         Args:
-            hwnd (int): Window handle of the target window. Defaults to -1.
+            hwnd: Window handle of the target window. Defaults to -1.
         """
         super().__init__(hwnd)
-        # Holds the image in OpenCV format.
         self.opencv_image: npt.NDArray[np.uint8] = np.empty(0, dtype=np.uint8)
 
-        # Define the path to the tessdata directory and set up Tesseract configuration.
-        absolute_directory = pathlib.Path(__file__).parents[1] / "data" / "traineddata"
-        # noinspection PyArgumentList
-        self.api = PyTessBaseAPI(
-            path=str(absolute_directory),
+        self._tessdata_dir = pathlib.Path(__file__).parents[1] / "data" / "traineddata"
+        self.api: PyTessBaseAPI = PyTessBaseAPI(
+            path=str(self._tessdata_dir),
             lang="runescape",
             psm=PSM.SPARSE_TEXT,
             oem=OEM.LSTM_ONLY,
         )
-        self._config = rf"--tessdata-dir {absolute_directory} --oem 1 --psm 11"
 
     def set_backbuffer(self: Self, image: npt.NDArray[np.uint8] | Image.Image) -> None:
-        """Sets the image buffer to the provided NumPy array or PIL Image.
+        """Set the image buffer to the provided NumPy array or PIL Image.
 
         Args:
-            image (npt.NDArray[np.uint8] | Image.Image): Image data used to refresh the backbuffer.
+            image: Image data used to refresh the backbuffer.
         """
         if isinstance(image, Image.Image):
             self.opencv_image = cast(
@@ -83,11 +73,11 @@ class Vision(WindowCapture):
 
     @check_valid_hwnd
     def refresh(self: Self, *, set_backbuffer: bool = True) -> npt.NDArray[np.uint8] | None:
-        """Captures the current window image and converts it to an OpenCV-compatible format.
+        """Capture the current window image and optionally persist it to ``opencv_image``.
 
         Args:
-            set_backbuffer (bool): When ``True``, persist the capture to ``self.opencv_image``.
-                          If False, returns the captured image.
+            set_backbuffer: When ``True``, persist the capture to ``self.opencv_image``;
+                otherwise return the captured frame.
 
         Raises:
             InvalidHandleError: Raised when ``self.hwnd`` is not a valid window handle.
@@ -95,57 +85,29 @@ class Vision(WindowCapture):
         Returns:
             npt.NDArray[np.uint8] | None: Captured frame when ``set_backbuffer`` is ``False``; ``None`` otherwise.
         """
-        # Get window dimensions.
-        left, top, right, bottom = win32gui.GetWindowRect(self.hwnd)
-        width = right - left
-        height = bottom - top
-
-        # Get device context and compatible bitmap.
-        window_dc = win32gui.GetWindowDC(self.hwnd)
-        mem_dc = win32ui.CreateDCFromHandle(window_dc)
-        bmp_dc = mem_dc.CreateCompatibleDC()
-        bitmap = win32ui.CreateBitmap()
-        bitmap.CreateCompatibleBitmap(mem_dc, width, height)
-        bmp_dc.SelectObject(bitmap)
-
-        # Copy window image data onto bitmap.
-        bmp_dc.BitBlt((0, 0), (width, height), mem_dc, (0, 0), win32con.SRCCOPY)
-
-        # Convert raw data into a format that OpenCV can read.
-        signed_ints_array = bitmap.GetBitmapBits(True)
-        img = np.frombuffer(signed_ints_array, dtype="uint8")
-        img.shape = (height, width, 4)
-
-        # Free resources.
-        mem_dc.DeleteDC()
-        bmp_dc.DeleteDC()
-        win32gui.ReleaseDC(self.hwnd, window_dc)
-        win32gui.DeleteObject(bitmap.GetHandle())
-
-        # Ensure the image is contiguous and drop the alpha channel.
-        image = np.ascontiguousarray(img[..., :3])
-
+        frame = self.capture_frame(persist=False)
         if set_backbuffer:
-            self.set_backbuffer(image)
+            self.set_backbuffer(frame)
             return None
-        return image
+        return frame
 
     @check_valid_image
     def save_backbuffer_to_file(self: Self, file_name: str) -> None:
-        """Saves the backbuffer image to a file.
+        """Save the backbuffer image to a file.
 
         Args:
-            file_name (str): Path where the backbuffer snapshot is stored.
+            file_name: Path where the backbuffer snapshot is stored.
         """
         cv.imwrite(file_name, self.opencv_image)
 
     @check_valid_hwnd
-    def get_pixel_change(self: Self, area: tuple[int, int, int, int] | None = None) -> int:
-        """Calculates the number of pixels that have changed between the current image and a newly captured image.
+    @check_valid_image
+    def get_pixel_change(self: Self, area: Rect | None = None) -> int:
+        """Calculate how many pixels changed between current and refreshed frames.
 
         Args:
-            area (tuple[int, int, int, int] | None): Region of interest expressed as (x, y, width, height); ``None``
-                inspects the full frame. If None, the entire image is used.
+            area: Region of interest expressed as (x, y, width, height); ``None``
+                inspects the full frame.
 
         Raises:
             InvalidImageError: Raised when the capture buffer is empty.
@@ -169,17 +131,17 @@ class Vision(WindowCapture):
     def _get_grouped_text(
         self: Self,
         image: npt.NDArray[np.uint8],
-        rect: tuple[int, int, int, int] | None = None,
-        colors: tuple[int, int, int] | list[tuple[int, int, int]] | None = None,
+        rect: Rect | None = None,
+        colors: Color | Sequence[Color] | None = None,
         tolerance: int = 0,
     ) -> pl.LazyFrame:
         """Preprocesses the image and extracts text using Tesseract OCR, grouping text data by block.
 
         Args:
             image (npt.NDArray[np.uint8]): Image to preprocess before OCR.
-            rect (tuple[int, int, int, int] | None): Optional region of interest described as
+            rect (Rect | None): Optional region of interest described as
                 (x, y, width, height).
-            colors (tuple[int, int, int] | list[tuple[int, int, int]] | None): Colours (RGB) to isolate before OCR.
+            colors (Color | Sequence[Color] | None): Colours (RGB) to isolate before OCR.
             tolerance (int): Per-channel tolerance when matching the colour filter.
 
         Returns:
@@ -193,7 +155,7 @@ class Vision(WindowCapture):
         img = cv.bilateralFilter(resized_img, 9, 75, 75)
 
         # Convert to grayscale and apply thresholding.
-        if len(img.shape) == GRESCALE_CHANNELS and img.shape[-1] == GRESCALE_CHANNELS:
+        if len(img.shape) == RGB_CHANNELS and img.shape[-1] == RGB_CHANNELS:
             img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
         img = cv.threshold(img, 0, MAX_COLOR_VALUE, cv.THRESH_BINARY + cv.THRESH_OTSU)[1]
         img = cv.bitwise_not(img)
@@ -227,7 +189,7 @@ class Vision(WindowCapture):
         )
 
         # Filter out invalid or low-confidence text.
-        text = text.filter((pl.col("conf") > 0) & (pl.col("conf") < ONE_HUNDRED))
+        text = text.filter((pl.col("conf") > 0) & (pl.col("conf") < PERCENT_SCALE))
         text = text.with_columns(
             [
                 pl.col("text").cast(pl.Utf8),
@@ -243,7 +205,7 @@ class Vision(WindowCapture):
                 pl.col("top").min().alias("top"),
                 pl.col("height").max().alias("height"),
                 pl.col("conf").max().alias("confidence"),
-                pl.col("text").str.concat(" ").alias("text"),
+                pl.col("text").str.join(" ").alias("text"),
                 ((pl.col("left") + pl.col("width")).max() - pl.col("left").min()).alias("width"),
             ]
         )
@@ -260,13 +222,13 @@ class Vision(WindowCapture):
 
     def _crop_image(
         self: Self,
-        rect: tuple[int, int, int, int] | None = None,
+        rect: Rect | None = None,
         image: npt.NDArray[np.uint8] | None = None,
     ) -> npt.NDArray[np.uint8]:
         """Crops the current image or a provided image to the specified rectangle.
 
         Args:
-            rect (tuple[int, int, int, int] | None): Region to crop in
+            rect (Rect | None): Region to crop in
                 (x, y, width, height) form.
             image (npt.NDArray[np.uint8] | None): Explicit image to operate on; defaults to ``self.opencv_image``.
 
@@ -282,8 +244,8 @@ class Vision(WindowCapture):
     @check_valid_image
     def get_text(
         self: Self,
-        rect: tuple[int, int, int, int] | None = None,
-        colors: tuple[int, int, int] | list[tuple[int, int, int]] | None = None,
+        rect: Rect | None = None,
+        colors: Color | Sequence[Color] | None = None,
         tolerance: int = 0,
         confidence: float | None = 0.8,
     ) -> list[dict[str, str | int | float | list[int]]]:
@@ -292,9 +254,9 @@ class Vision(WindowCapture):
         Only text with confidence greater than or equal to the provided threshold is returned.
 
         Args:
-            rect (tuple[int, int, int, int] | None): Search region specified as
+            rect (Rect | None): Search region specified as
                 (x, y, width, height).
-            colors (tuple[int, int, int] | list[tuple[int, int, int]] | None): Colours (RGB) to isolate before OCR.
+            colors (Color | Sequence[Color] | None): Colours (RGB) to isolate before OCR.
             tolerance (int): Per-channel tolerance when matching the colour filter.
             confidence (float | None): Minimum acceptable OCR confidence between 0 and 1.
 
@@ -311,14 +273,14 @@ class Vision(WindowCapture):
         return cast("list[dict[str, str | int | float | list[int]]]", result_df.collect().to_dicts())
 
     @check_valid_image
-    def get_color(self: Self, point: tuple[int, int]) -> tuple[int, int, int]:
+    def get_color(self: Self, point: Point) -> Color:
         """Returns the color of the pixel at the specified coordinates.
 
         Args:
-            point (tuple[int, int]): Pixel coordinates expressed as (x, y).
+            point (Point): Pixel coordinates expressed as (x, y).
 
         Returns:
-            tuple[int, int, int]: Pixel colour as (R, G, B).
+            Color: Pixel colour as (R, G, B).
 
         Raises:
             InvalidImageError: Raised when ``self.opencv_image`` is empty.
@@ -327,20 +289,20 @@ class Vision(WindowCapture):
         x, y = point
         if not (0 <= x < self.opencv_image.shape[1] and 0 <= y < self.opencv_image.shape[0]):
             raise IndexError
-        return tuple(np.flip(self.opencv_image[y, x]))
+        return cast("Color", tuple(np.flip(self.opencv_image[y, x])))
 
     @check_valid_image
     def find_color(
         self: Self,
-        color: tuple[int, int, int],
-        rect: tuple[int, int, int, int] | None = None,
+        color: Color,
+        rect: Rect | None = None,
         tolerance: int = 0,
-    ) -> list[tuple[int, int]]:
+    ) -> list[Point]:
         """Finds all pixel coordinates matching the given color within the specified tolerance.
 
         Args:
-            color (tuple[int, int, int]): Target colour expressed as (R, G, B).
-            rect (tuple[int, int, int, int] | None): Optional search region
+            color (Color): Target colour expressed as (R, G, B).
+            rect (Rect | None): Optional search region
                 described as (x, y, width, height).
             tolerance (int): Allowed per-channel delta when searching for colour matches.
 
@@ -352,31 +314,31 @@ class Vision(WindowCapture):
         points = np.stack(np.where(mask == MAX_COLOR_VALUE)[::-1], axis=1)
         if rect:
             points = np.add(points, rect[0:2])
-        return cast("list[tuple[int, int]]", points.tolist())
+        return cast("list[Point]", points.tolist())
 
     @check_valid_image
-    def get_average_color(self: Self, rect: tuple[int, int, int, int] | None = None) -> tuple[int, int, int]:
-        """Calculates the average color within a specified region.
+    def get_average_color(self: Self, rect: Rect | None = None) -> Color:
+        """Calculate the average color within a specified region.
 
         Args:
-            rect (tuple[int, int, int, int] | None): Region to average;
+            rect (Rect | None): Region to average;
                 ``None`` uses the full image.
 
         Returns:
-            tuple[int, int, int]: Average RGB value inside the requested region.
+            Color: Average RGB value inside the requested region.
         """
-        return cast("tuple[int, int, int]", tuple(int(x) for x in self._get_average_color(self.opencv_image, rect)))
+        return cast("Color", tuple(int(x) for x in self._get_average_color(self.opencv_image, rect)))
 
     def _get_average_color(
         self: Self,
         image: npt.NDArray[np.uint8],
-        rect: tuple[int, int, int, int] | None = None,
+        rect: Rect | None = None,
     ) -> npt.NDArray[np.int16]:
-        """Calculates the average color of the specified image region.
+        """Calculate the average color of the specified image region.
 
         Args:
             image (npt.NDArray[np.uint8]): Image to preprocess before OCR.
-            rect (tuple[int, int, int, int] | None): Region to sample;
+            rect (Rect | None): Region to sample;
                 defaults to the entire frame.
 
         Returns:
@@ -390,20 +352,20 @@ class Vision(WindowCapture):
     @check_valid_image
     def get_most_common_color(
         self: Self,
-        rect: tuple[int, int, int, int] | None = None,
+        rect: Rect | None = None,
         index: int = 1,
-        ignore_colors: tuple[int, int, int] | list[tuple[int, int, int]] | None = None,
-    ) -> tuple[int, int, int]:
+        ignore_colors: Color | Sequence[Color] | None = None,
+    ) -> Color:
         """Determines the most common color in the specified region.
 
         Args:
-            rect (tuple[int, int, int, int] | None): Region to average;
+            rect (Rect | None): Region to average;
                 ``None`` uses the full image.
             index (int): Rank of the dominant colour to extract (1-based).
-            ignore_colors (tuple[int, int, int] | list[tuple[int, int, int]] | None): Colours to skip while ranking.
+            ignore_colors (Color | Sequence[Color] | None): Colours to skip while ranking.
 
         Returns:
-            tuple[int, int, int]: Most common RGB colour in the region.
+            Color: Most common RGB colour in the region.
         """
         cropped_image = self._crop_image(rect)
         reshaped_image = cropped_image.reshape(-1, 3)
@@ -417,20 +379,20 @@ class Vision(WindowCapture):
         sorted_indices = np.argsort(counts)[::-1]
         desired_index = min(index - 1, len(sorted_indices) - 1)
         most_common_color = unique[sorted_indices[desired_index]][::-1]
-        return (int(most_common_color[0]), int(most_common_color[1]), int(most_common_color[2]))
+        return int(most_common_color[0]), int(most_common_color[1]), int(most_common_color[2])
 
     @check_valid_image
     def get_count_of_color(
         self: Self,
-        color: tuple[int, int, int],
-        rect: tuple[int, int, int, int] | None = None,
+        color: Color,
+        rect: Rect | None = None,
         tolerance: int | None = 0,
     ) -> int:
         """Counts the number of pixels matching a given color within a tolerance.
 
         Args:
-            color (tuple[int, int, int]): Target colour expressed as (R, G, B).
-            rect (tuple[int, int, int, int] | None): Region to average;
+            color (Color): Target colour expressed as (R, G, B).
+            rect (Rect | None): Region to average;
                 ``None`` uses the full image.
             tolerance (int): Allowed per-channel difference; defaults to 0 for exact matches.
 
@@ -444,16 +406,16 @@ class Vision(WindowCapture):
     @check_valid_image
     def get_all_colors_with_counts(
         self: Self,
-        rect: tuple[int, int, int, int] | None = None,
-    ) -> list[tuple[tuple[int, int, int], int]]:
+        rect: Rect | None = None,
+    ) -> list[tuple[Color, int]]:
         """Retrieves all colors in the specified region along with their pixel counts.
 
         Args:
-            rect (tuple[int, int, int, int] | None): Region to average;
+            rect (Rect | None): Region to average;
                 ``None`` uses the full image.
 
         Returns:
-            list[tuple[tuple[int, int, int], int]]: Colour counts ordered by frequency.
+            list[tuple[Color, int]]: Colour counts ordered by frequency.
         """
         cropped_image = self._crop_image(rect)
         reshaped_image = cropped_image.reshape(-1, 3)
@@ -462,25 +424,28 @@ class Vision(WindowCapture):
         sorted_unique = unique[sorted_indices]
         sorted_counts = counts[sorted_indices]
         return [
-            ((int(bgr[2]), int(bgr[1]), int(bgr[0])), int(c))
+            (
+                (int(bgr[2]), int(bgr[1]), int(bgr[0])),
+                int(c),
+            )
             for bgr, c in zip(sorted_unique, sorted_counts, strict=False)
         ]
 
     @check_valid_image
-    def get_median_color(self: Self, rect: tuple[int, int, int, int] | None = None) -> tuple[int, int, int]:
-        """Calculates the median color of the specified region.
+    def get_median_color(self: Self, rect: Rect | None = None) -> Color:
+        """Calculate the median color of the specified region.
 
         Args:
-            rect (tuple[int, int, int, int] | None): Region to average;
+            rect (Rect | None): Region to average;
                 ``None`` uses the full image.
 
         Returns:
-            tuple[int, int, int]: Median RGB colour inside the region.
+            Color: Median RGB colour inside the region.
         """
         cropped_image = self._crop_image(rect)
         reshaped_image = cropped_image.reshape(-1, 3)
         median_color = np.median(reshaped_image, axis=0).astype(np.uint8)
-        return tuple(median_color[::-1].tolist())
+        return cast("Color", tuple(median_color[::-1].tolist()))
 
     @staticmethod
     def _get_dominant_color(image: npt.NDArray[np.uint8]) -> npt.NDArray[np.uint8]:
@@ -498,20 +463,20 @@ class Vision(WindowCapture):
     @check_valid_image
     def maximize_color_match(
         self: Self,
-        rect: tuple[int, int, int, int],
+        rect: Rect,
         initial_tolerance: int = 100,
         tolerance_step: int = 1,
-    ) -> tuple[tuple[int, int, int], int]:
+    ) -> tuple[Color, int]:
         """Finds the color and tolerance that best match the region's dominant color.
 
         Args:
-            rect (tuple[int, int, int, int] | None): Region to evaluate when
+            rect (Rect): Region to evaluate when
                 computing the dominant colour.
             initial_tolerance (int): Initial tolerance applied when searching.
             tolerance_step (int): Amount to decrease tolerance when broadening the search.
 
         Returns:
-            tuple[tuple[int, int, int], int]: Matched RGB colour and the tolerance applied.
+            tuple[Color, int]: Matched RGB colour and the tolerance applied.
         """
         cropped_image = self._crop_image(rect)
         dominant_color = cast("tuple[int, int, int]", tuple(int(x) for x in self._get_dominant_color(cropped_image)))
@@ -526,7 +491,7 @@ class Vision(WindowCapture):
         dominant_color: tuple[int, int, int],
         initial_tolerance: int,
         tolerance_step: int,
-    ) -> tuple[tuple[int, int, int], int]:
+    ) -> tuple[Color, int]:
         """Searches for the best color match within the specified tolerance range.
 
         Args:
@@ -615,7 +580,7 @@ class Vision(WindowCapture):
         image2: npt.NDArray[np.uint8],
         mask: npt.NDArray[np.uint8] | None = None,
     ) -> int:
-        """Calculates the median absolute difference between two images, optionally ignoring masked areas.
+        """Calculate the median absolute difference between two images, optionally ignoring masked areas.
 
         Args:
             image1: The first image.
@@ -667,21 +632,20 @@ class Vision(WindowCapture):
     def find_image(
         self: Self,
         sub_image: npt.NDArray[np.uint8] | Image.Image,
-        rect: tuple[int, int, int, int] | None = None,
+        rect: Rect | None = None,
         confidence: float = 0.95,
         median_tolerance: int | None = None,
-    ) -> list[tuple[int, int, int, int]]:
+    ) -> list[Rect]:
         """Finds occurrences of a subimage within the main image using template matching.
 
         Args:
             sub_image (npt.NDArray[np.uint8] | Image.Image): Subimage to locate inside the backbuffer.
-            rect (tuple[int, int, int, int] | None): Search region specified as
-                (x, y, width, height). If None, the entire image is used.
+            rect (Rect | None): Search region specified as (x, y, width, height). If None, the entire image is used.
             confidence (float): Matching confidence threshold (default ``0.95``).
             median_tolerance (int | None): Optional per-channel median colour tolerance for matches.
 
         Returns:
-            list[tuple[int, int, int, int]]: Bounding boxes locating the subimage.
+            list[Rect]: Bounding boxes locating the subimage.
         """
         image = self._crop_image(rect)
         sub_image_bgr, mask = self._prepare_sub_image(sub_image)
@@ -706,7 +670,7 @@ class Vision(WindowCapture):
         """
         if isinstance(sub_image, Image.Image):
             sub_image = np.array(sub_image.convert("RGBA"))
-        if sub_image.shape[-1] == RECTANGLE_SIDES:
+        if sub_image.shape[-1] == RGBA_CHANNELS:
             sub_alpha = sub_image[..., 3]
             sub_image_bgr = cv.cvtColor(sub_image[..., :3], cv.COLOR_RGB2BGR)
             mask = sub_alpha.astype(np.uint8)
@@ -738,7 +702,7 @@ class Vision(WindowCapture):
         sub_image_gray: npt.NDArray[np.uint8],
         mask: npt.NDArray[np.uint8] | None,
         confidence: float,
-    ) -> npt.NDArray[np.uint8]:
+    ) -> MaskArray:
         """Performs template matching between the main image and subimage.
 
         Args:
@@ -748,37 +712,34 @@ class Vision(WindowCapture):
             confidence (float): Minimum required match confidence.
 
         Returns:
-            npt.NDArray[np.bool_]: Mask where template scores exceed the confidence threshold.
+            MaskArray: Mask where template scores exceed the confidence threshold.
         """
         res = cv.matchTemplate(main_image_gray, sub_image_gray, cv.TM_CCORR_NORMED, mask=mask)
-        return cast(
-            "npt.NDArray[np.uint8]", np.logical_and(res >= confidence, np.logical_not(np.isinf(res))).astype(np.uint8)
-        )
+        return cast("MaskArray", np.logical_and(res >= confidence, np.logical_not(np.isinf(res))).astype(np.uint8))
 
     def _process_matching_results(
         self: Self,
-        res: npt.NDArray[np.uint8],
+        res: MaskArray,
         main_image: npt.NDArray[np.uint8],
         sub_image_bgr: npt.NDArray[np.uint8],
         mask: npt.NDArray[np.uint8] | None,
-        rect: tuple[int, int, int, int] | None,
+        rect: Rect | None,
         median_tolerance: int | None,
-    ) -> list[tuple[int, int, int, int]]:
+    ) -> list[Rect]:
         """Processes template matching results to extract matching rectangles.
 
         Args:
-            res (npt.NDArray[np.uint8]): Binary mask produced by the template comparison.
+            res (MaskArray): Binary mask produced by the template comparison.
             main_image (npt.NDArray[np.uint8]): Reference image to search within.
             sub_image_bgr (npt.NDArray[np.uint8]): Template in BGR colour space.
             mask (npt.NDArray[np.uint8] | None): Optional mask applied to the subimage.
-            rect (tuple[int, int, int, int] | None): Region to constrain the
-                template search.
+            rect (Rect | None): Region to constrain the template search.
             median_tolerance (int | None): Optional tolerance applied to colour medians.
 
         Returns:
-            list[tuple[int, int, int, int]]: Bounding boxes for detected matches.
+            list[Rect]: Bounding boxes for detected matches.
         """
-        rects = []
+        rects: list[Rect] = []
         w, h = sub_image_bgr.shape[1::-1]
         locations = np.column_stack(np.where(res))
         for i in range(locations.shape[0]):
@@ -801,41 +762,40 @@ class Vision(WindowCapture):
 
     @staticmethod
     def _group_and_convert_to_shape_list(
-        rects: list[tuple[int, int, int, int]],
-    ) -> list[tuple[int, int, int, int]]:
+        rects: list[Rect],
+    ) -> list[Rect]:
         """Groups similar rectangles and returns a consolidated list.
 
         Args:
-            rects (list[tuple[int, int, int, int]]): Bounding boxes emitted by the matcher.
+            rects (list[Rect]): Bounding boxes emitted by the matcher.
 
         Returns:
-            list[tuple[int, int, int, int]]: Grouped rectangles merged by OpenCV's clustering.
+            list[Rect]: Grouped rectangles merged by OpenCV's clustering.
         """
         rects_arr = np.repeat(np.array(rects), 2, axis=0)
         grouped_rects, _ = cv.groupRectangles(rects_arr, groupThreshold=1, eps=0.1)  # type: ignore[arg-type]
-        return cast("list[tuple[int, int, int, int]]", grouped_rects)
+        return cast("list[Rect]", grouped_rects)
 
     @check_valid_image
     def find_contours(
         self: Self,
-        color: tuple[int, int, int],
-        rect: tuple[int, int, int, int] | None = None,
+        color: Color,
+        rect: Rect | None = None,
         tolerance: int = 0,
         min_area: int = 10,
         vertices: int | None = None,
-    ) -> list[npt.NDArray[np.uintp]]:
+    ) -> list[Contour]:
         """Finds contours in the image that match the specified color.
 
         Args:
-            color (tuple[int, int, int]): Target colour expressed as (R, G, B).
-            rect (tuple[int, int, int, int] | None): Search region specified as
-                (x, y, width, height). If None, the entire image is used.
+            color (Color): Target colour expressed as (R, G, B).
+            rect (Rect | None): Search region specified as (x, y, width, height). If None, the entire image is used.
             tolerance (int): Allowed deviation per colour channel.
             min_area (int): Minimum area in pixels squared for a contour to qualify.
             vertices (int | None): Required vertex count for returned contours.
 
         Returns:
-            list[npt.NDArray[np.uintp]]: Contours matching the search criteria.
+            list[Contour]: Contours matching the search criteria.
         """
         image = self._crop_image(rect)
         image = filter_colors(image, color, tolerance)
@@ -848,19 +808,19 @@ class Vision(WindowCapture):
                 for c in contours
                 if vertices == len(cv.approxPolyDP(c, 0.01 * cv.arcLength(c, closed=True), closed=True))
             ]
-        return cast("list[npt.NDArray[np.uintp]]", contours)
+        return cast("list[Contour]", contours)
 
     @check_valid_image
     def draw_points(
         self: Self,
-        points: Sequence[tuple[int, int]],
-        color: tuple[int, int, int] = (MAX_COLOR_VALUE, 0, 0),
+        points: Sequence[Point],
+        color: Color = (MAX_COLOR_VALUE, 0, 0),
     ) -> None:
         """Draws points on the backbuffer image.
 
         Args:
-            points (Sequence[tuple[int, int]]): Coordinates to mark on the backbuffer.
-            color (tuple[int, int, int]): Drawing colour (RGB). Defaults to red.
+            points (Sequence[Point]): Coordinates to mark on the backbuffer.
+            color (Color): Drawing colour (RGB). Defaults to red.
         """
         points_arr = np.array(points)
         self.opencv_image[points_arr[:, 1], points_arr[:, 0]] = color[::-1]
@@ -869,13 +829,13 @@ class Vision(WindowCapture):
     def draw_contours(
         self: Self,
         contours: tuple[tuple[tuple[tuple[int, int]]]],
-        color: tuple[int, int, int] = (MAX_COLOR_VALUE, 0, 0),
+        color: Color = (MAX_COLOR_VALUE, 0, 0),
     ) -> None:
         """Draws contours on the backbuffer image.
 
         Args:
             contours (tuple[tuple[tuple[tuple[int, int]]]]): Contour sequences as produced by OpenCV.
-            color (tuple[int, int, int]): Drawing colour (RGB). Defaults to red.
+            color (Color): Drawing colour (RGB). Defaults to red.
         """
         cv.drawContours(self.opencv_image, contours, -1, color[::-1], 2)  # type: ignore[arg-type]
 
@@ -883,13 +843,13 @@ class Vision(WindowCapture):
     def draw_circle(
         self: Self,
         circle: tuple[int, int, int],
-        color: tuple[int, int, int] = (MAX_COLOR_VALUE, 0, 0),
+        color: Color = (MAX_COLOR_VALUE, 0, 0),
     ) -> None:
         """Draws a circle on the backbuffer image.
 
         Args:
             circle (tuple[int, int, int]): Circle definition (x, y, radius).
-            color (tuple[int, int, int]): Drawing colour (RGB). Defaults to red.
+            color (Color): Drawing colour (RGB). Defaults to red.
         """
         x, y, r = circle
         cv.circle(self.opencv_image, (x, y), r, color[::-1], 2, cv.LINE_4)
@@ -897,14 +857,14 @@ class Vision(WindowCapture):
     @check_valid_image
     def draw_rectangle(
         self: Self,
-        rect: tuple[int, int, int, int],
-        color: tuple[int, int, int] = (MAX_COLOR_VALUE, 0, 0),
+        rect: Rect,
+        color: Color = (MAX_COLOR_VALUE, 0, 0),
     ) -> None:
         """Draws a rectangle on the backbuffer image.
 
         Args:
-            rect (tuple[int, int, int, int]): Rectangle specified as (x, y, width, height).
-            color (tuple[int, int, int]): Drawing colour (RGB). Defaults to red.
+            rect (Rect): Rectangle specified as (x, y, width, height).
+            color (Color): Drawing colour (RGB). Defaults to red.
         """
         x, y, w, h = rect
         cv.rectangle(self.opencv_image, (x, y), (x + w, y + h), color[::-1], 2, cv.LINE_4)
@@ -912,7 +872,7 @@ class Vision(WindowCapture):
     @check_valid_image
     def filter_colors(
         self: Self,
-        colors: tuple[int, int, int] | list[tuple[int, int, int]],
+        colors: Color | Sequence[Color],
         tolerance: int = 0,
         *,
         keep_original_colors: bool = False,
@@ -920,7 +880,7 @@ class Vision(WindowCapture):
         """Filters the backbuffer image to retain only specified colors within a given tolerance.
 
         Args:
-            colors (tuple[int, int, int] | list[tuple[int, int, int]]): Colours to keep while filtering.
+            colors (Color | Sequence[Color]): Colours to keep while filtering.
             tolerance (int): Per-channel tolerance threshold (0-255).
             keep_original_colors (bool): When ``True``, retain source colours for matching pixels;
                 otherwise, update the backbuffer in place.

@@ -9,11 +9,11 @@ import sys
 import typing
 from pathlib import Path
 from tkinter import Tk
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Self
 
 import cv2 as cv
 import win32gui
-from typing_extensions import Self
+from typing_extensions import override
 
 from .color_picker import ColorPicker
 from .core import Input, check_valid_hwnd, check_valid_image
@@ -46,7 +46,8 @@ class AutoCV(Input):
         pyd_dir = Path(__file__).parent / "prebuilt" / f"python{version.major}{version.minor}"
 
         if not pyd_dir.exists():
-            raise FileNotFoundError
+            msg = f"Missing prebuilt extension directory: {pyd_dir}"
+            raise FileNotFoundError(msg)
 
         sys.path.insert(0, str(pyd_dir))
         try:
@@ -55,16 +56,21 @@ class AutoCV(Input):
             raise ImportError from exc
 
         self._antigcp = antigcp
-        self._instance_logger = logging.getLogger(__name__).getChild(self.__class__.__name__).getChild(str(id(self)))
+        self._instance_logger: logging.Logger = (
+            logging.getLogger(__name__).getChild(self.__class__.__name__).getChild(str(id(self)))
+        )
 
     @check_valid_hwnd
     def get_hwnd(self: Self) -> int:
         """Return the current target window handle."""
         return self.hwnd
 
+    @override
     @check_valid_hwnd
-    def get_window_size(self: Self) -> tuple[int, int]:
+    def get_window_size(self: Self, *, use_cache: bool = False) -> tuple[int, int]:
         """Return the client area dimensions for the active window."""
+        if use_cache:
+            return super().get_window_size(use_cache=use_cache)
         left, top, right, bottom = win32gui.GetWindowRect(self.hwnd)
         return right - left, bottom - top
 

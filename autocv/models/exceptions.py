@@ -12,22 +12,23 @@ __all__ = (
     "InvalidLengthError",
 )
 
-from typing_extensions import Self
+from typing import Self
 
 
 class InvalidHandleError(Exception):
     """Raised when a window handle is missing or otherwise unusable.
 
     Attributes:
-        hwnd (int): Handle value that failed validation.
+        hwnd: Handle value that failed validation.
     """
 
     def __init__(self: Self, hwnd: int) -> None:
         """Initialise the error with the offending handle.
 
         Args:
-            hwnd (int): Handle value that triggered the error.
+            hwnd: Handle value that triggered the error.
         """
+        self.hwnd: int = hwnd
         super().__init__(f"Invalid handle: {hwnd}. Please set handle before calling this method.")
 
 
@@ -43,15 +44,17 @@ class InvalidLengthError(Exception):
     """Raised when iterable length mismatches the expected size.
 
     Attributes:
-        expected (int): Target number of items required by the caller.
-        received (int): Number of items supplied by the caller.
+        expected: Target number of items required by the caller.
+        received: Number of items supplied by the caller.
     """
 
     def __init__(self: Self, expected: int, received: int) -> None:
         """Initialise the error with the expected versus received lengths.
 
         Args:
-            expected (int): Number of items the routine requires.
-            received (int): Number of items provided.
+            expected: Number of items the routine requires.
+            received: Number of items provided.
         """
+        self.expected: int = expected
+        self.received: int = received
         super().__init__(f"Expected length {expected}. Instead received length {received}.")
