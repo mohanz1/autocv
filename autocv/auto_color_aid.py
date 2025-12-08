@@ -300,17 +300,19 @@ class AutoColorAid(tk.Tk):
 
     def _on_delete_selected(self) -> None:
         """Delete selected items from the colors listbox and refresh best-color computation."""
-        children = list(self.colors_listbox.get_children(""))
         selected_ids = set(self.colors_listbox.selection())
+        if not selected_ids:
+            return
 
+        children = list(self.colors_listbox.get_children(""))
         removed_indices = {idx for idx, child in enumerate(children) if child in selected_ids}
 
         self._color_state.remove_indices(removed_indices)
 
         self.colors_listbox.delete(*children)
         for row, col, r_, g_, b_ in self._color_state.pixels:
-            self._insert_listbox_item(row, col, r_, g_, b_)
-        self._refresh_best_color_display()
+            self._insert_listbox_item(row, col, r_, g_, b_, add_to_state=False)
+        self._update_best_color()
 
     def _update_best_color(self) -> None:
         """Compute the best color from selected pixels and update the info display."""
@@ -326,11 +328,12 @@ class AutoColorAid(tk.Tk):
             text = f"best color: {self._best_color}\nbest tolerance: {self._best_tolerance}"
         self.info_label.config(text=text)
 
-    def _insert_listbox_item(self, row: int, col: int, r_: int, g_: int, b_: int) -> None:
+    def _insert_listbox_item(self, row: int, col: int, r_: int, g_: int, b_: int, *, add_to_state: bool = True) -> None:
         """Insert a color and coordinate entry into the colors listbox and record it."""
         text = f"({r_}, {g_}, {b_}) @ ({row}, {col})"
         self.colors_listbox.insert("", tk.END, text=text)
-        self._color_state.add((row, col, r_, g_, b_))
+        if add_to_state:
+            self._color_state.add((row, col, r_, g_, b_))
 
     def _update_image(self) -> None:
         """Refresh the displayed image and schedule the next update."""
