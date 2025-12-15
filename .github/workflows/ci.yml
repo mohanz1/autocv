@@ -116,7 +116,7 @@ jobs:
           enable-cache: true
 
       - name: Download coverage
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           path: coverages/
           # Not specifying any name will lead to the download of all available artifacts
