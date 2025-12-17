@@ -89,7 +89,7 @@ jobs:
           python scripts/ci/normalize_coverage.py
 
       - name: Upload coverage
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: .coverage.${{ matrix.os }}.${{ matrix.python-version }}
           path: .coverage
@@ -116,7 +116,7 @@ jobs:
           enable-cache: true
 
       - name: Download coverage
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           path: coverages/
           # Not specifying any name will lead to the download of all available artifacts
@@ -247,7 +247,7 @@ jobs:
 
       - name: Upload artifacts
         if: github.event_name == 'pull_request'
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: docs
           path: public/docs

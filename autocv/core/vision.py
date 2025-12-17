@@ -403,8 +403,11 @@ class Vision(WindowCapture):
         """
         image = self._crop_image(rect, image)
         avg_color = cv.mean(image)
-        avg_color_rgb = np.array(avg_color[:3], dtype=np.int16)
-        return avg_color_rgb[::-1]
+        if isinstance(avg_color, float):
+            avg_color_bgr = np.array([avg_color, avg_color, avg_color], dtype=np.int16)
+        else:
+            avg_color_bgr = np.array(avg_color[:3], dtype=np.int16)
+        return avg_color_bgr[::-1]
 
     @check_valid_image
     def get_most_common_color(

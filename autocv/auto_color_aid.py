@@ -97,7 +97,7 @@ class AutoColorAidController:
         self.autocv.refresh()
 
     @property
-    def frame(self) -> np.ndarray:
+    def frame(self) -> NDArray[np.uint8]:
         """Return the current OpenCV frame."""
         return self.autocv.opencv_image
 
