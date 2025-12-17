@@ -81,7 +81,7 @@ jobs:
       - name: Test Installation
         run: |
           uv pip install .
-          uv pip uninstall -y autocv
+          uv pip uninstall -- -y autocv
 
       - name: Run tests
         run: |
