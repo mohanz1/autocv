@@ -13,12 +13,13 @@ import logging
 import math
 import time
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Final, Self
+from typing import TYPE_CHECKING, Final
 
 import numpy as np
 import win32api
 import win32con
 import win32gui
+from typing_extensions import Self
 
 from autocv import constants
 

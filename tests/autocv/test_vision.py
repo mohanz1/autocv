@@ -66,11 +66,11 @@ class TestAutoCVVision:
         assert isinstance(results[0][0], tuple)  # RGB
         assert isinstance(results[0][1], int)  # Count
 
-    @patch("autocv.core.Vision._get_grouped_text")
-    def test_get_text_filters_confidence(self, mock_grouped, autocv):
-        mock_grouped.return_value = MagicMock()
-        mock_grouped.return_value.filter.return_value.select.return_value.with_columns.return_value.select.return_value.collect.return_value.to_dicts.return_value = [
-            {"text": "foo", "rect": [1, 1, 1, 1], "confidence": 0.9}
-        ]
-        text = autocv.get_text(confidence=0.8)
-        assert isinstance(text, list)
+    @patch("autocv.core.Vision._ensure_ocr")
+    def test_get_text_filters_confidence(self, mock_ensure_ocr, autocv):
+        mock_ensure_ocr.return_value.predict.return_value = {
+            "rec_texts": ["foo"],
+            "rec_scores": [0.9],
+            "rec_boxes": [[0, 0, 2, 2]],
+        }
+        assert autocv.get_text(confidence=0.8) == [{"text": "foo", "rect": [0, 0, 1, 1], "confidence": 0.9}]

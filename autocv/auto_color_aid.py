@@ -12,12 +12,13 @@ __all__ = ("AutoColorAid",)
 import tkinter as tk
 from dataclasses import dataclass, field
 from tkinter import ttk
-from typing import TYPE_CHECKING, Any, Final, NamedTuple, Protocol, Self
+from typing import TYPE_CHECKING, Any, Final, NamedTuple, Protocol
 
 import cv2
 import numpy as np
 import sv_ttk
 from PIL import Image, ImageDraw, ImageTk
+from typing_extensions import Self
 
 from autocv import AutoCV
 

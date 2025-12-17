@@ -12,7 +12,7 @@ __all__ = ("ColorPicker",)
 
 from pathlib import Path
 from tkinter import NW, Canvas, Tk, Toplevel
-from typing import Protocol, Self
+from typing import Protocol
 
 import cv2 as cv
 import numpy as np
@@ -22,6 +22,7 @@ import win32con
 import win32gui
 from PIL import Image, ImageDraw, ImageFont, ImageTk
 from PIL.ImageTk import PhotoImage
+from typing_extensions import Self
 
 from .core import Vision
 

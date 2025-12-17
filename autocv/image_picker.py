@@ -6,10 +6,11 @@ __all__ = ("ImagePicker",)
 
 import logging
 from tkinter import BOTH, YES, Canvas, Event, Frame, Tk, Toplevel
-from typing import TYPE_CHECKING, Final, Protocol, Self
+from typing import TYPE_CHECKING, Final, Protocol
 
 import win32con
 import win32gui
+from typing_extensions import Self
 
 from autocv.models import InvalidHandleError
 

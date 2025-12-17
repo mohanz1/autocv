@@ -4,11 +4,12 @@ from __future__ import annotations
 
 __all__ = ("ImageFilter",)
 
-from typing import Final, Self, cast
+from typing import Final, cast
 
 import cv2 as cv
 import numpy as np
 import numpy.typing as npt
+from typing_extensions import Self
 
 from .models import FilterSettings
 

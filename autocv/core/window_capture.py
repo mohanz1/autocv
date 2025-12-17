@@ -8,13 +8,14 @@ from __future__ import annotations
 
 __all__ = ("WindowCapture",)
 
-from typing import TYPE_CHECKING, Final, Self, TypeAlias
+from typing import TYPE_CHECKING, Final, TypeAlias
 
 import numpy as np
 import numpy.typing as npt
 import win32con
 import win32gui
 import win32ui
+from typing_extensions import Self
 
 from autocv.models import InvalidHandleError
 from autocv.utils import filtering

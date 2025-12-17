@@ -9,11 +9,11 @@ import sys
 import typing
 from pathlib import Path
 from tkinter import Tk
-from typing import TYPE_CHECKING, Self
+from typing import TYPE_CHECKING
 
 import cv2 as cv
 import win32gui
-from typing_extensions import override
+from typing_extensions import Self, override
 
 from .color_picker import ColorPicker
 from .core import Input, check_valid_hwnd, check_valid_image

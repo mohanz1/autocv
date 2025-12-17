@@ -4,17 +4,16 @@ from __future__ import annotations
 
 __all__ = ("Vision",)
 
-import io
 import logging
-import pathlib
-from typing import TYPE_CHECKING, Final, Self, cast
+import os
+from typing import TYPE_CHECKING, Final, Literal, cast
 
 import cv2 as cv
 import numpy as np
 import numpy.typing as npt
-import polars as pl
+from paddleocr import PaddleOCR  # type: ignore[import-untyped]
 from PIL import Image
-from tesserocr import OEM, PSM, PyTessBaseAPI
+from typing_extensions import Self
 
 from .decorators import check_valid_hwnd, check_valid_image
 from .image_processing import filter_colors
@@ -37,25 +36,92 @@ PERCENT_SCALE: Final[int] = 100
 logger = logging.getLogger(__name__)
 
 
+SpeedPreset = Literal["fast", "balanced", "accurate"]
+
+
 class Vision(WindowCapture):
     """Capture windows, process images, and perform OCR."""
 
-    def __init__(self: Self, hwnd: int = -1) -> None:
+    def __init__(
+        self: Self,
+        hwnd: int = -1,
+        lang: str = "en",
+        device: str | None = None,
+        conf_threshold: float = 0.60,
+        speed: SpeedPreset = "balanced",
+        *,
+        disable_model_source_check: bool = False,
+    ) -> None:
         """Initialise a Vision object.
 
         Args:
             hwnd: Window handle of the target window. Defaults to -1.
+            lang: PaddleOCR language code.
+            device: PaddleOCR device override (e.g. ``"cpu"`` / ``"gpu"``); ``None`` uses PaddleOCR defaults.
+            conf_threshold: OCR recognition confidence threshold between 0 and 1.
+            speed: Preset that tunes detection settings.
+            disable_model_source_check: When ``True``, disables PaddleOCR/PaddleX model host connectivity checks
+                via the ``DISABLE_MODEL_SOURCE_CHECK`` environment variable.
         """
         super().__init__(hwnd)
         self.opencv_image: npt.NDArray[np.uint8] = np.empty(0, dtype=np.uint8)
+        self.api: PaddleOCR | None = None
 
-        self._tessdata_dir = pathlib.Path(__file__).parents[1] / "data" / "traineddata"
-        self.api: PyTessBaseAPI = PyTessBaseAPI(
-            path=str(self._tessdata_dir),
-            lang="runescape",
-            psm=PSM.SPARSE_TEXT,
-            oem=OEM.LSTM_ONLY,
-        )
+        if disable_model_source_check:
+            os.environ.setdefault("DISABLE_MODEL_SOURCE_CHECK", "True")
+
+        # Presets: tune detection resize + thresholds. Keep it simple & safe.
+        if speed == "fast":
+            det_side_len = 640
+            det_box_thresh = 0.55
+            det_unclip = 1.6
+        elif speed == "accurate":
+            det_side_len = 1280
+            det_box_thresh = 0.45
+            det_unclip = 1.9
+        else:  # "balanced"
+            det_side_len = 960
+            det_box_thresh = 0.50
+            det_unclip = 1.8
+
+        self._ocr_lang = lang
+        self._ocr_device = device
+        self._ocr_conf_threshold = conf_threshold
+        self._ocr_det_side_len = int(det_side_len)
+        self._ocr_det_box_thresh = float(det_box_thresh)
+        self._ocr_det_unclip_ratio = float(det_unclip)
+
+    def _ensure_ocr(self: Self) -> PaddleOCR:
+        if self.api is not None:
+            return self.api
+
+        try:
+            self.api = PaddleOCR(
+                # Core selection
+                lang=self._ocr_lang,
+                ocr_version="PP-OCRv5",
+                # OSRS/game UI: disable doc features
+                use_doc_orientation_classify=False,
+                use_doc_unwarping=False,
+                use_textline_orientation=False,
+                # Detection tuning
+                text_det_limit_type="max",
+                text_det_limit_side_len=self._ocr_det_side_len,
+                text_det_box_thresh=self._ocr_det_box_thresh,
+                text_det_unclip_ratio=self._ocr_det_unclip_ratio,
+                # Recognition filtering (TTS-friendly)
+                text_rec_score_thresh=self._ocr_conf_threshold,
+                # Runtime
+                device=self._ocr_device,
+                cpu_threads=8,
+            )
+        except ModuleNotFoundError as exc:
+            if exc.name != "paddle":
+                raise
+            msg = "PaddleOCR requires PaddlePaddle. Install `autocv[paddle-cpu]` or `autocv[paddle-gpu]`."
+            raise RuntimeError(msg) from exc
+
+        return self.api
 
     def set_backbuffer(self: Self, image: npt.NDArray[np.uint8] | Image.Image) -> None:
         """Set the image buffer to the provided NumPy array or PIL Image.
@@ -128,98 +194,6 @@ class Vision(WindowCapture):
         diff = cv.absdiff(image, updated_image)
         return int(np.count_nonzero(diff))
 
-    def _get_grouped_text(
-        self: Self,
-        image: npt.NDArray[np.uint8],
-        rect: Rect | None = None,
-        colors: Color | Sequence[Color] | None = None,
-        tolerance: int = 0,
-    ) -> pl.LazyFrame:
-        """Preprocesses the image and extracts text using Tesseract OCR, grouping text data by block.
-
-        Args:
-            image (npt.NDArray[np.uint8]): Image to preprocess before OCR.
-            rect (Rect | None): Optional region of interest described as
-                (x, y, width, height).
-            colors (Color | Sequence[Color] | None): Colours (RGB) to isolate before OCR.
-            tolerance (int): Per-channel tolerance when matching the colour filter.
-
-        Returns:
-            pl.LazyFrame: Grouped OCR output including text and bounding boxes.
-        """
-        if colors:
-            image = filter_colors(image, colors, tolerance)
-
-        # Resize image to double the size.
-        resized_img = cv.resize(image, None, fx=2, fy=2, interpolation=cv.INTER_CUBIC)
-        img = cv.bilateralFilter(resized_img, 9, 75, 75)
-
-        # Convert to grayscale and apply thresholding.
-        if len(img.shape) == RGB_CHANNELS and img.shape[-1] == RGB_CHANNELS:
-            img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-        img = cv.threshold(img, 0, MAX_COLOR_VALUE, cv.THRESH_BINARY + cv.THRESH_OTSU)[1]
-        img = cv.bitwise_not(img)
-
-        # Perform OCR.
-        self.api.SetImage(Image.fromarray(img))
-        if rect:
-            self.api.SetRectangle(*rect)
-        text_data = self.api.GetTSVText(0)
-        self.api.Clear()
-
-        text = pl.scan_csv(
-            io.StringIO(text_data),
-            has_header=False,
-            separator="\t",
-            quote_char=None,
-            new_columns=[
-                "level",
-                "page_num",
-                "block_num",
-                "par_num",
-                "line_num",
-                "word_num",
-                "left",
-                "top",
-                "width",
-                "height",
-                "conf",
-                "text",
-            ],
-        )
-
-        # Filter out invalid or low-confidence text.
-        text = text.filter((pl.col("conf") > 0) & (pl.col("conf") < PERCENT_SCALE))
-        text = text.with_columns(
-            [
-                pl.col("text").cast(pl.Utf8),
-                (pl.col("conf") / 100).alias("conf"),
-            ]
-        )
-        text = text.filter(pl.col("text").str.strip_chars().str.len_chars() > 0)
-
-        grouped_text = text.group_by("block_num").agg(
-            [
-                pl.col("word_num").max().alias("word_num"),
-                pl.col("left").min().alias("left"),
-                pl.col("top").min().alias("top"),
-                pl.col("height").max().alias("height"),
-                pl.col("conf").max().alias("confidence"),
-                pl.col("text").str.join(" ").alias("text"),
-                ((pl.col("left") + pl.col("width")).max() - pl.col("left").min()).alias("width"),
-            ]
-        )
-
-        sorted_text = grouped_text.sort("confidence", descending=True)
-        return sorted_text.with_columns(
-            [
-                (pl.col("top") // 2).alias("top"),
-                (pl.col("left") // 2).alias("left"),
-                (pl.col("height") // 2).alias("height"),
-                (pl.col("width") // 2).alias("width"),
-            ]
-        )
-
     def _crop_image(
         self: Self,
         rect: Rect | None = None,
@@ -249,28 +223,111 @@ class Vision(WindowCapture):
         tolerance: int = 0,
         confidence: float | None = 0.8,
     ) -> list[dict[str, str | int | float | list[int]]]:
-        """Extracts text from the backbuffer using Tesseract OCR.
-
-        Only text with confidence greater than or equal to the provided threshold is returned.
+        """Extract text from the backbuffer using PaddleOCR.
 
         Args:
-            rect (Rect | None): Search region specified as
-                (x, y, width, height).
-            colors (Color | Sequence[Color] | None): Colours (RGB) to isolate before OCR.
-            tolerance (int): Per-channel tolerance when matching the colour filter.
-            confidence (float | None): Minimum acceptable OCR confidence between 0 and 1.
+            rect: Search region (x, y, width, height).
+            colors: RGB colour(s) to isolate before OCR.
+            tolerance: Per-channel tolerance when matching the colour filter.
+            confidence: Minimum acceptable OCR confidence between 0 and 1. If None, no filtering.
 
         Returns:
-            list[dict[str, str | int | float | list[int]]]: Text entries with bounding boxes and confidence levels.
+            Text entries with bounding boxes and confidence levels:
+            [{"text": str, "rect": [left, top, width, height], "confidence": float}, ...]
         """
-        sorted_text = self._get_grouped_text(self.opencv_image, rect, colors, tolerance)
-        acceptable_text = sorted_text.filter(pl.col("confidence") >= confidence)
-        acceptable_text = acceptable_text.select("text", "left", "top", "width", "height", "confidence")
-        if rect:
-            acceptable_text = acceptable_text.with_columns(pl.col("left") + rect[0], pl.col("top") + rect[1])
-        result_df = acceptable_text.with_columns(pl.concat_list(["left", "top", "width", "height"]).alias("rect"))
-        result_df = result_df.select(["text", "rect", "confidence"])
-        return cast("list[dict[str, str | int | float | list[int]]]", result_df.collect().to_dicts())
+        # 1) Crop early (perf)
+        img = self._crop_image(rect, self.opencv_image)
+
+        if colors:
+            # filter_colors returns a mask/greyscale style image; for OCR we want original colors preserved
+            # so use keep_original_colors=True to keep the matching pixels' original BGR values.
+            img = filter_colors(img, colors, tolerance, keep_original_colors=True)
+
+        # 3) Preprocess (OSRS-friendly) BUT keep 3-channel BGR for PaddleOCR
+        #    PaddleOCR v3 pipeline expects shape (H, W, 3)
+        upscale = 2.0
+
+        gray = (
+            cv.cvtColor(img, cv.COLOR_BGR2GRAY) if (img.ndim == RGB_CHANNELS and img.shape[-1] == RGB_CHANNELS) else img
+        )
+        gray = cv.resize(gray, None, fx=upscale, fy=upscale, interpolation=cv.INTER_LANCZOS4)
+        gray = cv.bilateralFilter(gray, 5, 50, 50)
+        gray = cv.normalize(gray, gray, 0, 255, cv.NORM_MINMAX)
+        work = cv.cvtColor(gray, cv.COLOR_GRAY2BGR)
+
+        # 4) OCR (predict returns an object with .json)
+        pred = self._ensure_ocr().predict(work)
+        j = getattr(pred, "json", pred)
+
+        if isinstance(j, list):
+            if not j:
+                return []
+            j = j[0]
+
+        if not isinstance(j, dict):
+            return []
+
+        rec_texts = cast("list[str]", j.get("rec_texts") or [])
+        rec_scores = cast("list[float]", j.get("rec_scores") or [])
+
+        # Preferred: already rect boxes: [x_min, y_min, x_max, y_max]
+        rec_boxes = j.get("rec_boxes")  # list[list[int]] after JSON conversion
+        rec_polys = j.get("rec_polys")  # list[list[list[int]]] 4x2, optional fallback
+
+        # Helper: poly -> rect
+        def poly_to_rect(poly: object) -> tuple[int, int, int, int]:
+            arr = np.asarray(poly, dtype=np.int32)
+            xs = arr[:, 0]
+            ys = arr[:, 1]
+            return int(xs.min()), int(ys.min()), int(xs.max()), int(ys.max())
+
+        # 5) Build results
+        min_conf = float(confidence) if confidence is not None else None
+        out: list[dict[str, str | int | float | list[int]]] = []
+
+        n = min(len(rec_texts), len(rec_scores))
+        for i in range(n):
+            text = str(rec_texts[i]).strip()
+            if not text:
+                continue
+
+            score = float(rec_scores[i])
+            if min_conf is not None and score < min_conf:
+                continue
+
+            if rec_boxes is not None and i < len(rec_boxes):
+                x_min, y_min, x_max, y_max = rec_boxes[i]
+                x_min_i, y_min_i, x_max_i, y_max_i = int(x_min), int(y_min), int(x_max), int(y_max)
+            elif rec_polys is not None and i < len(rec_polys):
+                x_min_i, y_min_i, x_max_i, y_max_i = poly_to_rect(rec_polys[i])
+            else:
+                # No box info; skip or return dummy. I recommend skip:
+                continue
+
+            # Undo the 2x upscale so coords match original cropped image
+            left = int(x_min_i / upscale)
+            top = int(y_min_i / upscale)
+            right = int(x_max_i / upscale)
+            bottom = int(y_max_i / upscale)
+
+            # Convert to (left, top, width, height)
+            w = max(0, right - left)
+            h = max(0, bottom - top)
+
+            # Add rect offset back to full frame if user cropped
+            if rect:
+                left += rect[0]
+                top += rect[1]
+
+            out.append(
+                {
+                    "text": text,
+                    "rect": [left, top, w, h],
+                    "confidence": score,
+                }
+            )
+
+        return out
 
     @check_valid_image
     def get_color(self: Self, point: Point) -> Color:
