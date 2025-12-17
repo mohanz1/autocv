@@ -67,7 +67,7 @@ mypy = ["mypy[faster-cache] >=1.16.0,<2", { include-group = "types" }]
 pyright = ["pyright >=1.1.401,<2", { include-group = "types" }]
 pytest = [
     "mock >=5.2.0,<6",
-    "pytest >=8.4.1,<9",
+    "pytest>=8.4.1,<10",
     "pytest-cov >=6.2.1,<7",
     "pytest-xdist >=3.6,<4",
     { include-group = "coverage" },
