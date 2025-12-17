@@ -1,7 +1,7 @@
-
 name: CI
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
@@ -10,7 +10,7 @@ on:
       - main
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -19,6 +19,9 @@ concurrency:
 jobs:
   changes:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
     outputs:
       source: ${{ steps.filter.outputs.source }}
       docs: ${{ steps.filter.outputs.docs }}
@@ -59,7 +62,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [ "3.10", 3.11, 3.12 ]
+        python-version: ["3.10", "3.11", "3.12"]
 
     steps:
       - name: Checkout repository
@@ -78,20 +81,17 @@ jobs:
       - name: Test Installation
         run: |
           uv pip install .
-          uv pip uninstall autocv
+          uv pip uninstall -y autocv
 
       - name: Run tests
         run: |
-          uv sync --frozen --only-group nox
-
-          nox -s pytest -- --coverage
-
+          uvx nox -s pytest -- --coverage
           python scripts/ci/normalize_coverage.py
 
       - name: Upload coverage
         uses: actions/upload-artifact@v6
         with:
-          name: .coverage.${{ matrix.os }}.${{ matrix.python-version }}
+          name: .coverage.${{ runner.os }}.${{ matrix.python-version }}
           path: .coverage
           retention-days: 1
           if-no-files-found: error
@@ -165,28 +165,12 @@ jobs:
           enable-cache: true
           prune-cache: false
 
-      - name: Install nox
-        run: |
-          uv sync --frozen --only-group nox
-
       - name: Check stubs
-        if: always() && !cancelled()
+        if: ${{ needs.changes.outputs.stubs == 'true' }}
         run: |
-          if [[ "${{ github.event_name }}" == "pull_request" && -n "${{ github.base_ref }}" ]]; then
-            git fetch origin ${{ github.base_ref }} --depth=1
-            DIFF_TARGET="origin/${{ github.base_ref }}"
-          else
-            DIFF_TARGET="HEAD^"
-          fi
-
-          if git rev-parse "$DIFF_TARGET" >/dev/null 2>&1 && git diff --quiet "$DIFF_TARGET"...HEAD -- 'autocv/**/*.py'; then
-            echo "Skipping stub generation; no Python changes under autocv/."
-            exit 0
-          fi
-
-          nox -s generate-stubs
+          uvx nox -s generate-stubs
           if [ "$(git status --short)" ]; then
-            echo "Stubs were not updated accordingly to the changes. Please run 'nox -s generate-stubs' and commit the changes to fix this."
+            echo "Stubs were not updated accordingly to the changes. Please run 'uvx nox -s generate-stubs' and commit the changes to fix this."
             git status --short
             exit 1
           fi
@@ -194,32 +178,34 @@ jobs:
       - name: Audit
         if: always() && !cancelled()
         run: |
-          nox -s audit
+          uvx nox -s audit
 
       - name: Mypy
         if: always() && !cancelled()
         run: |
-          nox -s mypy
+          uvx nox -s mypy
 
       - name: Ruff
         if: always() && !cancelled()
         run: |
-          nox -s ruff -- --output-format=github
+          uvx nox -s ruff -- --output-format=github
 
       - name: Codespell
         if: always() && !cancelled()
         run: |
-          nox -s codespell
+          uvx nox -s codespell
 
       - name: Check trailing whitespaces
         if: always() && !cancelled()
         run: |
-          nox -s check-trailing-whitespaces
+          uvx nox -s check-trailing-whitespaces
 
   docs:
     needs: [changes]
     if: ${{ needs.changes.outputs.docs == 'true' || github.event_name != 'pull_request' }}
     runs-on: windows-latest
+    permissions:
+      contents: write
     defaults:
       run:
         shell: bash
@@ -238,12 +224,9 @@ jobs:
           enable-cache: true
           prune-cache: false
 
-      - name: Install docs deps
-        run: uv sync --frozen --only-group nox
-
       - name: Sphinx build
         run: |
-          nox -s sphinx
+          uvx nox -s sphinx
 
       - name: Upload artifacts
         if: github.event_name == 'pull_request'
@@ -253,6 +236,7 @@ jobs:
           path: public/docs
 
       - name: Deploy to GitHub Pages
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: peaceiris/actions-gh-pages@v4
         with:
           publish_branch: docs
@@ -264,8 +248,11 @@ jobs:
     needs: [upload-coverage, linting, docs]
     if: ${{ github.actor == 'dependabot[bot]' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
-      - name: Upload artifacts
+      - name: Checkout repository
         uses: actions/checkout@v6
         with:
           fetch-depth: 0

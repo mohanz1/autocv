@@ -38,6 +38,9 @@ def sync(
     for group in groups:
         args.extend((group_flag, group))
 
+    if not self and groups:
+        args.append("--no-install-project")
+
     session.run_install(
         "uv", "sync", "--locked", *args, silent=True, env={"UV_PROJECT_ENVIRONMENT": session.virtualenv.location}
     )
