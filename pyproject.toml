@@ -113,6 +113,8 @@ exclude_lines = [
     "^\\s*\\.\\.\\.$",
     "^\\s*@abc.abstractmethod$",
     "^\\s*@typing.overload$",
+    "^\\s*if TYPE_CHECKING:$",
+    "^\\s*if not TYPE_CHECKING:$",
     "^\\s*if typing.TYPE_CHECKING:$",
     "^\\s*if not typing.TYPE_CHECKING:$",
 ]

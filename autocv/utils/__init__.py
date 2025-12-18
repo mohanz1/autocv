@@ -1,4 +1,9 @@
-"""Helper routines for geometry math and filtering utilities."""
+"""Utility helpers shared across AutoCV.
+
+The :mod:`autocv.utils` package provides small, dependency-free helpers that are
+useful throughout the project. Public symbols are re-exported here for
+convenience.
+"""
 
 from __future__ import annotations
 

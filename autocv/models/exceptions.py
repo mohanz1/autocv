@@ -12,7 +12,13 @@ __all__ = (
     "InvalidLengthError",
 )
 
+from typing import Final
+
 from typing_extensions import Self
+
+_INVALID_HANDLE_MESSAGE: Final[str] = "Invalid handle: {hwnd}. Please set handle before calling this method."
+_INVALID_IMAGE_MESSAGE: Final[str] = "Invalid image. Please call refresh() before calling this method."
+_INVALID_LENGTH_MESSAGE: Final[str] = "Expected length {expected}. Instead received length {received}."
 
 
 class InvalidHandleError(Exception):
@@ -29,7 +35,7 @@ class InvalidHandleError(Exception):
             hwnd: Handle value that triggered the error.
         """
         self.hwnd: int = hwnd
-        super().__init__(f"Invalid handle: {hwnd}. Please set handle before calling this method.")
+        super().__init__(_INVALID_HANDLE_MESSAGE.format(hwnd=hwnd))
 
 
 class InvalidImageError(Exception):
@@ -37,7 +43,7 @@ class InvalidImageError(Exception):
 
     def __init__(self: Self) -> None:
         """Initialise the error for a missing or empty image buffer."""
-        super().__init__("Invalid image. Please call refresh() before calling this method.")
+        super().__init__(_INVALID_IMAGE_MESSAGE)
 
 
 class InvalidLengthError(Exception):
@@ -57,4 +63,4 @@ class InvalidLengthError(Exception):
         """
         self.expected: int = expected
         self.received: int = received
-        super().__init__(f"Expected length {expected}. Instead received length {received}.")
+        super().__init__(_INVALID_LENGTH_MESSAGE.format(expected=expected, received=received))

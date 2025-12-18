@@ -1,16 +1,28 @@
-"""Sequence filtering helpers used across AutoCV utilities."""
+"""Sequence filtering helpers.
+
+AutoCV frequently needs to pick a single "best" item from collections (OCR hits,
+template matches, shapes, etc.). This module provides lightweight helpers for
+common selection patterns without introducing additional dependencies.
+"""
 
 from __future__ import annotations
 
 __all__ = ("find_first", "get_first")
 
+import functools
+from collections.abc import Callable, Iterable, Sequence
 from operator import attrgetter
-from typing import TYPE_CHECKING, Any, TypeVar
-
-if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable, Sequence
+from typing import Any, TypeAlias, TypeVar
 
 T = TypeVar("T")
+
+_Getter: TypeAlias = Callable[[Any], Any]
+
+
+@functools.lru_cache(maxsize=128)
+def _make_attr_getter(path: str) -> _Getter:
+    """Return an attribute getter supporting Django-style separators."""
+    return attrgetter(path.replace("__", "."))
 
 
 def find_first(predicate: Callable[[T], bool], seq: Sequence[T]) -> T | None:
@@ -21,7 +33,7 @@ def find_first(predicate: Callable[[T], bool], seq: Sequence[T]) -> T | None:
         seq: Sequence to scan in order.
 
     Returns:
-        T | None: First matching element, or ``None`` if nothing matches.
+        The first matching element, or ``None`` if nothing matches.
     """
     for element in seq:
         if predicate(element):
@@ -40,22 +52,20 @@ def get_first(iterable: Iterable[T], **kwargs: object) -> T | None:
         **kwargs: Attribute/value pairs that must all match.
 
     Returns:
-        T | None: First element satisfying every attribute constraint, otherwise ``None``.
+        First element satisfying every attribute constraint, otherwise ``None``.
     """
     if not kwargs:
         return None
 
     if len(kwargs) == 1:
         key, expected = next(iter(kwargs.items()))
-        getter = attrgetter(key.replace("__", "."))
+        getter = _make_attr_getter(key)
         for elem in iterable:
             if getter(elem) == expected:
                 return elem
         return None
 
-    matchers: list[tuple[Callable[[Any], Any], object]] = [
-        (attrgetter(attr.replace("__", ".")), expected) for attr, expected in kwargs.items()
-    ]
+    matchers: list[tuple[_Getter, object]] = [(_make_attr_getter(attr), expected) for attr, expected in kwargs.items()]
 
     for elem in iterable:
         if all(getter(elem) == expected for getter, expected in matchers):

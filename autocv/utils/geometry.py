@@ -1,98 +1,145 @@
-"""Geometry helpers for rectangles and contours."""
+"""Geometry helpers for rectangles and OpenCV contours.
+
+The public functions in this module accept either rectangle tuples in
+``(x, y, w, h)`` form or OpenCV contour arrays and provide convenient operations
+such as computing centers, sampling random points, and sorting shapes.
+"""
 
 from __future__ import annotations
 
 __all__ = ("get_center", "get_random_point", "sort_shapes")
 
-from typing import TYPE_CHECKING, Literal, TypeAlias
+from typing import TYPE_CHECKING, Final, Literal, TypeAlias
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 import cv2
 import numpy as np
 import numpy.typing as npt
 
-if TYPE_CHECKING:
-    from collections.abc import Callable
+Point: TypeAlias = tuple[int, int]
+Rect: TypeAlias = tuple[int, int, int, int]  # (x, y, w, h)
+Contour: TypeAlias = npt.NDArray[np.int32]
+Shape: TypeAlias = Rect | npt.NDArray[np.generic]
+SortBy: TypeAlias = Literal[
+    "inner_outer",
+    "outer_inner",
+    "left_right",
+    "right_left",
+    "top_bottom",
+    "bottom_top",
+]
 
-THREE = 3
-Rect: TypeAlias = tuple[int, int, int, int]  # x, y, w, h
-Contour: TypeAlias = npt.NDArray[np.uintp]
-Shape: TypeAlias = Rect | Contour
+_RNG: Final[np.random.Generator] = np.random.default_rng()
+_MAX_RANDOM_POINT_ATTEMPTS: Final[int] = 10_000
+_CONTOUR_NDIM_NESTED: Final[int] = 3
+_CONTOUR_NDIM_FLAT: Final[int] = 2
+_CONTOUR_SINGLETON_DIM: Final[int] = 1
+_CONTOUR_COORD_DIM: Final[int] = 2
 
-_rng = np.random.default_rng()
+
+def _normalize_contour(contour: npt.NDArray[np.generic]) -> Contour:
+    """Return a contiguous ``int32`` contour in the OpenCV ``(N, 1, 2)`` layout.
+
+    Args:
+        contour: Contour array, typically shaped ``(N, 1, 2)`` or ``(N, 2)``.
+
+    Returns:
+        Normalised contour array shaped ``(N, 1, 2)`` with dtype ``int32``.
+
+    Raises:
+        ValueError: If the input contour is empty or has an unsupported shape.
+    """
+    if contour.size == 0:
+        msg = "Contour is empty."
+        raise ValueError(msg)
+
+    contour_i32 = np.asarray(contour, dtype=np.int32)
+    if (
+        contour_i32.ndim == _CONTOUR_NDIM_NESTED
+        and contour_i32.shape[1] == _CONTOUR_SINGLETON_DIM
+        and contour_i32.shape[2] == _CONTOUR_COORD_DIM
+    ):
+        return np.ascontiguousarray(contour_i32)
+    if contour_i32.ndim == _CONTOUR_NDIM_FLAT and contour_i32.shape[1] == _CONTOUR_COORD_DIM:
+        return np.ascontiguousarray(contour_i32.reshape(-1, 1, _CONTOUR_COORD_DIM))
+    if contour_i32.ndim == _CONTOUR_NDIM_NESTED and contour_i32.shape[-1] == _CONTOUR_COORD_DIM:
+        return np.ascontiguousarray(contour_i32.reshape(-1, 1, _CONTOUR_COORD_DIM))
+    msg = "Contour must have shape (N, 2) or (N, 1, 2)."
+    raise ValueError(msg)
 
 
-def get_center(shape: Shape) -> tuple[int, int]:
+def get_center(shape: Shape) -> Point:
     """Return the center (x, y) of a rectangle or contour.
 
     Args:
         shape: Rectangle as ``(x, y, w, h)`` or contour array shaped ``(N, 2)`` or ``(N, 1, 2)``.
 
     Returns:
-        tuple[int, int]: Center coordinates.
+        Center coordinates.
 
     Raises:
         ValueError: If the contour area is zero.
     """
     if isinstance(shape, np.ndarray):
-        # Reshape contour to (N, 2) if necessary (e.g., when shape is (N, 1, 2))
-        contour = shape.reshape(-1, 2) if shape.ndim == THREE and shape.shape[1] == 1 else shape
-
-        # Calculate centroid using image moments
+        contour = _normalize_contour(shape)
         moments = cv2.moments(contour)
-        if moments["m00"] == 0:
-            raise ValueError
-        cx = int(moments["m10"] / moments["m00"])
-        cy = int(moments["m01"] / moments["m00"])
+        m00 = float(moments["m00"])
+        if m00 == 0.0:
+            msg = "Contour area is zero; cannot compute center."
+            raise ValueError(msg)
+        cx = int(float(moments["m10"]) / m00)
+        cy = int(float(moments["m01"]) / m00)
         return cx, cy
 
     x, y, w, h = shape
     return x + w // 2, y + h // 2
 
 
-def get_random_point(shape: Shape) -> tuple[int, int]:
+def get_random_point(shape: Shape) -> Point:
     """Return a random point (x, y) within a rectangle or contour.
 
     Args:
         shape: Rectangle as ``(x, y, w, h)`` or contour array shaped ``(N, 2)`` or ``(N, 1, 2)``.
 
     Returns:
-        tuple[int, int]: Random point inside the shape.
+        Random point inside the shape.
 
     Raises:
         ValueError: If the contour is empty or invalid, or the rectangle is malformed.
     """
     if isinstance(shape, np.ndarray):
-        # Convert contour to int32 and get its bounding rectangle
-        int_shape = shape.astype(np.int32)
-        x, y, w, h = cv2.boundingRect(int_shape)
+        contour = _normalize_contour(shape)
+        x, y, w, h = cv2.boundingRect(contour)
+        if w <= 0 or h <= 0:
+            msg = "Contour bounding rectangle has zero area."
+            raise ValueError(msg)
 
-        rng = np.random.default_rng()
-        while True:
-            # Generate a random candidate point within the bounding rectangle
-            rx = rng.integers(x, x + w).astype(int)
-            ry = rng.integers(y, y + h).astype(int)
+        for include_boundary in (False, True):
+            for _ in range(_MAX_RANDOM_POINT_ATTEMPTS):
+                rx = int(_RNG.integers(x, x + w))
+                ry = int(_RNG.integers(y, y + h))
+                test_value = cv2.pointPolygonTest(contour, (rx, ry), measureDist=False)
+                if test_value > 0 or (include_boundary and test_value == 0):
+                    return rx, ry
 
-            # Check if the point is inside the contour
-            if cv2.pointPolygonTest(int_shape, (rx, ry), measureDist=False) > 0:
-                return rx, ry
+        msg = "Failed to sample a point inside the contour."
+        raise ValueError(msg)
 
     x, y, w, h = shape
-    rand_x = _rng.integers(x, x + w).astype(int)
-    rand_y = _rng.integers(y, y + h).astype(int)
+    if w <= 0 or h <= 0:
+        msg = "Rectangle width and height must be positive."
+        raise ValueError(msg)
+    rand_x = int(_RNG.integers(x, x + w))
+    rand_y = int(_RNG.integers(y, y + h))
     return rand_x, rand_y
 
 
 def sort_shapes(
     window_size: tuple[int, int],
     shapes: list[Shape],
-    sort_by: Literal[
-        "inner_outer",
-        "outer_inner",
-        "left_right",
-        "right_left",
-        "top_bottom",
-        "bottom_top",
-    ],
+    sort_by: SortBy | str,
 ) -> list[Shape]:
     """Sort shapes based on the specified criterion.
 
@@ -105,30 +152,52 @@ def sort_shapes(
             ``right_left``, ``top_bottom``, or ``bottom_top``.
 
     Returns:
-        list[tuple[int, int, int, int] | npt.NDArray[np.uintp]]: Sorted shapes.
+        Sorted shapes. When ``sort_by`` is unrecognised, returns ``shapes`` unchanged.
 
     Raises:
         ValueError: If any shape is unrecognized or has zero area when calculating the center.
     """
-    window_center_x = window_size[0] // 2
-    window_center_y = window_size[1] // 2
+    window_width, window_height = window_size
+    window_center_x = window_width // 2
+    window_center_y = window_height // 2
 
     def distance_from_window_center(s: Shape) -> float:
         """Compute squared distance from a shape's center to the window center."""
         center_x, center_y = get_center(s)
-        return (center_x - window_center_x) ** 2 + (center_y - window_center_y) ** 2
+        dx = center_x - window_center_x
+        dy = center_y - window_center_y
+        return float(dx * dx + dy * dy)
 
-    strategies: dict[str, tuple[Callable[[Shape], float], bool]] = {
-        "inner_outer": (distance_from_window_center, False),
-        "outer_inner": (distance_from_window_center, True),
-        "left_right": (lambda s: float(get_center(s)[0]), False),
-        "right_left": (lambda s: float(get_center(s)[0]), True),
-        "top_bottom": (lambda s: float(get_center(s)[1]), False),
-        "bottom_top": (lambda s: float(get_center(s)[1]), True),
-    }
+    def center_x(shape: Shape) -> float:
+        """Return the shape center x-coordinate as a float."""
+        return float(get_center(shape)[0])
 
-    if sort_by not in strategies:
-        return shapes
+    def center_y(shape: Shape) -> float:
+        """Return the shape center y-coordinate as a float."""
+        return float(get_center(shape)[1])
 
-    key_func, reverse_sort = strategies[sort_by]
+    key_func: Callable[[Shape], float]
+    reverse_sort: bool
+    match sort_by:
+        case "inner_outer":
+            key_func = distance_from_window_center
+            reverse_sort = False
+        case "outer_inner":
+            key_func = distance_from_window_center
+            reverse_sort = True
+        case "left_right":
+            key_func = center_x
+            reverse_sort = False
+        case "right_left":
+            key_func = center_x
+            reverse_sort = True
+        case "top_bottom":
+            key_func = center_y
+            reverse_sort = False
+        case "bottom_top":
+            key_func = center_y
+            reverse_sort = True
+        case _:
+            return shapes
+
     return sorted(shapes, key=key_func, reverse=reverse_sort)

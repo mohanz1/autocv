@@ -1,7 +1,13 @@
-"""Window enumeration and capture helpers.
+"""Win32 window enumeration and capture helpers.
 
-The :class:`WindowCapture` base locates windows, walks child handles, and
-captures window contents into NumPy arrays for downstream vision routines.
+This module exposes :class:`~autocv.core.window_capture.WindowCapture`, a small building block for the AutoCV runtime
+that can:
+
+- enumerate visible top-level windows and their titles,
+- walk child windows for a given handle and return their class names,
+- capture a full window or window-relative sub-rectangle as a contiguous NumPy array.
+
+All captured frames are returned in BGR channel order (OpenCV compatible) with ``dtype=uint8``.
 """
 
 from __future__ import annotations
@@ -18,10 +24,11 @@ import win32ui
 from typing_extensions import Self
 
 from autocv.models import InvalidHandleError
-from autocv.utils import filtering
+
+from .decorators import check_valid_hwnd
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Sequence
 
 WindowHandle: TypeAlias = int
 WindowEntry: TypeAlias = tuple[WindowHandle, str]
@@ -31,27 +38,28 @@ Rect: TypeAlias = tuple[int, int, int, int]  # x, y, width, height
 Size: TypeAlias = tuple[int, int]
 NDArrayUint8: TypeAlias = npt.NDArray[np.uint8]
 
-_UNSET_HANDLE: Final[int] = -1
+_UNSET_HANDLE: Final[WindowHandle] = -1
+_BGRA_CHANNELS: Final[int] = 4
+_BGR_CHANNELS: Final[int] = 3
 
 
 class WindowCapture:
     """Base class for discovering Win32 windows and capturing their contents.
 
-    Responsibilities:
-        - manage window handles and cached window bounds,
-        - enumerate top-level or child windows,
-        - provide rectangle helpers for window-relative coordinates,
-        - capture window regions into numpy arrays for downstream processing.
+    This class stores a target Win32 handle (``hwnd``) and offers helper methods for:
+
+    - enumerating visible windows (top-level) and child windows,
+    - resolving handles by title/class substring,
+    - capturing window pixels via a GDI BitBlt into a BGR ``numpy.ndarray``.
     """
 
     __slots__ = ("_cached_bounds", "_last_frame", "hwnd")
 
     def __init__(self: Self, hwnd: WindowHandle = _UNSET_HANDLE) -> None:
-        """Initialise the window capture base.
+        """Initialise the window capture helper.
 
         Args:
-            hwnd: Window handle to operate on. Defaults to ``-1`` until a
-                valid handle is set.
+            hwnd: Window handle to operate on. Defaults to ``-1`` until a valid handle is set.
         """
         self.hwnd: WindowHandle = hwnd
         self._cached_bounds: Bounds | None = None
@@ -62,12 +70,15 @@ class WindowCapture:
     #
     @property
     def is_attached(self: Self) -> bool:
-        """Return whether a handle has been configured."""
+        """Return whether a handle value has been configured.
+
+        This property only checks the sentinel ``-1`` value; it does not validate the handle with the OS.
+        """
         return self.hwnd != _UNSET_HANDLE
 
     @property
     def last_frame(self: Self) -> NDArrayUint8 | None:
-        """Return the latest captured frame cached by ``capture_frame`` when ``persist`` is True."""
+        """Return the latest frame cached by ``capture_frame`` when ``persist`` is ``True``."""
         return self._last_frame
 
     def attach(self: Self, hwnd: WindowHandle) -> None:
@@ -85,28 +96,45 @@ class WindowCapture:
         self._cached_bounds = None
         self._last_frame = None
 
+    def _get_window_bounds_cached(self: Self, *, use_cache: bool) -> Bounds:
+        """Return window bounds, optionally reusing cached values.
+
+        This helper assumes ``hwnd`` has already been validated (e.g. via
+        :func:`~autocv.core.decorators.check_valid_hwnd`) and exists to keep the public API thin while avoiding
+        duplicated caching logic.
+        """
+        if use_cache and self._cached_bounds is not None:
+            return self._cached_bounds
+
+        self._cached_bounds = self._fetch_window_bounds(self.hwnd)
+        return self._cached_bounds
+
+    @check_valid_hwnd
     def get_window_bounds(self: Self, *, use_cache: bool = False) -> Bounds:
         """Return the window bounds.
 
         Args:
-            use_cache: When True, reuse cached bounds if available.
+            use_cache: When ``True``, reuse cached bounds if available.
 
         Returns:
             Bounds: Tuple of ``(left, top, right, bottom)``.
+
+        Raises:
+            InvalidHandleError: If no window handle is attached.
         """
-        hwnd = self._ensure_hwnd()
-        if not use_cache or self._cached_bounds is None:
-            self._cached_bounds = self._fetch_window_bounds(hwnd)
-        return self._cached_bounds
+        return self._get_window_bounds_cached(use_cache=use_cache)
 
     def get_window_size(self: Self, *, use_cache: bool = False) -> Size:
         """Return the window size.
 
         Args:
-            use_cache: When True, reuse cached bounds if available.
+            use_cache: When ``True``, reuse cached bounds if available.
 
         Returns:
             Size: Tuple of ``(width, height)``.
+
+        Raises:
+            InvalidHandleError: If no window handle is attached.
         """
         return self._bounds_to_size(self.get_window_bounds(use_cache=use_cache))
 
@@ -133,20 +161,24 @@ class WindowCapture:
     # Window enumeration
     #
     def get_windows_with_hwnds(self: Self) -> list[WindowEntry]:
-        """Return all visible windows exposed by ``EnumWindows``."""
-        return self._run_enum_windows(self._window_enumeration_handler)
+        """Return all visible top-level windows with non-empty titles."""
+        windows: list[WindowEntry] = []
+        win32gui.EnumWindows(self._window_enumeration_handler, windows)
+        return windows
 
-    def get_hwnd_by_title(self: Self, title: str) -> WindowHandle | None:
+    def get_hwnd_by_title(self: Self, title: str, *, case_insensitive: bool = True) -> WindowHandle | None:
         """Find the first window whose title contains the provided text.
 
         Args:
-            title: Title substring to search for (case-insensitive).
+            title: Title substring to search for.
+            case_insensitive: When ``True``, perform case-insensitive matching.
 
         Returns:
             WindowHandle | None: Matching handle or ``None``.
         """
-        return self._find_by_title(title, self.get_windows_with_hwnds(), case_insensitive=True)
+        return self._find_by_title(title, self.get_windows_with_hwnds(), case_insensitive=case_insensitive)
 
+    @check_valid_hwnd
     def get_child_windows(self: Self, hwnd: WindowHandle | None = None) -> list[ChildWindowEntry]:
         """Return child windows for the provided or current handle.
 
@@ -155,8 +187,11 @@ class WindowCapture:
 
         Returns:
             list[ChildWindowEntry]: Child handles and class names.
+
+        Raises:
+            InvalidHandleError: If the instance is not attached to a valid handle (validated by the decorator).
         """
-        target_hwnd = hwnd if hwnd is not None else self._ensure_hwnd()
+        target_hwnd = hwnd or self.hwnd
         child_windows: list[ChildWindowEntry] = []
         win32gui.EnumChildWindows(target_hwnd, self._child_window_enumeration_handler, child_windows)
         return child_windows
@@ -166,70 +201,70 @@ class WindowCapture:
 
         Args:
             title: Title substring to search for.
-            case_insensitive: When True, perform case-insensitive matching.
+            case_insensitive: When ``True``, perform case-insensitive matching.
 
         Returns:
             bool: True when the handle was updated.
         """
         windows = self.get_windows_with_hwnds()
         found = self._find_by_title(title, windows, case_insensitive=case_insensitive)
-        if found is not None:
-            self.attach(found)
-            return True
-        return False
+        return self._attach_if_found(found)
 
     def set_inner_hwnd_by_title(self: Self, class_name: str) -> bool:
         """Update ``hwnd`` to the first child window whose class matches.
 
         Args:
-            class_name: Substring of the child window class to match.
+            class_name: Substring of the child window class to match (case-insensitive).
 
         Returns:
             bool: True when the handle was updated.
+
+        Raises:
+            InvalidHandleError: If no window handle is attached when enumerating child windows.
         """
         child_windows = self.get_child_windows()
-        class_name_lower = class_name.casefold()
-        found = filtering.find_first(lambda x: class_name_lower in x[1].casefold(), child_windows)
-        if found:
-            self.attach(found[0])
-            return True
-        return False
+        found = self._find_by_title(class_name, child_windows, case_insensitive=True)
+        return self._attach_if_found(found)
 
     #
     # Capture pipeline
     #
-    def capture_frame(self: Self, region: Rect | None = None, *, persist: bool = True) -> NDArrayUint8:
+    @check_valid_hwnd
+    def capture_frame(
+        self: Self,
+        region: Rect | None = None,
+        *,
+        persist: bool = True,
+        use_cache: bool = False,
+    ) -> NDArrayUint8:
         """Capture the current window region into a contiguous BGR image.
 
         Args:
-            region (tuple[int, int, int, int] | None): Optional capture region specified
-                as ``(x, y, width, height)`` in window coordinates. Defaults to the full
-                window when omitted.
-            persist (bool): When ``True``, store the frame in ``last_frame`` for reuse.
+            region: Optional capture region specified as ``(x, y, width, height)`` in window coordinates.
+                Defaults to the full window when omitted.
+            persist: When ``True``, store the frame in ``last_frame`` for reuse.
+            use_cache: When ``True``, reuse cached window bounds when clamping the capture region.
 
         Returns:
             NDArrayUint8: Captured frame in BGR channel order.
 
         Raises:
-            ValueError: If ``region`` falls completely outside the window bounds.
+            InvalidHandleError: If no window handle is attached.
+            ValueError: If ``region`` falls completely outside the window bounds or has non-positive dimensions.
         """
-        hwnd = self._ensure_hwnd()
-        bounds = self.get_window_bounds()
+        bounds = self._get_window_bounds_cached(use_cache=use_cache)
         capture_rect = self._normalize_region(region, bounds)
-
-        frame = self._bitblt_to_array(hwnd, capture_rect)
+        frame = self._bitblt_to_array(self.hwnd, capture_rect)
         if persist:
             self._last_frame = frame
         return frame
 
-    #
-    # Internal helpers
-    #
-    def _ensure_hwnd(self: Self) -> WindowHandle:
-        """Return the configured handle or raise ``InvalidHandleError``."""
-        if self.hwnd == _UNSET_HANDLE:
-            raise InvalidHandleError(self.hwnd)
-        return self.hwnd
+    def _attach_if_found(self: Self, hwnd: WindowHandle | None) -> bool:
+        """Attach to ``hwnd`` when not ``None`` and return whether the handle was updated."""
+        if hwnd is None:
+            return False
+        self.attach(hwnd)
+        return True
 
     @staticmethod
     def _fetch_window_bounds(hwnd: WindowHandle) -> Bounds:
@@ -238,28 +273,22 @@ class WindowCapture:
         return left, top, right, bottom
 
     @staticmethod
-    def _find_by_title(title: str, windows: list[WindowEntry], *, case_insensitive: bool) -> WindowHandle | None:
-        """Return a window handle when the title matches the supplied substring."""
-        matcher: Callable[[WindowEntry], bool]
+    def _find_by_title(title: str, windows: Sequence[WindowEntry], *, case_insensitive: bool) -> WindowHandle | None:
+        """Return a window handle whose title/class contains ``title``.
+
+        The scan preserves the ordering produced by the underlying Win32 enumeration call.
+        """
         if case_insensitive:
-            lowered_title = title.casefold()
+            needle = title.casefold()
+            for hwnd, window_title in windows:
+                if needle in window_title.casefold():
+                    return hwnd
+            return None
 
-            def matcher(entry: WindowEntry) -> bool:
-                return lowered_title in entry[1].casefold()
-        else:
-
-            def matcher(entry: WindowEntry) -> bool:
-                return title in entry[1]
-
-        found = filtering.find_first(matcher, windows)
-        return found[0] if found else None
-
-    @staticmethod
-    def _run_enum_windows(handler: Callable[[WindowHandle, list[WindowEntry]], None]) -> list[WindowEntry]:
-        """Run a Win32 enumeration callback and collect results."""
-        windows: list[WindowEntry] = []
-        win32gui.EnumWindows(handler, windows)
-        return windows
+        for hwnd, window_title in windows:
+            if title in window_title:
+                return hwnd
+        return None
 
     @staticmethod
     def _normalize_region(region: Rect | None, bounds: Bounds) -> Rect:
@@ -273,7 +302,7 @@ class WindowCapture:
             Rect: Region clamped to the window.
 
         Raises:
-            ValueError: If the region lies completely outside the window.
+            ValueError: If the region lies completely outside the window or has non-positive dimensions.
         """
         if region is None:
             width, height = WindowCapture._bounds_to_size(bounds)
@@ -282,16 +311,23 @@ class WindowCapture:
         x, y, width, height = region
         window_width, window_height = WindowCapture._bounds_to_size(bounds)
 
-        max_width = max(window_width - x, 0)
-        max_height = max(window_height - y, 0)
-        clamped_width = min(width, max_width)
-        clamped_height = min(height, max_height)
+        if width <= 0 or height <= 0:
+            msg = "Capture region must have positive width and height."
+            raise ValueError(msg)
+
+        left = max(x, 0)
+        top = max(y, 0)
+        right = min(x + width, window_width)
+        bottom = min(y + height, window_height)
+
+        clamped_width = right - left
+        clamped_height = bottom - top
 
         if clamped_width <= 0 or clamped_height <= 0:
             msg = "Capture region lies outside the window bounds."
             raise ValueError(msg)
 
-        return x, y, clamped_width, clamped_height
+        return left, top, clamped_width, clamped_height
 
     @staticmethod
     def _bitblt_to_array(hwnd: WindowHandle, rect: Rect) -> NDArrayUint8:
@@ -312,31 +348,38 @@ class WindowCapture:
         window_dc = win32gui.GetWindowDC(hwnd)
         if window_dc == 0:
             raise InvalidHandleError(hwnd)
-        mem_dc = win32ui.CreateDCFromHandle(window_dc)
-        bmp_dc = mem_dc.CreateCompatibleDC()
-        bitmap = win32ui.CreateBitmap()
+        mem_dc = None
+        bmp_dc = None
+        bitmap = None
 
         try:
+            mem_dc = win32ui.CreateDCFromHandle(window_dc)
+            bmp_dc = mem_dc.CreateCompatibleDC()
+            bitmap = win32ui.CreateBitmap()
             bitmap.CreateCompatibleBitmap(mem_dc, width, height)
             bmp_dc.SelectObject(bitmap)
             bmp_dc.BitBlt((0, 0), (width, height), mem_dc, (x, y), win32con.SRCCOPY)
 
-            # Convert raw bitmap data into a contiguous BGR array.
-            signed_ints_array = bitmap.GetBitmapBits(True)
-            frame = np.frombuffer(signed_ints_array, dtype=np.uint8).reshape((height, width, 4))
-            return np.ascontiguousarray(frame[..., :3])
+            bitmap_bits = bitmap.GetBitmapBits(True)
+            bgra_frame = np.frombuffer(bitmap_bits, dtype=np.uint8).reshape((height, width, _BGRA_CHANNELS))
+            return np.ascontiguousarray(bgra_frame[..., :_BGR_CHANNELS])
         finally:
-            # Ensure GDI resources are always released.
-            bmp_dc.DeleteDC()
-            mem_dc.DeleteDC()
+            if bmp_dc is not None:
+                bmp_dc.DeleteDC()
+            if mem_dc is not None:
+                mem_dc.DeleteDC()
             win32gui.ReleaseDC(hwnd, window_dc)
-            win32gui.DeleteObject(bitmap.GetHandle())
+            if bitmap is not None:
+                win32gui.DeleteObject(bitmap.GetHandle())
 
     @staticmethod
     def _window_enumeration_handler(hwnd: WindowHandle, top_windows: list[WindowEntry]) -> None:
         """Collect visible top-level windows during enumeration."""
+        if not win32gui.IsWindowVisible(hwnd):
+            return
+
         title = win32gui.GetWindowText(hwnd)
-        if win32gui.IsWindowVisible(hwnd) and title:
+        if title:
             top_windows.append((hwnd, title))
 
     @staticmethod

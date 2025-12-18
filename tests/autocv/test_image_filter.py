@@ -23,6 +23,30 @@ def test_init_runs_without_error(
     ImageFilter(dummy_image)  # should complete immediately
 
 
+@patch("autocv.image_filter.ImageFilter.get_filtered_image", return_value=np.zeros((1, 1, 3), dtype=np.uint8))
+@patch("autocv.image_filter.cv.getTrackbarPos", return_value=0)
+@patch("autocv.image_filter.cv.namedWindow")
+@patch("autocv.image_filter.cv.createTrackbar")
+@patch("autocv.image_filter.cv.imshow")
+@patch("autocv.image_filter.cv.getWindowProperty", side_effect=[0, 0])
+@patch("autocv.image_filter.cv.waitKey", side_effect=[0, 27])
+@patch("autocv.image_filter.cv.destroyAllWindows")
+def test_init_event_loop_updates_until_escape(
+    mock_destroy,
+    mock_waitkey,
+    mock_prop,
+    mock_imshow,
+    mock_trackbar,
+    mock_named,
+    mock_gettrack,
+    mock_get_filtered,
+    dummy_image,
+):
+    ImageFilter(dummy_image)
+    assert mock_waitkey.call_count == 2
+    assert mock_imshow.call_count >= 2
+
+
 @patch("autocv.image_filter.cv.getTrackbarPos", return_value=5)
 def test_update_filter_settings_sets_all_fields(mock_get, dummy_image):
     f = ImageFilter.__new__(ImageFilter)
@@ -76,3 +100,9 @@ def test_get_filtered_image_returns_array(mock_update, dummy_image):
     result = f.get_filtered_image()
     assert isinstance(result, np.ndarray)
     assert result.ndim in (2, 3)
+
+
+def test_ensure_engine_raises_when_missing_image():
+    f = ImageFilter.__new__(ImageFilter)
+    with pytest.raises(ValueError, match="requires an image"):
+        f._ensure_engine()

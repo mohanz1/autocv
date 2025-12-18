@@ -1,8 +1,10 @@
-"""This module defines the Input class, which includes methods for simulating mouse and keyboard input.
+"""Win32 input simulation helpers.
 
-It provides functions for moving the mouse cursor (with human-like motion),
-clicking, sending keystrokes, and more, allowing for interaction with an application
-in a way that mimics human input.
+This module defines :class:`~autocv.core.input.Input`, an extension of
+:class:`~autocv.core.vision.Vision` that can simulate mouse and keyboard input
+for a target window handle.
+
+Most APIs accept client-area coordinates relative to the target window.
 """
 
 from __future__ import annotations
@@ -13,7 +15,7 @@ import logging
 import math
 import time
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Final, TypeAlias
 
 import numpy as np
 import win32api
@@ -23,7 +25,7 @@ from typing_extensions import Self
 
 from autocv import constants
 
-from . import check_valid_hwnd
+from .decorators import check_valid_hwnd
 from .vision import Vision
 
 if TYPE_CHECKING:
@@ -31,28 +33,52 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+ClientPoint: TypeAlias = tuple[int, int]
+FloatPoint: TypeAlias = tuple[float, float]
 
-THREE = 3
-HALF = 0.5
+
+_MIN_STEP_PIXELS: Final[int] = 3
+_HALF_PROBABILITY: Final[float] = 0.5
+_SLEEP_DIVISOR: Final[float] = 100.0
+
+_CLICK_DELAY_MS_RANGE: Final[tuple[int, int]] = (10, 50)
+_KEY_PRESS_DELAY_MS_RANGE: Final[tuple[int, int]] = (3, 5)
+_BETWEEN_KEYS_DELAY_MS_RANGE: Final[tuple[int, int]] = (20, 60)
+
+_MOUSE_BUTTON_DOWN_MESSAGES: Final[dict[int, int]] = {
+    1: win32con.WM_LBUTTONDOWN,
+    2: win32con.WM_RBUTTONDOWN,
+    3: win32con.WM_MBUTTONDOWN,
+}
+
+_KEYUP_LPARAM_FLAG: Final[int] = 0xC0000000
+
+# Backwards compatibility for legacy module-level names.
+THREE: Final[int] = _MIN_STEP_PIXELS
+HALF: Final[float] = _HALF_PROBABILITY
 
 
 @dataclass(frozen=True, slots=True)
 class _MotionConfig:
     """Tunable parameters for human-like mouse motion."""
 
-    speed_base: int = constants.MOTION_SPEED_BASE
-    gravity_min: float = constants.MOTION_GRAVITY_MIN
-    gravity_jitter: float = constants.MOTION_GRAVITY_JITTER
-    wind_min: float = constants.MOTION_WIND_MIN
-    wind_jitter: float = constants.MOTION_WIND_JITTER
     timeout_seconds: float = constants.MOTION_TIMEOUT_SECONDS
+    gravity: float = 9.0
+    wind: float = 3.0
+    speed_random_range: float = 15.0
+    speed_random_offset: float = 30.0
+    speed_random_divisor: float = 10.0
+    min_wait_base: float = 5.0
+    max_wait_base: float = 10.0
+    max_step_base: float = 10.0
+    target_area_base: float = 8.0
 
 
 def wind_mouse(
     rng: np.random.Generator,
     mover: Callable[[int, int], None],
-    start: tuple[float, float],
-    end: tuple[float, float],
+    start: FloatPoint,
+    end: FloatPoint,
     *,
     gravity: float,
     wind: float,
@@ -62,7 +88,11 @@ def wind_mouse(
     target_area: float,
     timeout_seconds: float,
 ) -> None:
-    """Move a point from start to end using wind/gravity-inspired motion.
+    """Move a point from ``start`` to ``end`` using wind/gravity-inspired motion.
+
+    The algorithm adds random "wind" to introduce jitter while applying "gravity"
+    toward the destination. The supplied ``mover`` callback is invoked with
+    rounded integer coordinates for each intermediate step.
 
     Args:
         rng: Random generator for jitter and timing.
@@ -71,8 +101,8 @@ def wind_mouse(
         end: Destination coordinates.
         gravity: Pull toward destination.
         wind: Randomness factor.
-        min_wait: Minimum wait between steps (ms).
-        max_wait: Maximum wait between steps (ms).
+        min_wait: Minimum wait between steps, scaled via ``time.sleep(min_wait / 100)``.
+        max_wait: Maximum wait between steps, scaled via ``time.sleep(max_wait / 100)``.
         max_step: Maximum step length per iteration.
         target_area: Threshold under which the cursor eases into the target.
         timeout_seconds: Hard timeout for the movement.
@@ -80,28 +110,29 @@ def wind_mouse(
     Raises:
         TimeoutError: If movement exceeds ``timeout_seconds``.
     """
-    timeout = time.perf_counter() + timeout_seconds
-    sqrt_3 = math.sqrt(3)
-    sqrt_5 = math.sqrt(5)
+    deadline = time.perf_counter() + timeout_seconds
+    sqrt_3 = math.sqrt(3.0)
+    sqrt_5 = math.sqrt(5.0)
+    wind_range = round(wind) * 2 + 1
 
-    xs, ys = start
-    xe, ye = end
-    x, y = xs, ys
-    velo_x = 0.0
-    velo_y = 0.0
+    start_x, start_y = start
+    end_x, end_y = end
+    x, y = start_x, start_y
+    velocity_x = 0.0
+    velocity_y = 0.0
     wind_x = 0.0
     wind_y = 0.0
 
     while True:
-        if time.perf_counter() > timeout:
+        if time.perf_counter() > deadline:
             raise TimeoutError
 
         if rng.random() < HALF:
-            wind_x = wind_x / sqrt_3 + (rng.random() * (round(wind) * 2 + 1) - wind) / sqrt_5
-            wind_y = wind_y / sqrt_3 + (rng.random() * (round(wind) * 2 + 1) - wind) / sqrt_5
+            wind_x = wind_x / sqrt_3 + (rng.random() * wind_range - wind) / sqrt_5
+            wind_y = wind_y / sqrt_3 + (rng.random() * wind_range - wind) / sqrt_5
 
-        traveled_distance = math.hypot(x - xs, y - ys)
-        remaining_distance = math.hypot(x - xe, y - ye)
+        traveled_distance = math.hypot(x - start_x, y - start_y)
+        remaining_distance = math.hypot(x - end_x, y - end_y)
 
         if remaining_distance <= 1:
             break
@@ -119,65 +150,79 @@ def wind_mouse(
         if step < THREE:
             step = 3 + (rng.random() * 3)
 
-        velo_x += wind_x + gravity * (xe - x) / remaining_distance
-        velo_y += wind_y + gravity * (ye - y) / remaining_distance
+        velocity_x += wind_x + gravity * (end_x - x) / remaining_distance
+        velocity_y += wind_y + gravity * (end_y - y) / remaining_distance
 
-        velo_mag = math.hypot(velo_x, velo_y)
-        if velo_mag > step:
+        velocity_mag = math.hypot(velocity_x, velocity_y)
+        if velocity_mag > step:
             random_dist = step / 3.0 + (step / 2 * rng.random())
-            velo_x = (velo_x / velo_mag) * random_dist
-            velo_y = (velo_y / velo_mag) * random_dist
+            velocity_x = (velocity_x / velocity_mag) * random_dist
+            velocity_y = (velocity_y / velocity_mag) * random_dist
 
-        idle = (max_wait - min_wait) * (math.hypot(velo_x, velo_y) / max_step) + min_wait
+        idle = (max_wait - min_wait) * (math.hypot(velocity_x, velocity_y) / max_step) + min_wait
 
-        x += velo_x
-        y += velo_y
+        x += velocity_x
+        y += velocity_y
 
         mover(round(x), round(y))
-        time.sleep(idle / 100)
+        time.sleep(idle / _SLEEP_DIVISOR)
 
-    mover(round(xe), round(ye))
+    mover(round(end_x), round(end_y))
 
 
 class Input(Vision):
-    """Extends the Vision class with functionalities for simulating user input.
+    """Simulate mouse and keyboard input for a target window handle.
 
-    This class supports human-like mouse movements, clicks, and keyboard key presses.
-    Randomness and delays are incorporated to mimic natural interaction.
+    The class extends :class:`~autocv.core.vision.Vision` with helpers that post
+    and send Win32 messages for mouse movement, clicks, and keystrokes.
     """
 
     def __init__(self: Self, hwnd: int = -1) -> None:
-        """Initializes an Input object.
+        """Initialise the input helper.
 
         Args:
-            hwnd (int): Window handle that will receive simulated input. Defaults to -1.
+            hwnd: Window handle that will receive simulated input. Defaults to ``-1``.
         """
         super().__init__(hwnd)
-        self._last_moved_point: tuple[int, int] = (0, 0)
-        self._rng = np.random.default_rng()
-
-        self._motion_config = _MotionConfig()
-        self.__speed: Final[int] = self._motion_config.speed_base
+        self._last_moved_point: ClientPoint = (0, 0)
+        self._rng: np.random.Generator = np.random.default_rng()
+        self._motion_config: _MotionConfig = _MotionConfig()
+        # Compatibility: historical private attributes retained for callers that inspect them
+        # and to preserve the original RNG advancement order.
+        self.__speed: Final[int] = constants.MOTION_SPEED_BASE
         self.__gravity: Final[float] = (
-            self._motion_config.gravity_min + self._rng.random() * self._motion_config.gravity_jitter
+            constants.MOTION_GRAVITY_MIN + self._rng.random() * constants.MOTION_GRAVITY_JITTER
         )
-        self.__wind: Final[float] = self._motion_config.wind_min + self._rng.random() * self._motion_config.wind_jitter
+        self.__wind: Final[float] = constants.MOTION_WIND_MIN + self._rng.random() * constants.MOTION_WIND_JITTER
 
-    def get_last_moved_point(self: Self) -> tuple[int, int]:
-        """Returns the last point where the mouse cursor was moved.
+    def get_last_moved_point(self: Self) -> ClientPoint:
+        """Return the last client-area point targeted by :meth:`move_mouse`.
 
         Returns:
-            tuple[int, int]: Last cursor position that was targeted.
+            The most recent ``(x, y)`` point in client coordinates.
         """
         return self._last_moved_point
 
+    def _sleep_ms(self: Self, low: int, high: int) -> None:
+        """Sleep for a random duration in milliseconds drawn from ``[low, high)``."""
+        time.sleep(int(self._rng.integers(low, high)) / 1_000)
+
+    def _set_window_active(self: Self, *, active: bool) -> None:
+        """Send a ``WM_ACTIVATE`` message to the target window."""
+        win32api.SendMessage(self.hwnd, win32con.WM_ACTIVATE, int(active), self.hwnd)  # type: ignore[arg-type]
+
+    @staticmethod
+    def _make_vk_lparam(vk_code: int, *, keyup: bool = False) -> int:
+        """Construct an LPARAM value for WM_KEYDOWN/WM_KEYUP messages."""
+        scan_code = win32api.MapVirtualKey(vk_code, 0)  # type: ignore[no-untyped-call]
+        l_param = (scan_code << 16) | 1
+        if keyup:
+            l_param |= _KEYUP_LPARAM_FLAG
+        return int(l_param)
+
     @check_valid_hwnd
     def _get_topmost_hwnd(self: Self) -> int:
-        """Retrieves the topmost (root) window handle for the target window.
-
-        Returns:
-            int: Handle for the topmost ancestor window.
-        """
+        """Return the topmost (root) window handle for the target window."""
         parent_hwnd: int = win32gui.GetAncestor(self.hwnd, win32con.GA_ROOT)
         logger.debug("Found parent handle: %s", parent_hwnd)
         return parent_hwnd
@@ -187,61 +232,53 @@ class Input(Vision):
         """Construct a packed LPARAM value for Win32 messages.
 
         Args:
-            x (int): X-coordinate to encode in the message.
-            y (int): Y-coordinate to encode in the message.
+            x: X-coordinate (low word).
+            y: Y-coordinate (high word).
 
         Returns:
-            int: Packed LPARAM value suitable for Win32 messages.
+            Packed LPARAM value suitable for Win32 message APIs.
         """
         return (y << 16) | (x & 0xFFFF)
 
     @check_valid_hwnd
     def move_mouse(self: Self, x: int, y: int, *, human_like: bool = True, ghost_mouse: bool = True) -> None:
-        """Moves the mouse cursor to the specified (x, y) coordinates.
-
-        The movement is relative to the client area of the target window. If `human_like` is True,
-        the movement will simulate natural motion.
+        """Move the mouse cursor to ``(x, y)`` in client coordinates.
 
         Args:
-            x (int): Target x-coordinate inside the client area.
-            y (int): Target y-coordinate inside the client area.
-            human_like (bool): When ``True``, simulate human-like mouse motion.
-            ghost_mouse (bool): When ``True``, rely on ghost mouse behaviour; otherwise emit OS cursor updates.
+            x: Target X coordinate inside the window client area.
+            y: Target Y coordinate inside the window client area.
+            human_like: When ``True``, simulate human-like mouse motion.
+            ghost_mouse: When ``True``, simulate motion using Win32 messages; when ``False``, move the OS cursor.
         """
         if not human_like:
             self._move_mouse(x, y, ghost_mouse=ghost_mouse)
             return
 
-        # Determine a random speed factor.
-        speed = (self._rng.random() * 15 + 30) / 10
+        motion = self._motion_config
+        speed = (
+            self._rng.random() * motion.speed_random_range + motion.speed_random_offset
+        ) / motion.speed_random_divisor
+        start: FloatPoint = (float(self._last_moved_point[0]), float(self._last_moved_point[1]))
+        end: FloatPoint = (float(x), float(y))
         wind_mouse(
             rng=self._rng,
             mover=lambda xi, yi: self._move_mouse(xi, yi, ghost_mouse=ghost_mouse),
-            start=(*self._last_moved_point,),
-            end=(x, y),
-            gravity=9,
-            wind=3,
-            min_wait=5 / speed,
-            max_wait=10 / speed,
-            max_step=10 * speed,
-            target_area=8 * speed,
-            timeout_seconds=self._motion_config.timeout_seconds,
+            start=start,
+            end=end,
+            gravity=motion.gravity,
+            wind=motion.wind,
+            min_wait=motion.min_wait_base / speed,
+            max_wait=motion.max_wait_base / speed,
+            max_step=motion.max_step_base * speed,
+            target_area=motion.target_area_base * speed,
+            timeout_seconds=motion.timeout_seconds,
         )
 
         self._last_moved_point = (x, y)
 
     @check_valid_hwnd
     def _move_mouse(self: Self, x: int, y: int, *, ghost_mouse: bool = True) -> None:
-        """Moves the mouse cursor to the specified (x, y) coordinates.
-
-        The movement is performed relative to the client area of the target window.
-        If `ghost_mouse` is True, the movement is simulated via message passing.
-
-        Args:
-            x (int): Target x-coordinate inside the client area.
-            y (int): Target y-coordinate inside the client area.
-            ghost_mouse (bool): When ``True``, simulate the movement using ghost mouse techniques.
-        """
+        """Move the mouse cursor to ``(x, y)`` in client coordinates."""
         # Convert client coordinates to screen coordinates.
         screen_point = win32gui.ClientToScreen(self.hwnd, (x, y))
         if ghost_mouse:
@@ -259,20 +296,14 @@ class Input(Vision):
 
     @check_valid_hwnd
     def click_mouse(self: Self, button: int = 1, *, send_message: bool = False) -> None:
-        """Simulates a mouse click at the last moved position.
+        """Click a mouse button at the last moved position.
 
         Args:
-            button (int): Mouse button identifier (1=left, 2=right, 3=middle).
-            send_message (bool): When ``True``, dispatches ``SendMessage`` instead of ``PostMessage``.
-
+            button: Mouse button identifier (1=left, 2=right, 3=middle).
+            send_message: When ``True``, use ``SendMessage`` instead of ``PostMessage`` for the click.
         """
         screen_point = win32gui.ClientToScreen(self.hwnd, self._last_moved_point)
-        button_messages = {
-            1: win32con.WM_LBUTTONDOWN,
-            2: win32con.WM_RBUTTONDOWN,
-            3: win32con.WM_MBUTTONDOWN,
-        }
-        button_to_press = button_messages.get(button, win32con.WM_LBUTTONDOWN)
+        button_to_press = _MOUSE_BUTTON_DOWN_MESSAGES.get(button, win32con.WM_LBUTTONDOWN)
         screen_lparam = self._make_lparam(*screen_point)
         result = win32gui.SendMessage(self.hwnd, win32con.WM_NCHITTEST, 0, screen_lparam)
         client_lparam = self._make_lparam(*self._last_moved_point)
@@ -290,88 +321,84 @@ class Input(Vision):
         win32gui.SendMessage(top_hwnd, win32con.WM_MOUSEACTIVATE, top_hwnd, lparam_button)
         win32api.SendMessage(self.hwnd, win32con.WM_SETCURSOR, self.hwnd, lparam_button)  # type: ignore[arg-type]
 
-        if send_message:
-            last_moved_point_lparam = win32api.MAKELONG(*self._last_moved_point)  # type: ignore[no-untyped-call]
-            win32gui.SendMessage(self.hwnd, button_to_press, button, last_moved_point_lparam)
-            time.sleep(self._rng.integers(10, 50).astype(int) / 1_000)
-            win32gui.SendMessage(self.hwnd, button_to_press + 1, 0, last_moved_point_lparam)
-        else:
-            win32gui.PostMessage(self.hwnd, button_to_press, button, screen_lparam)
-            time.sleep(self._rng.integers(10, 50).astype(int) / 1_000)
-            win32gui.PostMessage(self.hwnd, button_to_press + 1, 0, screen_lparam)
+        dispatch = win32gui.SendMessage if send_message else win32gui.PostMessage
+        click_lparam = (
+            win32api.MAKELONG(*self._last_moved_point)  # type: ignore[no-untyped-call]
+            if send_message
+            else screen_lparam
+        )
+        dispatch(self.hwnd, button_to_press, button, click_lparam)
+        self._sleep_ms(*_CLICK_DELAY_MS_RANGE)
+        dispatch(self.hwnd, button_to_press + 1, 0, click_lparam)
 
     @check_valid_hwnd
     def press_vk_key(self: Self, vk_code: int) -> None:
-        """Simulates pressing a virtual key.
+        """Press a virtual key using Win32 keyboard messages.
 
         Args:
-            vk_code (int): Virtual-key code to press.
+            vk_code: Virtual-key code (``VK_*``) to press.
 
+        Notes:
+            This method sends ``WM_CHAR`` with ``chr(vk_code)`` to preserve historical behaviour.
         """
-        scan_code = win32api.MapVirtualKey(vk_code, 0)  # type: ignore[no-untyped-call]
-        l_param = (scan_code << 16) | 1
-        win32api.SendMessage(self.hwnd, win32con.WM_ACTIVATE, 1, self.hwnd)  # type: ignore[arg-type]
+        l_param = self._make_vk_lparam(vk_code)
+        self._set_window_active(active=True)
         win32api.SendMessage(self.hwnd, win32con.WM_KEYDOWN, vk_code, l_param)  # type: ignore[arg-type]
-        win32api.SendMessage(self.hwnd, win32con.WM_CHAR, chr(vk_code), l_param)
-        win32api.SendMessage(self.hwnd, win32con.WM_ACTIVATE, 0, self.hwnd)  # type: ignore[arg-type]
+        win32api.SendMessage(self.hwnd, win32con.WM_CHAR, chr(vk_code), l_param)  # type: ignore[arg-type]
+        self._set_window_active(active=False)
 
     @check_valid_hwnd
     def release_vk_key(self: Self, vk_code: int) -> None:
-        """Simulates releasing a virtual key.
+        """Release a virtual key using Win32 keyboard messages.
 
         Args:
-            vk_code (int): Virtual-key code to release.
-
+            vk_code: Virtual-key code (``VK_*``) to release.
         """
-        scan_code = win32api.MapVirtualKey(vk_code, 0)  # type: ignore[no-untyped-call]
-        l_param = (scan_code << 16) | 1
-        l_param |= 0xC0000000
-        win32api.SendMessage(self.hwnd, win32con.WM_ACTIVATE, 1, self.hwnd)  # type: ignore[arg-type]
+        l_param = self._make_vk_lparam(vk_code, keyup=True)
+        self._set_window_active(active=True)
         win32api.SendMessage(self.hwnd, win32con.WM_KEYUP, vk_code, l_param)  # type: ignore[arg-type]
-        win32api.SendMessage(self.hwnd, win32con.WM_ACTIVATE, 0, self.hwnd)  # type: ignore[arg-type]
+        self._set_window_active(active=False)
 
     @check_valid_hwnd
     def send_vk_key(self: Self, vk_code: int) -> None:
-        """Sends a virtual key by simulating a press and release.
+        """Send a virtual key by pressing and releasing it.
 
         Args:
-            vk_code (int): Virtual-key code to send.
-
+            vk_code: Virtual-key code (``VK_*``) to send.
         """
         self.press_vk_key(vk_code)
-        time.sleep(self._rng.integers(3, 5).astype(int) / 1_000)
+        self._sleep_ms(*_KEY_PRESS_DELAY_MS_RANGE)
         self.release_vk_key(vk_code)
 
     @staticmethod
     def get_async_key_state(vk_code: int) -> bool:
-        """Retrieves the asynchronous state of a specified virtual key.
+        """Return the asynchronous state of a specified virtual key.
 
         Args:
-            vk_code (int): Virtual-key code tested via ``GetAsyncKeyState``.
+            vk_code: Virtual-key code tested via ``GetAsyncKeyState``.
 
         Returns:
-            bool: ``True`` if the key was pressed since the previous poll, otherwise ``False``.
+            ``True`` if the key was pressed since the previous poll, otherwise ``False``.
         """
         return bool(win32api.GetAsyncKeyState(vk_code))
 
     @check_valid_hwnd
     def send_keys(self: Self, characters: str) -> None:
-        """Sends a sequence of keystrokes to the active window.
+        """Send a sequence of characters to the target window.
 
         Args:
-            characters (str): Characters to emit sequentially.
-
+            characters: Characters to emit sequentially.
         """
-        win32api.SendMessage(self.hwnd, win32con.WM_ACTIVATE, 1, self.hwnd)  # type: ignore[arg-type]
+        self._set_window_active(active=True)
 
-        for c in characters:
-            vk = win32api.VkKeyScan(c)
-            scan_code = win32api.MapVirtualKey(ord(c.upper()), 0)  # type: ignore[no-untyped-call]
+        for character in characters:
+            vk = win32api.VkKeyScan(character)
+            scan_code = win32api.MapVirtualKey(ord(character.upper()), 0)  # type: ignore[no-untyped-call]
             l_param = (scan_code << 16) | 1
             win32api.SendMessage(self.hwnd, win32con.WM_KEYDOWN, vk, l_param)
-            win32api.SendMessage(self.hwnd, win32con.WM_CHAR, ord(c), l_param)  # type: ignore[arg-type]
-            time.sleep(self._rng.integers(3, 5).astype(int) / 1_000)
-            l_param |= 0xC0000000
-            win32api.SendMessage(self.hwnd, win32con.WM_KEYUP, vk, l_param)
-            time.sleep(self._rng.integers(20, 60).astype(int) / 1_000)
-        win32api.SendMessage(self.hwnd, win32con.WM_ACTIVATE, 0, self.hwnd)  # type: ignore[arg-type]
+            win32api.SendMessage(self.hwnd, win32con.WM_CHAR, ord(character), l_param)  # type: ignore[arg-type]
+            self._sleep_ms(*_KEY_PRESS_DELAY_MS_RANGE)
+            win32api.SendMessage(self.hwnd, win32con.WM_KEYUP, vk, l_param | _KEYUP_LPARAM_FLAG)
+            self._sleep_ms(*_BETWEEN_KEYS_DELAY_MS_RANGE)
+
+        self._set_window_active(active=False)

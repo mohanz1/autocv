@@ -1,4 +1,8 @@
-"""Filter configuration dataclass used throughout AutoCV."""
+"""Filter configuration dataclass used throughout AutoCV.
+
+The :class:`~autocv.models.filter_settings.FilterSettings` model acts as a
+lightweight container for user-adjustable HSV, Canny, and morphology parameters.
+"""
 
 from __future__ import annotations
 
@@ -6,11 +10,8 @@ __all__ = ("FilterSettings",)
 
 from dataclasses import dataclass
 
-kwdefaults = dataclass.__kwdefaults__ or {}
-SLOTS_DATACLASS = {"slots": True} if "slots" in kwdefaults else {}
 
-
-@dataclass(**SLOTS_DATACLASS)
+@dataclass(slots=True)
 class FilterSettings:
     """Persist HSV, Canny, and morphology parameters for image filtering.
 

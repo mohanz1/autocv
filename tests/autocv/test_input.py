@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 from mock import patch, MagicMock
 from autocv import AutoCV
+from autocv.core.input import wind_mouse
 
 
 @pytest.fixture
@@ -35,11 +36,35 @@ class TestAutoCVInput:
         autocv.click_mouse(button=1, send_message=False)
         post.assert_called()
 
+    @patch("win32api.MAKELONG", return_value=123)
+    @patch("win32gui.ClientToScreen", return_value=(200, 200))
+    @patch("win32gui.SendMessage")
+    @patch("win32gui.GetParent", return_value=1234)
+    @patch("win32gui.GetAncestor", return_value=1234)
+    def test_click_mouse_send_message(self, ga, gp, send, to_screen, make_long, autocv):
+        autocv._last_moved_point = (10, 10)
+        autocv.click_mouse(button=1, send_message=True)
+        assert send.call_count > 0
+
     @patch("win32api.SendMessage")
     @patch("win32api.MapVirtualKey", return_value=42)
     def test_press_vk_key(self, mvk, send, autocv):
         autocv.press_vk_key(65)
         assert send.call_count >= 3
+
+    @patch("win32api.MapVirtualKey", return_value=42)
+    def test_make_vk_lparam_keyup_sets_flag(self, mvk, autocv):
+        down = autocv._make_vk_lparam(65)
+        up = autocv._make_vk_lparam(65, keyup=True)
+        assert up != down
+
+    def test_make_lparam_packs_words(self, autocv):
+        assert autocv._make_lparam(1, 2) == (2 << 16) | 1
+
+    @patch("autocv.core.input.time.sleep")
+    def test_sleep_ms_uses_rng_range(self, mock_sleep, autocv):
+        autocv._sleep_ms(10, 11)
+        mock_sleep.assert_called_once()
 
     @patch("win32api.SendMessage")
     @patch("win32api.MapVirtualKey", return_value=42)
@@ -64,3 +89,67 @@ class TestAutoCVInput:
     def test_send_keys(self, mvk, scan, send, autocv):
         autocv.send_keys("a")
         assert send.call_count > 0
+
+    @patch("win32gui.ClientToScreen", return_value=(200, 200))
+    @patch("win32api.SetCursorPos")
+    def test__move_mouse_non_ghost_calls_set_cursor_pos(self, mock_set_cursor, mock_to_screen, autocv):
+        autocv._move_mouse(10, 20, ghost_mouse=False)
+        mock_set_cursor.assert_called_once_with((200, 200))
+        assert autocv.get_last_moved_point() == (10, 20)
+
+    @patch("autocv.core.input.wind_mouse")
+    def test_move_mouse_human_like_invokes_wind_mouse(self, mock_wind_mouse, autocv):
+        def fake_wind_mouse(*, mover, end, **_kwargs):
+            mover(int(end[0]), int(end[1]))
+
+        mock_wind_mouse.side_effect = fake_wind_mouse
+        autocv._move_mouse = MagicMock()
+
+        autocv.move_mouse(5, 6, human_like=True, ghost_mouse=False)
+
+        autocv._move_mouse.assert_called_once_with(5, 6, ghost_mouse=False)
+        assert autocv.get_last_moved_point() == (5, 6)
+
+
+@patch("autocv.core.input.time.sleep")
+@patch("autocv.core.input.time.perf_counter", return_value=0.0)
+def test_wind_mouse_moves_to_target(mock_perf_counter, mock_sleep):
+    rng = np.random.default_rng(0)
+    points: list[tuple[int, int]] = []
+
+    wind_mouse(
+        rng=rng,
+        mover=lambda x, y: points.append((x, y)),
+        start=(0.0, 0.0),
+        end=(50.0, 0.0),
+        gravity=9.0,
+        wind=3.0,
+        min_wait=0.0,
+        max_wait=0.0,
+        max_step=10.0,
+        target_area=8.0,
+        timeout_seconds=1.0,
+    )
+
+    assert len(points) > 1
+    assert points[-1] == (50, 0)
+
+
+@patch("autocv.core.input.time.perf_counter", side_effect=[0.0, 10.0])
+def test_wind_mouse_raises_timeout(mock_perf_counter):
+    rng = np.random.default_rng(0)
+
+    with pytest.raises(TimeoutError):
+        wind_mouse(
+            rng=rng,
+            mover=lambda _x, _y: None,
+            start=(0.0, 0.0),
+            end=(10.0, 0.0),
+            gravity=9.0,
+            wind=3.0,
+            min_wait=0.0,
+            max_wait=0.0,
+            max_step=10.0,
+            target_area=8.0,
+            timeout_seconds=1.0,
+        )

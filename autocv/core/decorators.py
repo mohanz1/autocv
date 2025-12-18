@@ -41,7 +41,7 @@ R = TypeVar("R")
 HandleOwner = TypeVar("HandleOwner", bound=_HasHandle)
 ImageOwner = TypeVar("ImageOwner", bound=_HasImageBuffer)
 
-_INVALID_HWND: Final[int] = -1
+_UNSET_HANDLE: Final[int] = -1
 
 
 def _validate_hwnd(instance: _HasHandle) -> int:
@@ -61,13 +61,13 @@ def _validate_hwnd(instance: _HasHandle) -> int:
         ensure_hwnd = cast("Callable[[], int]", ensure_hwnd_candidate)
         return int(ensure_hwnd())
 
-    hwnd = getattr(instance, "hwnd", _INVALID_HWND)
-    if hwnd == _INVALID_HWND:
+    hwnd = getattr(instance, "hwnd", _UNSET_HANDLE)
+    if hwnd == _UNSET_HANDLE:
         raise InvalidHandleError(hwnd)
     try:
         return int(hwnd)
     except (TypeError, ValueError) as exc:
-        raise InvalidHandleError(_INVALID_HWND) from exc
+        raise InvalidHandleError(_UNSET_HANDLE) from exc
 
 
 def _validate_image(instance: _HasImageBuffer) -> npt.NDArray[np.uint8]:

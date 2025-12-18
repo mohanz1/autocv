@@ -14,13 +14,31 @@ def autocv():
 
 
 class TestAutoCV:
+    @patch("autocv.autocv.Path.exists", return_value=False)
+    def test_init_raises_when_prebuilt_missing(self, mock_exists):
+        with pytest.raises(FileNotFoundError, match="Missing prebuilt extension directory"):
+            AutoCV(hwnd=1111)
+
     @patch("autocv.autocv.win32gui.GetWindowRect", return_value=(0, 0, 800, 600))
     def test_get_window_size(self, mock_get_rect, autocv):
         size = autocv.get_window_size()
         assert size == (800, 600)
 
+    @patch("autocv.autocv.win32gui.GetWindowRect", return_value=(0, 0, 800, 600))
+    def test_get_window_size_uses_cache_path(self, mock_get_rect, autocv):
+        size = autocv.get_window_size(use_cache=True)
+        assert size == (800, 600)
+
     def test_get_hwnd_valid(self, autocv):
         assert autocv.get_hwnd() == 1111
+
+    def test_antigcp_delegates_to_prebuilt_extension(self, autocv):
+        autocv._antigcp = MagicMock()
+        autocv._antigcp.antigcp.return_value = True
+        autocv._get_topmost_hwnd = MagicMock(return_value=1234)
+
+        assert autocv.antigcp() is True
+        autocv._antigcp.antigcp.assert_called_once_with(1234)
 
     @patch("autocv.autocv.Tk")
     @patch("autocv.autocv.ImagePicker")
