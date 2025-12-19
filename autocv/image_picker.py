@@ -1,4 +1,4 @@
-"""Tkinter overlay for selecting and capturing AutoCV window regions."""
+"""Tkinter overlay for selecting and capturing a window region."""
 
 from __future__ import annotations
 
@@ -12,9 +12,8 @@ import win32con
 import win32gui
 from typing_extensions import Self
 
-from autocv.models import InvalidHandleError
-
 from .core import Vision
+from .models import InvalidHandleError
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -23,9 +22,9 @@ if TYPE_CHECKING:
     import numpy.typing as npt
 
 _OVERLAY_ALPHA: Final[float] = 0.3
-_OVERLAY_COLOR = "maroon3"
-_CURSOR_STYLE = "cross"
-_RECT_OUTLINE = "red"
+_OVERLAY_COLOR: Final[str] = "maroon3"
+_CURSOR_STYLE: Final[str] = "cross"
+_RECT_OUTLINE: Final[str] = "red"
 _RECT_WIDTH: Final[int] = 3
 _DEFAULT_GEOM_PADDING: Final[int] = 2
 
@@ -77,7 +76,7 @@ class ImagePicker:
     """Interactive overlay for selecting and capturing a region of a window."""
 
     def __init__(self: Self, hwnd: int, master: Tk) -> None:
-        """Initializes the ImagePicker instance and sets up the GUI overlay for region selection.
+        """Initialize the ImagePicker and set up the selection overlay.
 
         Args:
             hwnd: Window handle of the window to capture.
@@ -85,7 +84,7 @@ class ImagePicker:
         """
         self.hwnd: int = hwnd
         self.master: Tk = master
-        self.controller = ImagePickerController(hwnd)
+        self.controller: ImagePickerController = ImagePickerController(hwnd)
         self.snip_surface: Canvas  # Initialized in create_screen_canvas
         self.start_x: int = -1
         self.start_y: int = -1
@@ -96,16 +95,16 @@ class ImagePicker:
         self._rect_id: int | None = None
 
         self.master.title("AutoCV Image Picker")
-        self.master_screen = Toplevel(self.master)
+        self.master_screen: Toplevel = Toplevel(self.master)
         self.master_screen.withdraw()
         self.master_screen.attributes("-transparent", _OVERLAY_COLOR)
-        self.picture_frame = Frame(self.master_screen, background=_OVERLAY_COLOR)
+        self.picture_frame: Frame = Frame(self.master_screen, background=_OVERLAY_COLOR)
         self.picture_frame.pack(fill=BOTH, expand=YES)
 
         self.create_screen_canvas()
 
     def create_screen_canvas(self: Self) -> None:
-        """Creates the canvas and transparent overlay window for region selection.
+        """Create the canvas and transparent overlay window for region selection.
 
         The method brings the target window to the foreground, creates a full-screen overlay
         with a semi-transparent canvas, and binds mouse events for region selection.

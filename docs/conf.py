@@ -54,7 +54,7 @@ master_doc = "index"
 
 # General information about the project.
 project = "autocv"
-copyright = "2024, Zach"
+copyright = "2026, Zach"
 author = "Zach"
 release = "1.0.0"
 

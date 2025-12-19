@@ -25,9 +25,10 @@ from typing import TYPE_CHECKING, Final, Literal, TypedDict, cast
 import cv2 as cv
 import numpy as np
 import numpy.typing as npt
-from paddleocr import PaddleOCR  # type: ignore[import-untyped]
 from PIL import Image
 from typing_extensions import Self
+
+from paddleocr import PaddleOCR
 
 from .decorators import check_valid_hwnd, check_valid_image
 from .image_processing import filter_colors
@@ -129,7 +130,7 @@ class Vision(WindowCapture):
         self.api: PaddleOCR | None = None
 
         if disable_model_source_check:
-            os.environ.setdefault("DISABLE_MODEL_SOURCE_CHECK", "True")
+            os.environ.setdefault("PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK", "True")
 
         preset = _OCR_PRESETS.get(speed, _OCR_PRESETS["balanced"])
         self._ocr_lang: str = lang
@@ -305,12 +306,16 @@ class Vision(WindowCapture):
     @staticmethod
     def _extract_ocr_payload(prediction: object) -> dict[str, object] | None:
         """Normalize PaddleOCR predictions into a single JSON-like dictionary."""
-        payload = getattr(prediction, "json", prediction)
+        payload: object = prediction
+        json_payload: object | None = getattr(prediction, "json", None)
+        if json_payload is not None:
+            payload = json_payload
         if isinstance(payload, list):
-            if not payload:
+            payload_list = cast("list[object]", payload)
+            if not payload_list:
                 return None
-            payload = payload[0]
-        return payload if isinstance(payload, dict) else None
+            payload = payload_list[0]
+        return cast("dict[str, object]", payload) if isinstance(payload, dict) else None
 
     @staticmethod
     def _prepare_ocr_input(image: NDArrayUint8) -> NDArrayUint8:
@@ -361,7 +366,7 @@ class Vision(WindowCapture):
             image = filter_colors(image, colors, tolerance, keep_original_colors=True)
 
         work = self._prepare_ocr_input(image)
-        payload = self._extract_ocr_payload(self._ensure_ocr().predict(work))
+        payload = self._extract_ocr_payload(cast("object", self._ensure_ocr().predict(work)))
         if payload is None:
             return []
 
@@ -914,7 +919,8 @@ class Vision(WindowCapture):
             MaskArray: Mask where template scores exceed the confidence threshold.
         """
         res = cv.matchTemplate(main_image_gray, sub_image_gray, cv.TM_CCORR_NORMED, mask=mask)
-        return cast("MaskArray", np.logical_and(res >= confidence, np.logical_not(np.isinf(res))).astype(np.uint8))
+        mask_arr: MaskArray = np.logical_and(res >= confidence, np.logical_not(np.isinf(res))).astype(np.uint8)
+        return mask_arr
 
     def _process_matching_results(
         self: Self,

@@ -15,7 +15,7 @@ import logging
 import math
 import time
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Final, TypeAlias
+from typing import TYPE_CHECKING, Any, Final, TypeAlias, cast
 
 import numpy as np
 import win32api
@@ -214,11 +214,11 @@ class Input(Vision):
     @staticmethod
     def _make_vk_lparam(vk_code: int, *, keyup: bool = False) -> int:
         """Construct an LPARAM value for WM_KEYDOWN/WM_KEYUP messages."""
-        scan_code = win32api.MapVirtualKey(vk_code, 0)  # type: ignore[no-untyped-call]
+        scan_code = int(win32api.MapVirtualKey(vk_code, 0))  # type: ignore[no-untyped-call]
         l_param = (scan_code << 16) | 1
         if keyup:
             l_param |= _KEYUP_LPARAM_FLAG
-        return int(l_param)
+        return l_param
 
     @check_valid_hwnd
     def _get_topmost_hwnd(self: Self) -> int:
@@ -322,11 +322,7 @@ class Input(Vision):
         win32api.SendMessage(self.hwnd, win32con.WM_SETCURSOR, self.hwnd, lparam_button)  # type: ignore[arg-type]
 
         dispatch = win32gui.SendMessage if send_message else win32gui.PostMessage
-        click_lparam = (
-            win32api.MAKELONG(*self._last_moved_point)  # type: ignore[no-untyped-call]
-            if send_message
-            else screen_lparam
-        )
+        click_lparam: int = int(win32api.MAKELONG(*self._last_moved_point)) if send_message else screen_lparam  # type: ignore[no-untyped-call]
         dispatch(self.hwnd, button_to_press, button, click_lparam)
         self._sleep_ms(*_CLICK_DELAY_MS_RANGE)
         dispatch(self.hwnd, button_to_press + 1, 0, click_lparam)
@@ -391,14 +387,18 @@ class Input(Vision):
         """
         self._set_window_active(active=True)
 
+        send_message = cast("Any", win32api.SendMessage)
+        vk_key_scan = cast("Any", win32api.VkKeyScan)
+        map_virtual_key = cast("Any", win32api.MapVirtualKey)
+
         for character in characters:
-            vk = win32api.VkKeyScan(character)
-            scan_code = win32api.MapVirtualKey(ord(character.upper()), 0)  # type: ignore[no-untyped-call]
-            l_param = (scan_code << 16) | 1
-            win32api.SendMessage(self.hwnd, win32con.WM_KEYDOWN, vk, l_param)
-            win32api.SendMessage(self.hwnd, win32con.WM_CHAR, ord(character), l_param)  # type: ignore[arg-type]
+            vk: int = int(vk_key_scan(character))
+            scan_code: int = int(map_virtual_key(ord(character.upper()), 0))
+            l_param: int = (scan_code << 16) | 1
+            send_message(self.hwnd, win32con.WM_KEYDOWN, vk, l_param)
+            send_message(self.hwnd, win32con.WM_CHAR, ord(character), l_param)
             self._sleep_ms(*_KEY_PRESS_DELAY_MS_RANGE)
-            win32api.SendMessage(self.hwnd, win32con.WM_KEYUP, vk, l_param | _KEYUP_LPARAM_FLAG)
+            send_message(self.hwnd, win32con.WM_KEYUP, vk, l_param | _KEYUP_LPARAM_FLAG)
             self._sleep_ms(*_BETWEEN_KEYS_DELAY_MS_RANGE)
 
         self._set_window_active(active=False)

@@ -13,7 +13,7 @@ from typing_extensions import Self
 
 from .models import FilterSettings
 
-ESC_CODE = 27
+ESC_CODE: Final[int] = 27
 WINDOW_FILTER: Final[str] = "Image Filter"
 WINDOW_TRACKBARS: Final[str] = "Trackbars"
 
@@ -22,6 +22,7 @@ ImageArray = npt.NDArray[np.uint8]
 
 def nothing(_: int) -> None:
     """Dummy callback function for trackbar events."""
+    return
 
 
 class FilterEngine:
@@ -39,14 +40,16 @@ class FilterEngine:
                 self.filter_settings.h_min,
                 self.filter_settings.s_min,
                 self.filter_settings.v_min,
-            ]
+            ],
+            dtype=np.uint8,
         )
         upper = np.array(
             [
                 self.filter_settings.h_max,
                 self.filter_settings.s_max,
                 self.filter_settings.v_max,
-            ]
+            ],
+            dtype=np.uint8,
         )
         hsv_mask = cv.inRange(self.hsv_image, lower, upper)
         hsv_filtered = cv.bitwise_and(self.hsv_image, self.hsv_image, mask=hsv_mask)
@@ -191,14 +194,14 @@ class ImageFilter:
         settings.erode_kernel_size = get("Erode", WINDOW_TRACKBARS)
         settings.dilate_kernel_size = get("Dilate", WINDOW_TRACKBARS)
 
-    def get_filtered_image(self: Self) -> npt.NDArray[np.uint8]:
-        """Applies the current filter settings to the image and returns the result.
+    def get_filtered_image(self: Self) -> ImageArray:
+        """Apply the current filter settings and return the filtered image.
 
         The method updates the filter settings, applies an HSV filter, performs Canny edge detection,
         and applies erosion and dilation if specified.
 
         Returns:
-            npt.NDArray[np.uint8]: Filtered image after applying HSV/Canny and morphology.
+            Filtered image after applying HSV/Canny and morphology.
         """
         # Update the filter settings from trackbar positions.
         self.update_filter_settings()

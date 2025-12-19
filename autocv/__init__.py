@@ -10,6 +10,42 @@ Note:
 
 from __future__ import annotations
 
+import ctypes
+import platform
+
+_WINDOWS_RELEASES_WITH_SHCORE = {"10", "11"}
+
+
+def _configure_process_dpi_awareness() -> None:
+    """Configure process DPI awareness for clearer pixel-accurate capture."""
+    if platform.release() in _WINDOWS_RELEASES_WITH_SHCORE:
+        ctypes.windll.shcore.SetProcessDpiAwareness(2)
+    else:
+        ctypes.windll.user32.SetProcessDPIAware()
+
+
+if platform.system() != "Windows":
+    msg = "Only Windows platform is currently supported."
+    raise RuntimeError(msg)
+
+_configure_process_dpi_awareness()
+
+from ._about import (  # noqa: E402
+    __author__,
+    __ci__,
+    __copyright__,
+    __docs__,
+    __email__,
+    __git_sha1__,
+    __issue_tracker__,
+    __license__,
+    __maintainer__,
+    __url__,
+    __version__,
+)
+from .auto_color_aid import AutoColorAid  # noqa: E402
+from .autocv import AutoCV  # noqa: E402
+
 __all__ = (
     "AutoCV",
     "AutoColorAid",
@@ -25,30 +61,3 @@ __all__ = (
     "__url__",
     "__version__",
 )
-
-
-import ctypes
-import platform
-
-if platform.system() != "Windows":
-    msg = "Only Windows platform is currently supported."
-    raise RuntimeError(msg)
-
-if platform.release() in {"10", "11"}:
-    ctypes.windll.shcore.SetProcessDpiAwareness(2)
-else:
-    ctypes.windll.user32.SetProcessDPIAware()
-
-from .autocv import AutoCV  # noqa: I001
-from .auto_color_aid import AutoColorAid
-from autocv._about import __author__
-from autocv._about import __ci__
-from autocv._about import __copyright__
-from autocv._about import __docs__
-from autocv._about import __email__
-from autocv._about import __git_sha1__
-from autocv._about import __issue_tracker__
-from autocv._about import __license__
-from autocv._about import __maintainer__
-from autocv._about import __url__
-from autocv._about import __version__
