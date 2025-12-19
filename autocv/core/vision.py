@@ -999,6 +999,8 @@ class Vision(WindowCapture):
         tolerance: int = 0,
         min_area: int = 10,
         vertices: int | None = None,
+        *,
+        close_and_dilate: bool = False,
     ) -> list[Contour]:
         """Find contours in the backbuffer that match a color.
 
@@ -1008,13 +1010,21 @@ class Vision(WindowCapture):
             tolerance: Allowed deviation per colour channel.
             min_area: Minimum area in pixels squared for a contour to qualify.
             vertices: Required vertex count for returned contours.
+            close_and_dilate: When ``True``, apply a 3x3 morphological close and dilation pass to the filtered mask
+                before extracting contours.
 
         Returns:
             Contours matching the search criteria.
         """
         image = self._crop_image(rect)
-        image = filter_colors(image, color, tolerance)
-        contours, _ = cv.findContours(image, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+        mask: MaskArray = filter_colors(image, color, tolerance)
+
+        if close_and_dilate:
+            kernel = np.ones((_DEFAULT_MORPH_KERNEL_SIZE, _DEFAULT_MORPH_KERNEL_SIZE), np.uint8)
+            mask = cast("MaskArray", cv.morphologyEx(mask, cv.MORPH_CLOSE, kernel, iterations=1))
+            mask = cast("MaskArray", cv.dilate(mask, kernel, iterations=1))
+
+        contours, _ = cv.findContours(mask, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
         if rect is not None:
             offset = np.array([rect[0], rect[1]], dtype=np.int32)
             contours = [c + offset for c in contours]

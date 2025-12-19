@@ -108,6 +108,20 @@ def test_find_contours_offsets_results(autocv):
         assert int(contours[0].min()) >= 5
 
 
+def test_find_contours_close_and_dilate_merges_nearby_shapes(autocv):
+    autocv.opencv_image = np.zeros((20, 20, 3), dtype=np.uint8)
+    mask = np.zeros((20, 20), dtype=np.uint8)
+    mask[5:10, 5:8] = 255
+    mask[5:10, 9:12] = 255
+
+    with patch("autocv.core.vision.filter_colors", return_value=mask):
+        contours = autocv.find_contours((0, 0, 0), min_area=1)
+        assert len(contours) == 2
+
+        contours = autocv.find_contours((0, 0, 0), min_area=1, close_and_dilate=True)
+        assert len(contours) == 1
+
+
 def test_draw_helpers_and_filter_colors(autocv):
     autocv.opencv_image = np.zeros((10, 10, 3), dtype=np.uint8)
 
