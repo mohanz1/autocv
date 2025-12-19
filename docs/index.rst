@@ -1,15 +1,9 @@
-.. autocv documentation master file, created by
-   sphinx-quickstart on Wed Feb 14 15:24:45 2024.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
 =================
 Welcome to AutoCV
 =================
 
-AutoCV is an innovative computer vision library that simplifies image processing and analysis. With a focus on ease of use and flexibility, AutoCV enables rapid development of computer vision applications.
-
-
+AutoCV is a Windows-first computer vision automation toolkit for capturing game or desktop windows, analyzing frames with
+OpenCV, and steering Win32 input back into the client.
 
 .. toctree::
    :hidden:
@@ -20,92 +14,78 @@ AutoCV is an innovative computer vision library that simplifies image processing
    autocv.core.window_capture
    autocv.core.vision
    autocv.core.input
+   autocv.tools
    autocv.models
    autocv.utils
-
-
 
 Features
 --------
 
-* Easy-to-use interface
-* Comprehensive image processing functions
-* High performance with real-time capabilities
-* Extensive documentation
+- Win32 window discovery and capture via :class:`~autocv.core.window_capture.WindowCapture` /
+  :class:`~autocv.core.vision.Vision`
+- Template matching, contour detection, and color filtering helpers
+- Human-like mouse motion and keyboard/mouse message sending via :class:`~autocv.core.input.Input`
+- Optional OCR via PaddleOCR (:meth:`~autocv.core.vision.Vision.get_text`)
+- Interactive tuning tools (:class:`~autocv.auto_color_aid.AutoColorAid`, :class:`~autocv.color_picker.ColorPicker`,
+  :class:`~autocv.image_picker.ImagePicker`, :class:`~autocv.image_filter.ImageFilter`)
 
-
-
-Quick Start
------------
-
-To get started with AutoCV, install the package using pip:
+Installation
+------------
 
 .. code-block:: bash
 
    pip install autocv
 
+OCR requires PaddlePaddle; install one of the extras:
 
+.. code-block:: bash
 
-Prerequisites
--------------
+   pip install "autocv[paddle-cpu]"
+   # or (Windows x64)
+   pip install "autocv[paddle-gpu]"
 
-- Autocv requires Python 3.10+
+Requirements
+------------
 
-- Install `Google Tesseract OCR <https://github.com/tesseract-ocr/tesseract>`_ (additional info how to install the engine on Windows). You must be able to invoke the tesseract command as `tesseract`. If this isn't the case, for example because tesseract isn't in your PATH, you will have to change the "tesseract_cmd" variable `pytesseract.pytesseract.tesseract_cmd`.
+- Windows (AutoCV uses ``pywin32`` for capture/input)
+- Python 3.10+
 
-- *Note:* In some rare cases, you might need to additionally install `tessconfigs` and `configs` from `tesseract-ocr/tessconfigs <https://github.com/tesseract-ocr/tessconfigs>`_ if the OS specific package doesn't include them.
+OCR Notes
+---------
 
+The first call to :meth:`~autocv.core.vision.Vision.get_text` may download OCR models and can require network access.
+If your environment blocks PaddleOCR model-host checks, set ``DISABLE_MODEL_SOURCE_CHECK=True`` before importing/using
+AutoCV, or pass ``disable_model_source_check=True`` when constructing :class:`~autocv.core.vision.Vision`.
 
 Reading the Documentation
 -------------------------
 
 The class structure and inheritance within the documentation is organized as follows:
 
-- ``AutoCV``
+- ``AutoCV`` inherits from ``Input`` → ``Vision`` → ``WindowCapture``.
 
-  - Inherits from:
-
-    - ``Input``
-
-      - Which in turn inherits from:
-
-        - ``Vision``
-
-          - Which finally inherits from:
-
-            - ``WindowCapture``
-
-This means that the ``AutoCV`` class has access to all methods and properties of the classes it inherits from. The documentation is structured to reflect this hierarchy, grouping functions by their respective class to facilitate easier reading and understanding.
-
-
+This means :class:`~autocv.autocv.AutoCV` has access to all methods and properties of its parent classes. The reference
+pages are structured to reflect this hierarchy.
 
 Example
 -------
 
-.. code:: python
+.. code-block:: python
 
    from autocv import AutoCV
 
-
-   # initialize AutoCV class
    autocv = AutoCV()
-
-   # set handle
    autocv.set_hwnd_by_title("RuneLite")
 
-   # set inner handle recursively
+   # Optionally walk down to an inner canvas handle.
    while autocv.set_inner_hwnd_by_title("SunAwtCanvas"):
        pass
 
-    # re-write memory to disable getCursorPos
+   # Patch GetCursorPos checks (requires the bundled `antigcp` extension).
    autocv.antigcp()
 
-   # refresh (or in this case, set) the backbuffer image
    autocv.refresh()
 
-   # find the first green contour with an area over 50 and a tolerance of 50
    contour = autocv.find_contours((0, 255, 0), tolerance=50, min_area=50).first()
-
-   #  move and click the mouse to a random point in the contour
    autocv.move_mouse(*contour.random_point())
    autocv.click_mouse()
