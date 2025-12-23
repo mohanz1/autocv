@@ -1,8 +1,10 @@
+"""Stub generation utilities."""
+
 from __future__ import annotations
 
 import pathlib
 
-from pipelines import config, nox
+from pipelines import nox
 
 STUBGEN_GENERATE = [
     "autocv/__init__.py",
@@ -10,22 +12,28 @@ STUBGEN_GENERATE = [
     "autocv/models/__init__.py",
     "autocv/utils/__init__.py",
 ]
-
-
-@nox.session()
-def mypy(session: nox.Session) -> None:
-    """Perform static type analysis on Python source code using mypy."""
-    nox.sync(session, self=True, groups=["mypy"])
-
-    session.run("mypy", "-p", config.MAIN_PACKAGE, "--config", config.PYPROJECT_TOML)
+STUBGEN_PACKAGE = "mypy==1.19.1"
 
 
 @nox.session()
 def generate_stubs(session: nox.Session) -> None:
     """Generate the stubs for the package."""
-    nox.sync(session, groups=["mypy", "ruff"])
+    nox.sync(session, groups=["ruff"])
 
-    session.run("stubgen", *STUBGEN_GENERATE, "-o", ".", "--include-private", "--no-import")
+    session.run(
+        "uv",
+        "tool",
+        "run",
+        "--from",
+        STUBGEN_PACKAGE,
+        "stubgen",
+        *STUBGEN_GENERATE,
+        "-o",
+        ".",
+        "--include-private",
+        "--no-import",
+        external=True,
+    )
 
     stub_paths = [path + "i" for path in STUBGEN_GENERATE]
 

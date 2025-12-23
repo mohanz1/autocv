@@ -15,7 +15,6 @@ DIRECTORIES_TO_DELETE = [
     "public",
     ".pytest",
     ".pytest_cache",
-    ".mypy_cache",
     "node_modules",
 ]
 

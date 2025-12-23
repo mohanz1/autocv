@@ -1,7 +1,7 @@
 # AutoCV
 ![Supported Python versions](https://img.shields.io/badge/python-3.10%20|%203.11%20|%203.12-blue.svg)
 [![CI](https://github.com/mohanz1/autocv/actions/workflows/ci.yml/badge.svg?branch=main&event=push)](https://github.com/mohanz1/autocv/actions/workflows/ci.yml)
-[![Mypy Checked](https://img.shields.io/badge/mypy-checked-green.svg)](https://pypi.org/project/mypy)
+![Ty Checked](https://img.shields.io/badge/ty-checked-green.svg)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/charliermarsh/ruff/main/assets/badge/v2.json)](https://pypi.org/project/ruff)
 [![codecov.io](https://codecov.io/github/mohanz1/autocv/coverage.svg?branch=main)](https://app.codecov.io/github/mohanz1/autocv)
 
@@ -27,7 +27,7 @@ git clone https://github.com/mohanz1/autocv.git
 cd autocv
 
 # Create a managed environment with uv (recommended)
-uv sync --locked --group pytest --group ruff --group mypy
+uv sync --locked --group pytest --group ruff --group ty
 
 # Verify the install
 uv run python -m autocv
@@ -68,7 +68,7 @@ if bot.get_pixel_change(area=(500, 300, 120, 80)) > 1500:
 More GUI helpers live in `autocv/color_picker.py`, `autocv/image_picker.py`, and `autocv/image_filter.py`; call `bot.color_picker()`, `bot.image_picker()`, or `bot.image_filter()` to tune colors or filters in real time.
 
 ## Development Workflow
-- `uv run nox` (or `uvx nox` if you don't have `nox` installed) runs the default suite: `reformat-code`, `codespell`, `pytest`, `ruff`, and `mypy`.
+- `uv run nox` (or `uvx nox` if you don't have `nox` installed) runs the default suite: `reformat-code`, `codespell`, `pytest`, `ruff`, and `ty`.
 - `uv run nox -s pytest -- --coverage` writes HTML/XML coverage to `public/coverage/html`.
 - `uv run nox -s sphinx` builds the docs to `public/docs` (served on GitHub Pages).
 
@@ -79,4 +79,3 @@ Project code lives in `autocv/`, reusable automation lives in `pipelines/`, and 
 - Issues & feature requests: https://github.com/mohanz1/autocv/issues
 - Discord: https://discord.gg/Jx4cNGG
 - License: MIT
-
