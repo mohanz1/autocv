@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
-from mock import MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 from autocv.core.window_capture import WindowCapture
 from autocv.models import InvalidHandleError

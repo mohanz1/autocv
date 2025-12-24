@@ -17,7 +17,8 @@ __all__ = ("main",)
 
 def main() -> None:
     """Print package info to stderr and return."""
-    path = Path(_about.__file__).resolve().parent
+    about_file = _about.__file__
+    path = Path(about_file).resolve().parent if about_file else Path.cwd()
     sha1 = _about.__git_sha1__[:8]
     version = _about.__version__
     python_summary = f"{platform.python_implementation()} {platform.python_version()} {platform.python_compiler()}"

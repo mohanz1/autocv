@@ -9,7 +9,7 @@ from __future__ import annotations
 
 __all__ = ("get_center", "get_random_point", "sort_shapes")
 
-from typing import TYPE_CHECKING, Final, Literal, TypeAlias
+from typing import TYPE_CHECKING, Final, Literal, TypeAlias, cast
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -83,7 +83,7 @@ def get_center(shape: Shape) -> Point:
         ValueError: If the contour area is zero.
     """
     if isinstance(shape, np.ndarray):
-        contour = _normalize_contour(shape)
+        contour = _normalize_contour(cast("npt.NDArray[np.generic]", shape))
         moments = cv2.moments(contour)
         m00 = float(moments["m00"])
         if m00 == 0.0:
@@ -110,7 +110,7 @@ def get_random_point(shape: Shape) -> Point:
         ValueError: If the contour is empty or invalid, or the rectangle is malformed.
     """
     if isinstance(shape, np.ndarray):
-        contour = _normalize_contour(shape)
+        contour = _normalize_contour(cast("npt.NDArray[np.generic]", shape))
         x, y, w, h = cv2.boundingRect(contour)
         if w <= 0 or h <= 0:
             msg = "Contour bounding rectangle has zero area."

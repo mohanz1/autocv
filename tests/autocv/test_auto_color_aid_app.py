@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
-from mock import MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 from autocv.auto_color_aid import (
     AutoColorAid,

@@ -1,4 +1,4 @@
-from mock import MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 from autocv.auto_color_aid import AutoColorAidController, ColorSelectionState
 

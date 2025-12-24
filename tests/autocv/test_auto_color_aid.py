@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from mock import MagicMock, patch
+from unittest.mock import MagicMock, patch
 from PIL import Image
 from autocv.color_picker import ColorPicker
 

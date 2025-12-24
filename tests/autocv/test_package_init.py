@@ -6,7 +6,7 @@ import types
 from pathlib import Path
 
 import pytest
-from mock import MagicMock
+from unittest.mock import MagicMock
 
 import autocv
 

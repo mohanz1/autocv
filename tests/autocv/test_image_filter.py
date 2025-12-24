@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from mock import patch, MagicMock
+from unittest.mock import patch, MagicMock
 from autocv.image_filter import ImageFilter
 from autocv.models import FilterSettings
 

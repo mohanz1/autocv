@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from mock import patch, MagicMock
+from unittest.mock import patch, MagicMock
 from autocv import AutoCV
 from autocv.core.input import wind_mouse
 

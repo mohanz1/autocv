@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from mock import MagicMock, patch
+from unittest.mock import MagicMock, patch
 from tkinter import Tk, TclError
 from autocv.image_picker import ImagePicker
 
