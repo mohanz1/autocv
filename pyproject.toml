@@ -52,7 +52,7 @@ paddle-gpu-nvidia = ["paddlepaddle-gpu==3.0.0.dev20250717; sys_platform == 'win3
 "CI" = "https://github.com/mohanz1/autocv/actions"
 
 [dependency-groups]
-nox = ["nox[uv] >=2025.11,<2026"]
+nox = ["nox[uv]>=2025.11,<2027"]
 
 audit = ["uv-secure"]
 codespell = ["codespell >=2.4.1,<3"]
