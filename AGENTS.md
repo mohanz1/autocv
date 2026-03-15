@@ -7,16 +7,16 @@ Interactive tools live in `autocv/auto_color_aid.py`, `autocv/color_picker.py`, 
 `autocv/__init__.py` is intentionally lazy and must stay lightweight at import time. Do not eagerly import heavy GUI, OCR, or Win32-dependent modules there. `.pyi` files and `autocv/py.typed` are part of the package's typed public surface; when public exports or signatures change, keep the matching stub files in sync. If you add support for a new Python minor version, check whether `autocv/prebuilt/python*/` needs a matching `antigcp` binary.
 
 ## Environment & Dependencies
-We standardize on uv to create environments and lock dependencies. For the normal non-OCR development workflow, sync
-the full dev environment with `uv sync --locked --no-sources --group dev`, or install only what you need with
-`uv sync --locked --no-sources --group test`, `--group lint`, `--group type`, or `--group docs`.
+We standardize on uv to create environments and lock dependencies. For the normal development workflow, sync the full
+dev environment with `uv sync --locked --group dev`, or install only what you need with `uv sync --locked --group test`,
+`--group lint`, `--group type`, or `--group docs`.
 
 The runtime library is Windows-first because capture/input depend on `pywin32`, but CI also runs linting, type checking, and docs on Ubuntu. Keep imports and module initialization resilient when optional or platform-specific dependencies are unavailable unless the module is explicitly Windows-only. Optional extras are:
 - `autocv[gui]` for desktop theming helpers used by interactive tools
 - `autocv[ocr]` for PaddleOCR integration
 - `autocv[ocr,paddle-cpu]` or `autocv[ocr,paddle-gpu]` for complete OCR backends
 
-If you add new optional dependencies or imports that Sphinx cannot import in CI, update `docs/conf.py` mocks/stubs accordingly. PaddleOCR may perform model-host checks or downloads at runtime; document any environment variables or setup changes when that behavior is affected. Prefer `python scripts/install_ocr.py --backend cpu` or `--backend gpu` over ad-hoc OCR setup commands; the helper script applies the current repo-supported `uv sync` flags and retries targeted Paddle installs once.
+If you add new optional dependencies or imports that Sphinx cannot import in CI, update `docs/conf.py` mocks/stubs accordingly. PaddleOCR may perform model-host checks or downloads at runtime; document any environment variables or setup changes when that behavior is affected. Prefer `python scripts/install_ocr.py --backend cpu` or `--backend gpu` over ad-hoc OCR setup commands; the helper script applies the current repo-supported `uv sync` flags, retries targeted Paddle installs once, and the `gpu` backend is pinned to Paddle's official Windows x64 CUDA 12.9 index.
 
 ## Required Validation After Changes
 After syncing the relevant groups, run the same commands enforced in GitHub Actions from the repository root:

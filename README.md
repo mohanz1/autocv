@@ -11,11 +11,8 @@ AutoCV is not published on PyPI. Install from source:
 ```powershell
 git clone https://github.com/mohanz1/autocv.git
 cd autocv
-uv sync --locked --no-sources --group dev
+uv sync --locked --group dev
 ```
-
-For non-OCR development, `--no-sources` avoids resolving the optional Paddle GPU source mappings during the initial
-environment sync.
 
 Optional extras:
 - `autocv[gui]`: interactive desktop tools (`AutoColorAid`)
@@ -30,8 +27,8 @@ python scripts/install_ocr.py --backend cpu
 python scripts/install_ocr.py --backend gpu
 ```
 
-The CPU path avoids the unrelated `paddlepaddle-gpu` source mapping with `--no-sources-package`, and the helper retries
-once with a targeted Paddle/PaddleOCR reinstall if the first install flakes.
+The helper retries once with a targeted Paddle/PaddleOCR reinstall if the first install flakes.
+The `gpu` backend uses Paddle's official Windows x64 CUDA 12.9 package index.
 
 ## Quick Start
 ```python

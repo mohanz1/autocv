@@ -17,22 +17,12 @@ def _load_script_module():
     return module
 
 
-def test_build_command_for_cpu_backend_avoids_gpu_sources():
+def test_build_command_for_cpu_backend_is_minimal():
     module = _load_script_module()
 
     command = module.build_command(module.BACKENDS["cpu"], retry=False)
 
-    assert command == [
-        "uv",
-        "sync",
-        "--locked",
-        "--extra",
-        "ocr",
-        "--extra",
-        "paddle-cpu",
-        "--no-sources-package",
-        "paddlepaddle-gpu",
-    ]
+    assert command == ["uv", "sync", "--locked", "--extra", "ocr", "--extra", "paddle-cpu"]
 
 
 def test_build_command_for_retry_reinstalls_target_packages():
@@ -65,7 +55,7 @@ def test_install_ocr_retries_after_failure(monkeypatch):
 
     assert result == 0
     assert len(calls) == 2
-    assert "--no-sources-package" in calls[0]
+    assert calls[0] == ["uv", "sync", "--locked", "--extra", "ocr", "--extra", "paddle-cpu"]
     assert "--reinstall-package" in calls[1]
 
 

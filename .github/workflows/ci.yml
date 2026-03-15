@@ -14,9 +14,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  UV_NO_SOURCES: "1"
-
 jobs:
   lint-type:
     name: Lint and Type

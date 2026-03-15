@@ -38,14 +38,14 @@ AutoCV is not published on PyPI. Install from source:
 
    git clone https://github.com/mohanz1/autocv.git
    cd autocv
-   uv sync --locked --no-sources --group dev
+   uv sync --locked --group dev
 
 OCR support is optional and requires extra dependencies:
 
 .. code-block:: powershell
 
    python scripts/install_ocr.py --backend cpu
-   # or on Windows x64 with GPU support:
+   # or on Windows x64 with CUDA 12.9 GPU support:
    python scripts/install_ocr.py --backend gpu
 
 Requirements

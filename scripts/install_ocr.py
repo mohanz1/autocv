@@ -12,21 +12,17 @@ from pathlib import Path
 class BackendConfig:
     extra: str
     runtime_package: str
-    no_sources_packages: tuple[str, ...] = ()
 
 
 BACKENDS: dict[str, BackendConfig] = {
-    "cpu": BackendConfig(extra="paddle-cpu", runtime_package="paddlepaddle", no_sources_packages=("paddlepaddle-gpu",)),
+    "cpu": BackendConfig(extra="paddle-cpu", runtime_package="paddlepaddle"),
     "gpu": BackendConfig(extra="paddle-gpu", runtime_package="paddlepaddle-gpu"),
-    "gpu-nvidia": BackendConfig(extra="paddle-gpu-nvidia", runtime_package="paddlepaddle-gpu"),
 }
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
 def build_command(config: BackendConfig, *, retry: bool) -> list[str]:
     command = ["uv", "sync", "--locked", "--extra", "ocr", "--extra", config.extra]
-    for package_name in config.no_sources_packages:
-        command.extend(["--no-sources-package", package_name])
 
     if retry:
         for package_name in ("paddleocr", config.runtime_package):
