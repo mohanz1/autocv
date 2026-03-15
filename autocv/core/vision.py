@@ -21,12 +21,13 @@ import os
 import warnings
 from dataclasses import dataclass
 from importlib import import_module
-from typing import TYPE_CHECKING, Final, Literal, Self, TypedDict, cast
+from typing import TYPE_CHECKING, Any, Final, Literal, Self, TypedDict, cast
 
-import cv2 as cv
 import numpy as np
 import numpy.typing as npt
 from PIL import Image
+
+import cv2 as cv
 
 from .decorators import check_valid_hwnd, check_valid_image
 from .image_processing import filter_colors
@@ -187,7 +188,7 @@ class Vision(WindowCapture):
     def _pil_to_bgr(image: Image.Image) -> NDArrayUint8:
         """Convert a PIL image to an OpenCV-compatible BGR array."""
         rgb = np.array(image.convert("RGB"), dtype=np.uint8)
-        return cast("NDArrayUint8", cv.cvtColor(rgb, cv.COLOR_RGB2BGR))
+        return cv.cvtColor(rgb, cv.COLOR_RGB2BGR)
 
     @staticmethod
     def _require_color_image(image: NDArrayUint8, *, caller: str) -> NDArrayUint8:
@@ -225,7 +226,7 @@ class Vision(WindowCapture):
         if image.ndim == GRAYSCALE_IMAGE_NDIMS:
             return image
         if image.ndim == COLOR_IMAGE_NDIMS and image.shape[-1] == RGB_CHANNELS:
-            return cast("NDArrayUint8", cv.cvtColor(image, cv.COLOR_BGR2GRAY))
+            return cv.cvtColor(image, cv.COLOR_BGR2GRAY)
         msg = f"{caller} requires a grayscale image or a 3-channel BGR image."
         raise ValueError(msg)
 
@@ -381,23 +382,18 @@ class Vision(WindowCapture):
     def _prepare_ocr_input(image: NDArrayUint8) -> NDArrayUint8:
         """Preprocess an image for PaddleOCR inference."""
         gray = Vision._to_grayscale_image(image, caller="OCR preprocessing")
-
-        gray = cast(
-            "NDArrayUint8",
-            cv.resize(
-                gray,
-                None,
-                fx=_OCR_UPSCALE_FACTOR,
-                fy=_OCR_UPSCALE_FACTOR,
-                interpolation=cv.INTER_LANCZOS4,
-            ),
+        resized_size = (
+            max(1, round(gray.shape[1] * _OCR_UPSCALE_FACTOR)),
+            max(1, round(gray.shape[0] * _OCR_UPSCALE_FACTOR)),
         )
-        gray = cast(
-            "NDArrayUint8",
-            cv.bilateralFilter(gray, _OCR_BILATERAL_DIAMETER, _OCR_BILATERAL_SIGMA_COLOR, _OCR_BILATERAL_SIGMA_SPACE),
+        gray = cv.resize(
+            gray,
+            resized_size,
+            interpolation=cv.INTER_LANCZOS4,
         )
-        gray = cast("NDArrayUint8", cv.normalize(gray, gray, 0, MAX_COLOR_VALUE, cv.NORM_MINMAX))
-        return cast("NDArrayUint8", cv.cvtColor(gray, cv.COLOR_GRAY2BGR))
+        gray = cv.bilateralFilter(gray, _OCR_BILATERAL_DIAMETER, _OCR_BILATERAL_SIGMA_COLOR, _OCR_BILATERAL_SIGMA_SPACE)
+        gray = cv.normalize(gray, gray, 0, MAX_COLOR_VALUE, cv.NORM_MINMAX)
+        return cv.cvtColor(gray, cv.COLOR_GRAY2BGR)
 
     @staticmethod
     def _get_ocr_bbox(
@@ -825,9 +821,11 @@ class Vision(WindowCapture):
         Returns:
             tuple[int, int]: Pixel counts inside the region and outside it.
         """
-        mask = cv.inRange(cropped_image, lower_bound, upper_bound)
+        lower = cast("Any", lower_bound)
+        upper = cast("Any", upper_bound)
+        mask = cv.inRange(cropped_image, lower, upper)
         pixel_count = int(np.count_nonzero(mask))
-        outside_mask = cv.inRange(self.opencv_image, lower_bound, upper_bound)
+        outside_mask = cv.inRange(self.opencv_image, lower, upper)
         outside_pixel_count = int(np.count_nonzero(outside_mask)) - pixel_count
         return pixel_count, outside_pixel_count
 
@@ -880,10 +878,7 @@ class Vision(WindowCapture):
         """
         if kernel is None:
             kernel = np.ones((_DEFAULT_MORPH_KERNEL_SIZE, _DEFAULT_MORPH_KERNEL_SIZE), np.uint8)
-        self.opencv_image = cast(
-            "NDArrayUint8",
-            cv.erode(self.opencv_image, kernel, iterations=iterations),
-        )
+        self.opencv_image = cv.erode(self.opencv_image, kernel, iterations=iterations)
 
     @check_valid_image
     def dilate_image(self: Self, iterations: int = 1, kernel: NDArrayUint8 | None = None) -> None:
@@ -895,10 +890,7 @@ class Vision(WindowCapture):
         """
         if kernel is None:
             kernel = np.ones((_DEFAULT_MORPH_KERNEL_SIZE, _DEFAULT_MORPH_KERNEL_SIZE), np.uint8)
-        self.opencv_image = cast(
-            "NDArrayUint8",
-            cv.dilate(self.opencv_image, kernel, iterations=iterations),
-        )
+        self.opencv_image = cv.dilate(self.opencv_image, kernel, iterations=iterations)
 
     @check_valid_image
     def find_image(
@@ -1010,7 +1002,12 @@ class Vision(WindowCapture):
         Returns:
             MaskArray: Mask where template scores exceed the confidence threshold.
         """
-        res = cv.matchTemplate(main_image_gray, sub_image_gray, cv.TM_CCORR_NORMED, mask=mask)
+        res = cv.matchTemplate(
+            main_image_gray,
+            cast("Any", sub_image_gray),
+            cv.TM_CCORR_NORMED,
+            mask=cast("Any", mask),
+        )
         mask_arr: MaskArray = np.logical_and(res >= confidence, np.logical_not(np.isinf(res))).astype(np.uint8)
         return mask_arr
 
@@ -1114,8 +1111,8 @@ class Vision(WindowCapture):
 
         if close_and_dilate:
             kernel = np.ones((_DEFAULT_MORPH_KERNEL_SIZE, _DEFAULT_MORPH_KERNEL_SIZE), np.uint8)
-            mask = cast("MaskArray", cv.morphologyEx(mask, cv.MORPH_CLOSE, kernel, iterations=1))
-            mask = cast("MaskArray", cv.dilate(mask, kernel, iterations=1))
+            mask = cv.morphologyEx(mask, cv.MORPH_CLOSE, kernel, iterations=1)
+            mask = cv.dilate(mask, kernel, iterations=1)
 
         contours, _ = cv.findContours(mask, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
         if rect is not None:
@@ -1170,7 +1167,9 @@ class Vision(WindowCapture):
             color: Drawing colour (RGB). Defaults to red.
         """
         image = self._require_color_image(self.opencv_image, caller="draw_contours")
-        contours_to_draw = [contours] if isinstance(contours, np.ndarray) else list(contours)
+        contours_to_draw: list[Contour] = (
+            [cast("Contour", contours)] if isinstance(contours, np.ndarray) else list(contours)
+        )
         if not contours_to_draw:
             return
         cv.drawContours(image, contours_to_draw, -1, color[::-1], 2)

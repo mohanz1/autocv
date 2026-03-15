@@ -15,23 +15,34 @@ from dataclasses import dataclass, field
 from tkinter import ttk
 from typing import TYPE_CHECKING, Final, NamedTuple, Protocol, TypeAlias
 
-import cv2
 import numpy as np
 import numpy.typing as npt
 from PIL import Image, ImageDraw, ImageTk
 
+import cv2
+
 from . import constants
 
 try:
-    import sv_ttk
+    import sv_ttk as _sv_ttk
 except ModuleNotFoundError:  # pragma: no cover
 
-    class _ThemeFallback:
-        @staticmethod
-        def set_theme(_: str) -> None:
-            return
+    def _set_theme(_: str) -> None:
+        return
+else:
 
-    sv_ttk = _ThemeFallback()
+    def _set_theme(theme: str) -> None:
+        _sv_ttk.set_theme(theme)
+
+
+class _ThemeAdapter:
+    @staticmethod
+    def set_theme(theme: str) -> None:
+        _set_theme(theme)
+
+
+sv_ttk = _ThemeAdapter()
+
 
 try:
     from .autocv import AutoCV
@@ -493,7 +504,8 @@ class AutoColorAid(tk.Tk):
                 dtype=np.uint8,
             )
 
-        resized_img = cv2.resize(cropped_image, None, fx=zoom, fy=zoom, interpolation=cv2.INTER_NEAREST)
+        resized_size = (cropped_image.shape[1] * zoom, cropped_image.shape[0] * zoom)
+        resized_img = cv2.resize(cropped_image, resized_size, interpolation=cv2.INTER_NEAREST)
         img = Image.fromarray(resized_img)
         draw = ImageDraw.Draw(img)
 

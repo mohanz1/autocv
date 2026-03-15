@@ -4,11 +4,12 @@ from __future__ import annotations
 
 __all__ = ("ImageFilter",)
 
-from typing import Final, Self, cast
+from typing import Any, Final, Self, cast
 
-import cv2 as cv
 import numpy as np
 import numpy.typing as npt
+
+import cv2 as cv
 
 from .models import FilterSettings
 
@@ -66,7 +67,7 @@ class FilterEngine:
             ],
             dtype=np.uint8,
         )
-        hsv_mask = cv.inRange(self.hsv_image, lower, upper)
+        hsv_mask = cv.inRange(self.hsv_image, cast("Any", lower), cast("Any", upper))
         hsv_filtered = cv.bitwise_and(self.hsv_image, self.hsv_image, mask=hsv_mask)
 
         hsv_filtered[..., 1] = _apply_channel_offset(
@@ -102,14 +103,14 @@ class FilterEngine:
                 cv.MORPH_RECT,
                 (self.filter_settings.erode_kernel_size, self.filter_settings.erode_kernel_size),
             )
-            result = cast("ImageArray", cv.erode(result, erode_kernel))
+            result = cv.erode(result, erode_kernel)
 
         if self.filter_settings.dilate_kernel_size > 0:
             dilate_kernel = cv.getStructuringElement(
                 cv.MORPH_RECT,
                 (self.filter_settings.dilate_kernel_size, self.filter_settings.dilate_kernel_size),
             )
-            result = cast("ImageArray", cv.dilate(result, dilate_kernel))
+            result = cv.dilate(result, dilate_kernel)
 
         return result
 

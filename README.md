@@ -55,7 +55,7 @@ uv run --no-sync --group lint ruff format --check .
 uv run --no-sync --group lint ruff check .
 
 # Type check
-uv run --no-sync --group type mypy
+uv run --no-sync --group type ty check autocv
 
 # Test
 uv run --no-sync --group test pytest -q tests

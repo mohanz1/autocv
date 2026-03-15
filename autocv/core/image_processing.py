@@ -10,9 +10,10 @@ __all__ = ("filter_colors",)
 import logging
 from typing import TYPE_CHECKING, Final, TypeAlias, cast
 
-import cv2 as cv
 import numpy as np
 import numpy.typing as npt
+
+import cv2 as cv
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -113,10 +114,10 @@ def filter_colors(
             ub,
         )
         color_mask = cast("Mask", cv.inRange(opencv_image, lb, ub))
-        mask = cast("Mask", cv.bitwise_or(mask, color_mask))
+        mask = cv.bitwise_or(mask, color_mask)
 
     if keep_original_colors:
         logger.debug("Returning filtered image with original colors preserved for matching pixels.")
-        return cast("ImageU8", cv.bitwise_and(opencv_image, opencv_image, mask=mask))
+        return cv.bitwise_and(opencv_image, opencv_image, mask=mask)
 
     return mask

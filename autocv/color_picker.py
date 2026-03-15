@@ -13,7 +13,6 @@ from pathlib import Path
 from tkinter import NW, Canvas, Tk, Toplevel
 from typing import Final, Self
 
-import cv2 as cv
 import numpy as np
 import numpy.typing as npt
 import win32api
@@ -21,6 +20,8 @@ import win32con
 import win32gui
 from PIL import Image, ImageDraw, ImageFont, ImageTk
 from PIL.ImageTk import PhotoImage
+
+import cv2 as cv
 
 from . import constants
 from .core import Vision
@@ -205,7 +206,8 @@ class ColorPicker:
         self.set_geometry(cursor_pos)
 
         # Resize the cropped image to create a magnified view.
-        resized_img = cv.resize(cropped_image, None, fx=ZOOM, fy=ZOOM, interpolation=cv.INTER_NEAREST)
+        resized_size = (cropped_image.shape[1] * ZOOM, cropped_image.shape[0] * ZOOM)
+        resized_img = cv.resize(cropped_image, resized_size, interpolation=cv.INTER_NEAREST)
         img = Image.fromarray(resized_img)
         img = self.draw_cursor_coordinates(img, x, y)
         photo_image = PhotoImage(img)

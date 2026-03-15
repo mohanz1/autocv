@@ -16,10 +16,11 @@ from pathlib import Path
 from tkinter import Tk
 from typing import TYPE_CHECKING, Protocol, Self, cast
 
-import cv2 as cv
 import numpy as np
 import win32gui
 from typing_extensions import override
+
+import cv2 as cv
 
 from .color_picker import ColorPicker
 from .core import Input, check_valid_hwnd, check_valid_image

@@ -39,8 +39,8 @@ jobs:
       - name: Ruff Check
         run: uv run --no-sync --group lint ruff check . --output-format=github
 
-      - name: Mypy
-        run: uv run --no-sync --group type mypy
+      - name: Ty
+        run: uv run --no-sync --group type ty check --output-format=github autocv
 
   test:
     name: ${{ matrix.job-name }}

@@ -22,7 +22,7 @@ If you add new optional dependencies or imports that Sphinx cannot import in CI,
 After syncing the relevant groups, run the same commands enforced in GitHub Actions from the repository root:
 - `uv run --no-sync --group lint ruff format --check .`
 - `uv run --no-sync --group lint ruff check .`
-- `uv run --no-sync --group type mypy`
+- `uv run --no-sync --group type ty check autocv`
 - `uv run --no-sync --group test pytest -q tests --cov=autocv --cov-config=pyproject.toml --cov-report=term --cov-report=xml`
 - `uv run --no-sync --group docs sphinx-build -W docs public/docs`
 
@@ -31,7 +31,7 @@ If a command cannot run because of missing platform features, GUI support, or ex
 ## Coding Style & Naming Conventions
 Follow Ruff with a 120-column limit. Python files should start with `from __future__ import annotations` (`ruff` enforces this). Use 4-space indentation, `snake_case` functions, `PascalCase` classes, and avoid abbreviations unless they are already established in the module.
 
-Type hints are required and `mypy` runs in CI. Prefer the existing style of explicit `TypeAlias`, `Final`, small `Protocol` helpers, and typed dataclasses where they improve clarity. Keep docstrings in Google style where meaningful.
+Type hints are required and `ty` runs in CI. Prefer the existing style of explicit `TypeAlias`, `Final`, small `Protocol` helpers, and typed dataclasses where they improve clarity. Keep docstrings in Google style where meaningful.
 
 Be precise about color semantics: public-facing color APIs use RGB tuples, while OpenCV image buffers are stored in BGR order. Preserve that boundary in code, tests, and documentation. Maintain compatibility-oriented behavior when refactoring public modules: lazy imports, best-effort DPI awareness, and backwards-compatible properties/helpers are all covered by tests.
 
@@ -50,4 +50,4 @@ Sphinx builds on Linux with mocked Win32/Tk/Paddle imports and a small tkinter s
 `ImagePicker.rect` is a compatibility field containing the full target-window bounds. `ImagePicker.selection_rect` is the authoritative selected ROI. Preserve `AutoCV.image_picker()` for backwards compatibility and use `AutoCV.image_picker_capture()` for new code that needs explicit ROI metadata.
 
 ## Commit & Pull Request Guidelines
-Commit messages are short, present-tense summaries (`Add prebuilts`, `Fix trailing whitespace`). Group related changes into a single commit when practical. Pull requests should describe the change, link issues, and call out any manual setup or platform constraints, especially around GUI behavior, Win32 assumptions, or OCR dependencies. Attach screenshots or logs when touching GUI capture or coverage metrics, and confirm the CI-equivalent `ruff`, `mypy`, `pytest`, and docs commands passed locally.
+Commit messages are short, present-tense summaries (`Add prebuilts`, `Fix trailing whitespace`). Group related changes into a single commit when practical. Pull requests should describe the change, link issues, and call out any manual setup or platform constraints, especially around GUI behavior, Win32 assumptions, or OCR dependencies. Attach screenshots or logs when touching GUI capture or coverage metrics, and confirm the CI-equivalent `ruff`, `ty`, `pytest`, and docs commands passed locally.
