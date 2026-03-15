@@ -18,10 +18,20 @@ from typing import TYPE_CHECKING, Final, NamedTuple, Protocol, TypeAlias
 import cv2
 import numpy as np
 import numpy.typing as npt
-import sv_ttk
 from PIL import Image, ImageDraw, ImageTk
 
 from . import constants
+
+try:
+    import sv_ttk
+except ModuleNotFoundError:  # pragma: no cover
+
+    class _ThemeFallback:
+        @staticmethod
+        def set_theme(_: str) -> None:
+            return
+
+    sv_ttk = _ThemeFallback()
 
 try:
     from .autocv import AutoCV
@@ -42,15 +52,23 @@ _REFRESH_DELAY_MS: Final[int] = constants.REFRESH_DELAY_MS
 _ZOOM: Final[int] = constants.PIXEL_ZOOM
 _PIXELS: Final[int] = constants.PIXEL_RADIUS
 _FALLBACK_COLOR: Final[int] = constants.FALLBACK_COLOR
+_COLOR_IMAGE_NDIMS: Final[int] = 3
+_RGB_CHANNELS: Final[int] = 3
 
 _LISTBOX_BEST_COLOR_TEXT: Final[str] = "best color: ???"
 _LISTBOX_BEST_TOLERANCE_TEXT: Final[str] = "best tolerance: ???"
 _PLACEHOLDER_IMAGE_TEXT: Final[str] = "Image goes here"
 _NO_CAPTURE_TEXT: Final[str] = "No image captured"
+_NO_REGION_TEXT: Final[str] = "No region"
 
 
 def _new_pixel_samples() -> list[PixelSample]:
     return []
+
+
+def _is_color_frame(frame: ImageArray) -> bool:
+    """Return whether ``frame`` is a non-empty RGB/BGR image."""
+    return frame.size > 0 and frame.ndim == _COLOR_IMAGE_NDIMS and frame.shape[-1] == _RGB_CHANNELS
 
 
 class _FrameShape(NamedTuple):
@@ -299,8 +317,12 @@ class AutoColorAid(tk.Tk):
 
     def _refresh_main_windows(self) -> None:
         """Refresh the list of top-level windows and populate the picker."""
+        self._has_valid_main = False
+        self._has_valid_child = False
         self.main_window_picker["values"] = self.controller.window_titles()
         self.main_window_picker.set("Select a main window")
+        self.child_window_picker["values"] = []
+        self.child_window_picker.set("Select a child window")
 
     def _on_main_window_selected(self, _: tk.Event[ttk.Combobox]) -> None:
         """Handle selection events from the main-window picker."""
@@ -308,8 +330,12 @@ class AutoColorAid(tk.Tk):
         if not selected_main_window:
             return
 
-        self.controller.attach_main(selected_main_window)
-        self._has_valid_main = True
+        self._has_valid_main = self.controller.attach_main(selected_main_window)
+        self._has_valid_child = False
+        if not self._has_valid_main:
+            self.child_window_picker["values"] = []
+            self.child_window_picker.set("No child windows found")
+            return
 
         child_titles = self.controller.child_titles()
         if child_titles:
@@ -326,9 +352,10 @@ class AutoColorAid(tk.Tk):
         if not selected_child_window:
             return
 
+        attached = False
         while self.controller.attach_child(selected_child_window):
-            pass
-        self._has_valid_child = True
+            attached = True
+        self._has_valid_child = attached
 
     def _on_delete_selected(self) -> None:
         """Delete selected items from the colors listbox and refresh best-color computation."""
@@ -370,6 +397,10 @@ class AutoColorAid(tk.Tk):
 
     def _draw_color_markers(self) -> None:
         """Overlay markers for either the best colour or every sampled colour."""
+        if isinstance(self.controller, AutoColorAidController):
+            self.controller.draw_markers(mark_best_only=self.mark_best_color_var.get())
+            return
+
         if not self._color_state.pixels:
             return
 
@@ -384,19 +415,26 @@ class AutoColorAid(tk.Tk):
             if points:
                 self.controller.autocv.draw_points(points)
 
+    def _clear_pixel_region(self) -> None:
+        """Clear the magnified pixel preview when no valid region is available."""
+        self._pixel_region_photoimage = None
+        self.pixel_region_label.config(image="", text=_NO_REGION_TEXT)
+
     def _update_image(self) -> None:
         """Refresh the displayed image and schedule the next update."""
         if self._has_valid_main and self._has_valid_child:
             self.controller.refresh_frame()
             frame = self.controller.frame
-            if frame.size > 0:
+            if _is_color_frame(frame):
                 self._draw_color_markers()
                 image_rgb = Image.fromarray(frame[..., ::-1])
                 self._photo_image = ImageTk.PhotoImage(image_rgb)
                 self.image_label.config(image=self._photo_image, text="")
             else:
+                self._photo_image = None
                 self.image_label.config(text=_NO_CAPTURE_TEXT, image="")
         else:
+            self._photo_image = None
             self.image_label.config(text=_PLACEHOLDER_IMAGE_TEXT, image="")
 
         self._show_3x3_region()
@@ -406,13 +444,17 @@ class AutoColorAid(tk.Tk):
         """Convert mouse coordinates from the image label to frame coordinates."""
         if not (self._has_valid_main and self._has_valid_child):
             return None, None
-        if self._photo_image is None or self.controller.frame.size == 0:
+        if self._photo_image is None:
             return None, None
 
         frame = self.controller.frame
+        if not _is_color_frame(frame):
+            return None, None
         frame_height, frame_width, _ = _FrameShape(*frame.shape)
         disp_w = self._photo_image.width()
         disp_h = self._photo_image.height()
+        if disp_w <= 0 or disp_h <= 0:
+            return None, None
 
         mouse_x = min(max(event.x, 0), disp_w - 1)
         mouse_y = min(max(event.y, 0), disp_h - 1)
@@ -428,10 +470,13 @@ class AutoColorAid(tk.Tk):
 
     def _show_3x3_region(self) -> None:
         """Render a magnified 3x3 pixel preview around the last mouse position."""
+        if not (self._has_valid_main and self._has_valid_child):
+            self._clear_pixel_region()
+            return
+
         frame = self.controller.frame
-        if frame.size == 0:
-            self._pixel_region_photoimage = None
-            self.pixel_region_label.config(image="", text="No region")
+        if not _is_color_frame(frame):
+            self._clear_pixel_region()
             return
 
         zoom = _ZOOM
@@ -440,7 +485,8 @@ class AutoColorAid(tk.Tk):
         h, w, _ = frame.shape
 
         if x - pixels < 0 or y - pixels < 0 or x + pixels >= w or y + pixels >= h:
-            cropped_image: ImageArray = np.full((3, 3, 3), _FALLBACK_COLOR, dtype=np.uint8)
+            preview_size = pixels * 2 + 1
+            cropped_image: ImageArray = np.full((preview_size, preview_size, 3), _FALLBACK_COLOR, dtype=np.uint8)
         else:
             cropped_image = np.array(
                 frame[y - pixels : y + pixels + 1, x - pixels : x + pixels + 1, ::-1],
@@ -454,10 +500,10 @@ class AutoColorAid(tk.Tk):
         center_top_left = (pixels * zoom, pixels * zoom)
         center_bottom_right = (center_top_left[0] + zoom, center_top_left[1] + zoom)
 
-        try:
+        if 0 <= y < h and 0 <= x < w:
             b, g, r_ = frame[y, x]
             pixel_color: Color = (int(r_), int(g), int(b))
-        except IndexError:
+        else:
             pixel_color = (0, 0, 0)
 
         inverse_color: Color = (255 - pixel_color[0], 255 - pixel_color[1], 255 - pixel_color[2])

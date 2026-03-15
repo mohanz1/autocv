@@ -15,13 +15,12 @@ import logging
 import math
 import time
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Final, TypeAlias, cast
+from typing import TYPE_CHECKING, Any, Final, Self, TypeAlias, cast
 
 import numpy as np
 import win32api
 import win32con
 import win32gui
-from typing_extensions import Self
 
 from autocv import constants
 
@@ -50,6 +49,14 @@ _MOUSE_BUTTON_DOWN_MESSAGES: Final[dict[int, int]] = {
     2: win32con.WM_RBUTTONDOWN,
     3: win32con.WM_MBUTTONDOWN,
 }
+_SHIFT_MODIFIER_FLAG: Final[int] = 0x01
+_CTRL_MODIFIER_FLAG: Final[int] = 0x02
+_ALT_MODIFIER_FLAG: Final[int] = 0x04
+_KEY_MODIFIER_VKS: Final[tuple[tuple[int, int], ...]] = (
+    (_SHIFT_MODIFIER_FLAG, win32con.VK_SHIFT),
+    (_CTRL_MODIFIER_FLAG, win32con.VK_CONTROL),
+    (_ALT_MODIFIER_FLAG, win32con.VK_MENU),
+)
 
 _KEYUP_LPARAM_FLAG: Final[int] = 0xC0000000
 
@@ -211,10 +218,15 @@ class Input(Vision):
         """Send a ``WM_ACTIVATE`` message to the target window."""
         win32api.SendMessage(self.hwnd, win32con.WM_ACTIVATE, int(active), self.hwnd)  # type: ignore[arg-type]
 
+    @check_valid_hwnd
+    def _client_to_screen(self: Self, point: ClientPoint) -> ClientPoint:
+        """Convert a client-area point into screen coordinates."""
+        return cast("ClientPoint", win32gui.ClientToScreen(self.hwnd, point))
+
     @staticmethod
     def _make_vk_lparam(vk_code: int, *, keyup: bool = False) -> int:
         """Construct an LPARAM value for WM_KEYDOWN/WM_KEYUP messages."""
-        scan_code = int(win32api.MapVirtualKey(vk_code, 0))  # type: ignore[no-untyped-call]
+        scan_code = int(win32api.MapVirtualKey(vk_code, 0))
         l_param = (scan_code << 16) | 1
         if keyup:
             l_param |= _KEYUP_LPARAM_FLAG
@@ -238,7 +250,30 @@ class Input(Vision):
         Returns:
             Packed LPARAM value suitable for Win32 message APIs.
         """
-        return (y << 16) | (x & 0xFFFF)
+        return ((y & 0xFFFF) << 16) | (x & 0xFFFF)
+
+    @staticmethod
+    def _resolve_keypress(character: str) -> tuple[int, tuple[int, ...]]:
+        """Return the virtual-key code and required modifier keys for ``character``.
+
+        Args:
+            character: Single character to translate via ``VkKeyScan``.
+
+        Returns:
+            tuple[int, tuple[int, ...]]: Virtual-key code and required modifier VK codes.
+
+        Raises:
+            ValueError: If ``character`` cannot be represented as a Win32 key press.
+        """
+        vk_scan = int(win32api.VkKeyScan(character))
+        if vk_scan == -1:
+            msg = f"Cannot map character {character!r} to a virtual key."
+            raise ValueError(msg)
+
+        vk_code = vk_scan & 0xFF
+        modifier_flags = (vk_scan >> 8) & 0xFF
+        modifiers = tuple(vk for flag, vk in _KEY_MODIFIER_VKS if modifier_flags & flag)
+        return vk_code, modifiers
 
     @check_valid_hwnd
     def move_mouse(self: Self, x: int, y: int, *, human_like: bool = True, ghost_mouse: bool = True) -> None:
@@ -279,17 +314,19 @@ class Input(Vision):
     @check_valid_hwnd
     def _move_mouse(self: Self, x: int, y: int, *, ghost_mouse: bool = True) -> None:
         """Move the mouse cursor to ``(x, y)`` in client coordinates."""
-        # Convert client coordinates to screen coordinates.
-        screen_point = win32gui.ClientToScreen(self.hwnd, (x, y))
+        client_point = (x, y)
+        screen_point = self._client_to_screen(client_point)
         if ghost_mouse:
-            result = win32gui.SendMessage(self.hwnd, win32con.WM_NCHITTEST, 0, self._make_lparam(x, y))
+            screen_lparam = self._make_lparam(*screen_point)
+            client_lparam = self._make_lparam(*client_point)
+            result = win32gui.SendMessage(self.hwnd, win32con.WM_NCHITTEST, 0, screen_lparam)
             win32api.SendMessage(
                 self.hwnd,
                 win32con.WM_SETCURSOR,
                 self.hwnd,  # type: ignore[arg-type]
                 self._make_lparam(result, win32con.WM_MOUSEMOVE),  # type: ignore[arg-type]
             )
-            win32api.PostMessage(self.hwnd, win32con.WM_MOUSEMOVE, 0, self._make_lparam(*screen_point))
+            win32api.PostMessage(self.hwnd, win32con.WM_MOUSEMOVE, 0, client_lparam)
         else:
             win32api.SetCursorPos(screen_point)
         self._last_moved_point = (x, y)
@@ -302,7 +339,7 @@ class Input(Vision):
             button: Mouse button identifier (1=left, 2=right, 3=middle).
             send_message: When ``True``, use ``SendMessage`` instead of ``PostMessage`` for the click.
         """
-        screen_point = win32gui.ClientToScreen(self.hwnd, self._last_moved_point)
+        screen_point = self._client_to_screen(self._last_moved_point)
         button_to_press = _MOUSE_BUTTON_DOWN_MESSAGES.get(button, win32con.WM_LBUTTONDOWN)
         screen_lparam = self._make_lparam(*screen_point)
         result = win32gui.SendMessage(self.hwnd, win32con.WM_NCHITTEST, 0, screen_lparam)
@@ -322,7 +359,7 @@ class Input(Vision):
         win32api.SendMessage(self.hwnd, win32con.WM_SETCURSOR, self.hwnd, lparam_button)  # type: ignore[arg-type]
 
         dispatch = win32gui.SendMessage if send_message else win32gui.PostMessage
-        click_lparam: int = int(win32api.MAKELONG(*self._last_moved_point)) if send_message else screen_lparam  # type: ignore[no-untyped-call]
+        click_lparam: int = int(win32api.MAKELONG(*self._last_moved_point)) if send_message else client_lparam
         dispatch(self.hwnd, button_to_press, button, click_lparam)
         self._sleep_ms(*_CLICK_DELAY_MS_RANGE)
         dispatch(self.hwnd, button_to_press + 1, 0, click_lparam)
@@ -384,21 +421,33 @@ class Input(Vision):
 
         Args:
             characters: Characters to emit sequentially.
+
+        Raises:
+            ValueError: If a character cannot be translated into a Win32 key press.
         """
         self._set_window_active(active=True)
+        try:
+            send_message = cast("Any", win32api.SendMessage)
 
-        send_message = cast("Any", win32api.SendMessage)
-        vk_key_scan = cast("Any", win32api.VkKeyScan)
-        map_virtual_key = cast("Any", win32api.MapVirtualKey)
+            for character in characters:
+                vk_code, modifiers = self._resolve_keypress(character)
+                l_param = self._make_vk_lparam(vk_code)
 
-        for character in characters:
-            vk: int = int(vk_key_scan(character))
-            scan_code: int = int(map_virtual_key(ord(character.upper()), 0))
-            l_param: int = (scan_code << 16) | 1
-            send_message(self.hwnd, win32con.WM_KEYDOWN, vk, l_param)
-            send_message(self.hwnd, win32con.WM_CHAR, ord(character), l_param)
-            self._sleep_ms(*_KEY_PRESS_DELAY_MS_RANGE)
-            send_message(self.hwnd, win32con.WM_KEYUP, vk, l_param | _KEYUP_LPARAM_FLAG)
-            self._sleep_ms(*_BETWEEN_KEYS_DELAY_MS_RANGE)
+                for modifier_vk in modifiers:
+                    send_message(self.hwnd, win32con.WM_KEYDOWN, modifier_vk, self._make_vk_lparam(modifier_vk))
 
-        self._set_window_active(active=False)
+                send_message(self.hwnd, win32con.WM_KEYDOWN, vk_code, l_param)
+                send_message(self.hwnd, win32con.WM_CHAR, ord(character), l_param)
+                self._sleep_ms(*_KEY_PRESS_DELAY_MS_RANGE)
+
+                send_message(self.hwnd, win32con.WM_KEYUP, vk_code, l_param | _KEYUP_LPARAM_FLAG)
+                for modifier_vk in reversed(modifiers):
+                    send_message(
+                        self.hwnd,
+                        win32con.WM_KEYUP,
+                        modifier_vk,
+                        self._make_vk_lparam(modifier_vk, keyup=True),
+                    )
+                self._sleep_ms(*_BETWEEN_KEYS_DELAY_MS_RANGE)
+        finally:
+            self._set_window_active(active=False)

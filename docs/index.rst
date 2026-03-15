@@ -32,30 +32,48 @@ Features
 Installation
 ------------
 
-.. code-block:: bash
+AutoCV is not published on PyPI. Install from source:
 
-   pip install autocv
+.. code-block:: powershell
 
-OCR requires PaddlePaddle; install one of the extras:
+   git clone https://github.com/mohanz1/autocv.git
+   cd autocv
+   uv sync --locked --no-sources --group dev
 
-.. code-block:: bash
+OCR support is optional and requires extra dependencies:
 
-   pip install "autocv[paddle-cpu]"
-   # or (Windows x64)
-   pip install "autocv[paddle-gpu]"
+.. code-block:: powershell
+
+   python scripts/install_ocr.py --backend cpu
+   # or on Windows x64 with GPU support:
+   python scripts/install_ocr.py --backend gpu
 
 Requirements
 ------------
 
 - Windows (AutoCV uses ``pywin32`` for capture/input)
-- Python 3.10+
+- Python 3.11+
 
 OCR Notes
 ---------
 
 The first call to :meth:`~autocv.core.vision.Vision.get_text` may download OCR models and can require network access.
-If your environment blocks PaddleOCR model-host checks, set ``DISABLE_MODEL_SOURCE_CHECK=True`` before importing/using
-AutoCV, or pass ``disable_model_source_check=True`` when constructing :class:`~autocv.core.vision.Vision`.
+If your environment blocks PaddleOCR model-host checks, set
+``PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK=True`` before importing/using AutoCV, or pass
+``disable_model_source_check=True`` when constructing :class:`~autocv.core.vision.Vision`.
+
+Interactive Tool Notes
+----------------------
+
+``AutoCV.image_picker()`` preserves the historical ``(image, rect)`` return shape, where ``rect`` is the full target
+window bounds. New code that needs the actual selected ROI should use
+:meth:`~autocv.autocv.AutoCV.image_picker_capture` and read ``selection_rect``.
+
+For Windows-side regression checks after capture/UI changes, run:
+
+.. code-block:: powershell
+
+   python scripts/windows_smoke_test.py --exercise-cursor
 
 Reading the Documentation
 -------------------------
@@ -85,7 +103,7 @@ Example
    autocv.antigcp()
 
    autocv.refresh()
-
-   contour = autocv.find_contours((0, 255, 0), tolerance=50, min_area=50).first()
-   autocv.move_mouse(*contour.random_point())
-   autocv.click_mouse()
+   points = autocv.find_color((0, 255, 0), tolerance=50)
+   if points:
+       autocv.move_mouse(*points[0])
+       autocv.click_mouse()

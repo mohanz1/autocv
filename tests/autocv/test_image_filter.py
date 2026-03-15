@@ -1,13 +1,27 @@
+from __future__ import annotations
+
+from unittest.mock import MagicMock, patch
+
 import numpy as np
 import pytest
-from unittest.mock import patch, MagicMock
-from autocv.image_filter import ImageFilter
+
+from autocv.image_filter import FilterEngine, ImageFilter, _apply_channel_offset
 from autocv.models import FilterSettings
 
 
 @pytest.fixture
 def dummy_image():
     return np.ones((100, 100, 3), dtype=np.uint8) * 255
+
+
+def test_apply_channel_offset_saturates_high_and_low():
+    channel = np.array([[250, 5]], dtype=np.uint8)
+
+    raised = _apply_channel_offset(channel, 10)
+    lowered = _apply_channel_offset(channel, -10)
+
+    assert np.array_equal(raised, np.array([[255, 15]], dtype=np.uint8))
+    assert np.array_equal(lowered, np.array([[240, 0]], dtype=np.uint8))
 
 
 @patch("autocv.image_filter.cv.getTrackbarPos", return_value=0)
@@ -106,3 +120,8 @@ def test_ensure_engine_raises_when_missing_image():
     f = ImageFilter.__new__(ImageFilter)
     with pytest.raises(ValueError, match="requires an image"):
         f._ensure_engine()
+
+
+def test_filter_engine_rejects_non_color_image():
+    with pytest.raises(ValueError, match="requires a BGR image"):
+        FilterEngine(np.zeros((10, 10), dtype=np.uint8))

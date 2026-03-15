@@ -28,6 +28,9 @@ def test_calculate_median_difference_handles_mismatch_and_mask():
     mask_one = np.array([[1, 0], [0, 0]], dtype=np.uint8)
     assert Vision._calculate_median_difference(img1, img2, mask=mask_one) == 10
 
+    bad_mask = np.zeros((1, 1), dtype=np.uint8)
+    assert Vision._calculate_median_difference(img1, img2, mask=bad_mask) == -1
+
 
 def test_erode_and_dilate_modify_backbuffer(autocv):
     autocv.opencv_image = np.zeros((5, 5, 3), dtype=np.uint8)
@@ -76,6 +79,26 @@ def test_perform_template_matching_ignores_infinite_results():
         assert int(mask[0, 0]) == 1
 
 
+def test_convert_to_grayscale_accepts_grayscale_main_image():
+    main = np.zeros((2, 2), dtype=np.uint8)
+    sub = np.zeros((1, 1, 3), dtype=np.uint8)
+
+    main_gray, sub_gray = Vision._convert_to_grayscale(main, sub)
+
+    assert main_gray.shape == (2, 2)
+    assert sub_gray.shape == (1, 1)
+
+
+def test_prepare_images_for_median_difference_normalizes_mixed_color_spaces():
+    main = np.zeros((2, 2), dtype=np.uint8)
+    sub = np.zeros((2, 2, 3), dtype=np.uint8)
+
+    diff_main, diff_sub = Vision._prepare_images_for_median_difference(main, sub)
+
+    assert diff_main.shape == (2, 2)
+    assert diff_sub.shape == (2, 2)
+
+
 def test_process_matching_results_applies_offsets_and_tolerance(autocv):
     main = np.zeros((3, 3, 3), dtype=np.uint8)
     sub = np.zeros((1, 1, 3), dtype=np.uint8)
@@ -89,12 +112,101 @@ def test_process_matching_results_applies_offsets_and_tolerance(autocv):
         assert rects == []
 
 
+def test_process_matching_results_keeps_equal_median_tolerance(autocv):
+    main = np.zeros((1, 1, 3), dtype=np.uint8)
+    sub = np.zeros((1, 1, 3), dtype=np.uint8)
+    res = np.array([[1]], dtype=np.uint8)
+
+    with patch.object(AutoCV, "_calculate_median_difference", return_value=5):
+        rects = autocv._process_matching_results(res, main, sub, mask=None, rect=None, median_tolerance=5)
+
+    assert rects == [(0, 0, 1, 1)]
+
+
 def test_group_and_convert_to_shape_list_handles_empty_and_grouped():
     assert Vision._group_and_convert_to_shape_list([]) == []
 
     with patch("autocv.core.vision.cv.groupRectangles", return_value=(np.array([[1, 2, 3, 4]]), None)):
         grouped = Vision._group_and_convert_to_shape_list([(1, 2, 3, 4)])
         assert grouped == [(1, 2, 3, 4)]
+
+
+def test_get_dominant_color_rejects_non_color_image():
+    with pytest.raises(ValueError, match="3-channel BGR image"):
+        Vision._get_dominant_color(np.zeros((2, 2), dtype=np.uint8))
+
+
+def test_get_color_bounds_clamps_values():
+    lower, upper = Vision._get_color_bounds((5, 10, 250), tolerance=20)
+
+    assert lower.tolist() == [0, 0, 230]
+    assert upper.tolist() == [25, 30, 255]
+
+
+def test_get_pixel_counts_counts_inside_and_outside_region(autocv):
+    autocv.opencv_image = np.zeros((2, 2, 3), dtype=np.uint8)
+    autocv.opencv_image[0, 0] = [10, 20, 30]
+    autocv.opencv_image[1, 1] = [10, 20, 30]
+    cropped = autocv.opencv_image[:1, :1]
+    lower = np.array([10, 20, 30], dtype=np.uint8)
+    upper = np.array([10, 20, 30], dtype=np.uint8)
+
+    pixel_count, outside_pixel_count = autocv._get_pixel_counts(cropped, lower, upper)
+
+    assert pixel_count == 1
+    assert outside_pixel_count == 1
+
+
+def test_find_best_color_match_returns_rgb_and_best_tolerance(autocv):
+    autocv.opencv_image = np.zeros((2, 2, 3), dtype=np.uint8)
+    cropped = np.zeros((1, 1, 3), dtype=np.uint8)
+
+    with patch.object(AutoCV, "_get_pixel_counts", side_effect=[(1, 3), (1, 0), (0, 0)]):
+        color, tolerance = autocv._find_best_color_match(cropped, (10, 20, 30), initial_tolerance=2, tolerance_step=1)
+
+    assert color == (30, 20, 10)
+    assert tolerance == 1
+
+
+def test_find_best_color_match_validates_inputs(autocv):
+    autocv.opencv_image = np.zeros((2, 2, 3), dtype=np.uint8)
+
+    with pytest.raises(ValueError, match="must not be empty"):
+        autocv._find_best_color_match(np.zeros((0, 0, 3), dtype=np.uint8), (1, 2, 3), 1, 1)
+
+    with pytest.raises(ValueError, match="non-negative"):
+        autocv._find_best_color_match(np.zeros((1, 1, 3), dtype=np.uint8), (1, 2, 3), -1, 1)
+
+    with pytest.raises(ValueError, match=">= 1"):
+        autocv._find_best_color_match(np.zeros((1, 1, 3), dtype=np.uint8), (1, 2, 3), 1, 0)
+
+
+def test_maximize_color_match_validates_inputs(autocv):
+    with pytest.raises(ValueError, match="non-negative"):
+        autocv.maximize_color_match((0, 0, 1, 1), initial_tolerance=-1)
+
+    with pytest.raises(ValueError, match=">= 1"):
+        autocv.maximize_color_match((0, 0, 1, 1), tolerance_step=0)
+
+
+def test_find_image_returns_empty_when_template_is_larger(autocv):
+    autocv.opencv_image = np.zeros((2, 2, 3), dtype=np.uint8)
+    sub_image = np.zeros((3, 3, 3), dtype=np.uint8)
+
+    assert autocv.find_image(sub_image) == []
+
+
+def test_find_image_median_tolerance_supports_grayscale_main_image(autocv):
+    autocv.opencv_image = np.zeros((3, 3), dtype=np.uint8)
+    sub_image = np.zeros((1, 1, 3), dtype=np.uint8)
+
+    with (
+        patch.object(AutoCV, "_perform_template_matching", return_value=np.array([[1]], dtype=np.uint8)),
+        patch.object(AutoCV, "_group_and_convert_to_shape_list", side_effect=lambda rects: rects),
+    ):
+        rects = autocv.find_image(sub_image, median_tolerance=0)
+
+    assert rects == [(0, 0, 1, 1)]
 
 
 def test_find_contours_offsets_results(autocv):
@@ -136,3 +248,21 @@ def test_draw_helpers_and_filter_colors(autocv):
 
     autocv.filter_colors((0, 0, 0))
     assert autocv.opencv_image.ndim == 2
+
+
+def test_draw_points_ignores_out_of_bounds_points(autocv):
+    autocv.opencv_image = np.zeros((4, 4, 3), dtype=np.uint8)
+
+    autocv.draw_points([(-1, 0), (1, 1), (99, 99)], color=(255, 0, 0))
+
+    assert autocv.opencv_image[1, 1].tolist() == [0, 0, 255]
+    assert not np.any(autocv.opencv_image[0, 3])
+
+
+def test_draw_contours_ignores_empty_sequence(autocv):
+    autocv.opencv_image = np.zeros((4, 4, 3), dtype=np.uint8)
+
+    with patch("autocv.core.vision.cv.drawContours") as mock_draw_contours:
+        autocv.draw_contours([])
+
+    mock_draw_contours.assert_not_called()

@@ -44,6 +44,12 @@ def test_controller_titles_attach_and_add_sample(mock_autocv_cls):
 
     controller.add_sample(10, 20, (1, 2, 3))
     assert controller.state.pixels[-1] == (10, 20, 3, 2, 1)
+    controller.refresh_frame()
+    mock_autocv.refresh.assert_called_once_with()
+    assert controller.frame is mock_autocv.opencv_image
+
+    controller.remove_samples({0})
+    assert controller.state.pixels == []
 
 
 @patch("autocv.auto_color_aid.AutoCV")
@@ -60,6 +66,21 @@ def test_controller_draw_markers_best_only(mock_autocv_cls):
 
     mock_autocv.find_color.assert_called_once_with((10, 20, 30), tolerance=5)
     mock_autocv.draw_points.assert_called_once_with([(1, 2)])
+
+
+@patch("autocv.auto_color_aid.AutoCV")
+def test_controller_draw_markers_best_only_skips_empty_matches(mock_autocv_cls):
+    mock_autocv = mock_autocv_cls.return_value
+    mock_autocv.find_color.return_value = []
+
+    controller = AutoColorAidController()
+    controller.state.pixels = [(0, 0, 10, 20, 30)]
+    controller.state.best_color = (10, 20, 30)
+    controller.state.best_tolerance = 5
+
+    controller.draw_markers(mark_best_only=True)
+
+    mock_autocv.draw_points.assert_not_called()
 
 
 @patch("autocv.auto_color_aid.AutoCV")

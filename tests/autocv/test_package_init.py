@@ -1,27 +1,39 @@
+from __future__ import annotations
+
 import ctypes
 import importlib
 import platform
-import runpy
+import sys
 import types
-from pathlib import Path
-
-import pytest
 from unittest.mock import MagicMock
 
-import autocv
-
-_PACKAGE_ROOT = Path(__file__).resolve().parents[2]
-_AUTO_CV_INIT = _PACKAGE_ROOT / "autocv" / "__init__.py"
+import pytest
 
 
-def test_import_non_windows_raises(monkeypatch):
+def _reload_autocv() -> object:
+    module = importlib.import_module("autocv")
+    return importlib.reload(module)
+
+
+def test_import_non_windows_succeeds(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(platform, "system", lambda: "Linux")
-
-    with pytest.raises(RuntimeError):
-        runpy.run_path(str(_AUTO_CV_INIT))
+    _reload_autocv()
 
 
-def test_import_windows_10_sets_process_dpi_awareness(monkeypatch):
+def test_import_does_not_eager_import_heavy_modules(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(platform, "system", lambda: "Linux")
+    sys.modules.pop("autocv.autocv", None)
+    sys.modules.pop("autocv.auto_color_aid", None)
+
+    module = _reload_autocv()
+    assert "autocv.autocv" not in sys.modules
+    assert "autocv.auto_color_aid" not in sys.modules
+
+    _ = module.__version__
+    assert "autocv.autocv" not in sys.modules
+
+
+def test_import_windows_10_sets_process_dpi_awareness(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(platform, "system", lambda: "Windows")
     monkeypatch.setattr(platform, "release", lambda: "10")
 
@@ -30,13 +42,13 @@ def test_import_windows_10_sets_process_dpi_awareness(monkeypatch):
     windll = types.SimpleNamespace(shcore=shcore, user32=user32)
     monkeypatch.setattr(ctypes, "windll", windll, raising=False)
 
-    importlib.reload(autocv)
+    _reload_autocv()
 
     shcore.SetProcessDpiAwareness.assert_called_once_with(2)
     user32.SetProcessDPIAware.assert_not_called()
 
 
-def test_import_windows_other_sets_process_dpi_aware(monkeypatch):
+def test_import_windows_other_sets_process_dpi_aware(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(platform, "system", lambda: "Windows")
     monkeypatch.setattr(platform, "release", lambda: "7")
 
@@ -45,7 +57,7 @@ def test_import_windows_other_sets_process_dpi_aware(monkeypatch):
     windll = types.SimpleNamespace(shcore=shcore, user32=user32)
     monkeypatch.setattr(ctypes, "windll", windll, raising=False)
 
-    importlib.reload(autocv)
+    _reload_autocv()
 
     user32.SetProcessDPIAware.assert_called_once_with()
     shcore.SetProcessDpiAwareness.assert_not_called()

@@ -11,7 +11,7 @@ __all__ = ("ColorPicker",)
 
 from pathlib import Path
 from tkinter import NW, Canvas, Tk, Toplevel
-from typing import Final, TypeAlias
+from typing import Final, Self
 
 import cv2 as cv
 import numpy as np
@@ -21,19 +21,14 @@ import win32con
 import win32gui
 from PIL import Image, ImageDraw, ImageFont, ImageTk
 from PIL.ImageTk import PhotoImage
-from typing_extensions import Self
 
 from . import constants
 from .core import Vision
+from .models import InvalidHandleError
 
 ImageArray = npt.NDArray[np.uint8]
 Point = tuple[int, int]
 Color = tuple[int, int, int]
-
-# Pyright can struggle to infer NumPy-derived scalar types in strict mode; this
-# helper keeps the mean calculation in plain Python to preserve a concrete
-# `tuple[int, int, int]` result.
-ColorTotals: TypeAlias = tuple[int, int, int]
 
 # Constants for sampling and magnification.
 PIXELS: Final[int] = constants.PIXEL_RADIUS
@@ -41,8 +36,46 @@ ZOOM: Final[int] = constants.PIXEL_ZOOM
 REFRESH_DELAY_MS: Final[int] = constants.REFRESH_DELAY_MS
 _DEFAULT_CANVAS_COLOR: Final[int] = constants.FALLBACK_COLOR
 RGB_CHANNELS: Final[int] = 3
+COLOR_IMAGE_NDIMS: Final[int] = 3
 _FONT_PATH: Final[Path] = Path(__file__).parent / "data" / "Helvetica.ttf"
 _FONT_SIZE: Final[int] = 8
+
+
+def _rgb_to_inverted_hex(color: Color) -> str:
+    """Return an inverted RGB value encoded as a ``#rrggbb`` string."""
+    r, g, b = color
+    inv_r, inv_g, inv_b = (255 - r, 255 - g, 255 - b)
+    return f"#{inv_r:02x}{inv_g:02x}{inv_b:02x}"
+
+
+def _mean_patch_rgb(cropped_image: ImageArray) -> Color:
+    """Return the floor-mean RGB colour of a patch."""
+    if cropped_image.size == 0:
+        return 0, 0, 0
+
+    if cropped_image.ndim != COLOR_IMAGE_NDIMS or cropped_image.shape[-1] != RGB_CHANNELS:
+        msg = f"Expected an RGB patch with {RGB_CHANNELS} channels."
+        raise ValueError(msg)
+
+    mean_channels = cropped_image.reshape(-1, RGB_CHANNELS).mean(axis=0)
+    mean_r, mean_g, mean_b = (int(channel) for channel in mean_channels)
+    return mean_r, mean_g, mean_b
+
+
+def _is_rgb_frame(frame: ImageArray) -> bool:
+    """Return ``True`` when ``frame`` is a 3-channel RGB or BGR image."""
+    return frame.ndim == COLOR_IMAGE_NDIMS and frame.shape[-1] == RGB_CHANNELS
+
+
+def _frame_contains_point(frame: ImageArray, x: int, y: int) -> bool:
+    """Return whether ``frame`` contains an RGB pixel at ``(x, y)``."""
+    return _is_rgb_frame(frame) and 0 <= y < frame.shape[0] and 0 <= x < frame.shape[1]
+
+
+def _frame_pixel_to_rgb(frame: ImageArray, x: int, y: int) -> Color:
+    """Return the RGB color stored at ``(x, y)`` in a BGR frame."""
+    b, g, r = frame[y, x]
+    return int(r), int(g), int(b)
 
 
 class ColorPickerController:
@@ -56,18 +89,21 @@ class ColorPickerController:
     def capture_cursor_patch(self) -> tuple[ImageArray, int, int, Point]:
         """Capture a small patch around the current cursor; fall back to default canvas when out of bounds."""
         cursor_pos = win32gui.GetCursorPos()
-        x, y = win32gui.ScreenToClient(self.hwnd, cursor_pos)
+        try:
+            x, y = win32gui.ScreenToClient(self.hwnd, cursor_pos)
+            self.vision.refresh()
+        except (InvalidHandleError, win32gui.error):
+            return self.default_canvas, -1, -1, cursor_pos
 
-        self.vision.refresh()
         frame = self.vision.opencv_image
-        if frame.size == 0:
+        if frame.size == 0 or not _is_rgb_frame(frame):
             return self.default_canvas, x, y, cursor_pos
 
-        if x < 0 or y < 0:
+        if not _frame_contains_point(frame, x, y):
             return self.default_canvas, x, y, cursor_pos
 
         cropped = frame[y - PIXELS : y + PIXELS + 1, x - PIXELS : x + PIXELS + 1, ::-1]
-        if cropped.size == 0:
+        if cropped.shape != self.default_canvas.shape:
             return self.default_canvas, x, y, cursor_pos
         return cropped, x, y, cursor_pos
 
@@ -112,7 +148,11 @@ class ColorPicker:
             _DEFAULT_CANVAS_COLOR,
             dtype=np.uint8,
         )
-        self._font = ImageFont.truetype(str(_FONT_PATH), _FONT_SIZE)
+        self._font: ImageFont.FreeTypeFont | ImageFont.ImageFont
+        try:
+            self._font = ImageFont.truetype(str(_FONT_PATH), _FONT_SIZE)
+        except OSError:
+            self._font = ImageFont.load_default()
 
         # Controller encapsulating capture logic.
         self.controller = ColorPickerController(hwnd, self.default_canvas)
@@ -199,16 +239,14 @@ class ColorPicker:
             Image.Image: Updated image with cursor coordinates drawn.
         """
         draw = ImageDraw.Draw(img)
-        try:
-            color = self.controller.frame[y + PIXELS, x, ::-1]
-        except IndexError:
-            color = np.zeros(3, dtype=np.uint8)
-        inverse_color = 255 - color
-        hex_color = f"#{inverse_color[0]:02x}{inverse_color[1]:02x}{inverse_color[2]:02x}"
+        frame = self.controller.frame
+        sample_y = y + PIXELS
+        text_color = _frame_pixel_to_rgb(frame, x, sample_y) if _frame_contains_point(frame, x, sample_y) else (0, 0, 0)
+
         draw.text(
             (img.width // 2, img.height - ZOOM // 2),
             f"{x},{y}",
-            fill=hex_color,
+            fill=_rgb_to_inverted_hex(text_color),
             font=self._font,
             anchor="mm",
         )
@@ -222,28 +260,6 @@ class ColorPicker:
         Args:
             cropped_image: Cropped image around the cursor.
         """
-        if cropped_image.size == 0:
-            mean_r, mean_g, mean_b = (0, 0, 0)
-        else:
-            height, width, channels = cropped_image.shape
-            if channels != RGB_CHANNELS:
-                msg = f"Expected an RGB patch with {RGB_CHANNELS} channels."
-                raise ValueError(msg)
-            total_r = 0
-            total_g = 0
-            total_b = 0
-            for row in range(height):
-                for col in range(width):
-                    r_i, g_i, b_i = (int(v) for v in cropped_image[row, col])
-                    total_r += r_i
-                    total_g += g_i
-                    total_b += b_i
-
-            count = height * width
-            mean_r, mean_g, mean_b = (total_r // count, total_g // count, total_b // count)
-
-        inv_r, inv_g, inv_b = (255 - mean_r, 255 - mean_g, 255 - mean_b)
-        hex_color = f"#{inv_r:02x}{inv_g:02x}{inv_b:02x}"
         rect_pos = PIXELS * ZOOM
         self.snip_surface.create_rectangle(
             rect_pos,
@@ -252,7 +268,7 @@ class ColorPicker:
             rect_pos + ZOOM,
             dash=(3, 5),
             tags="center",
-            outline=hex_color,
+            outline=_rgb_to_inverted_hex(_mean_patch_rgb(cropped_image)),
         )
 
     def handle_button_press(self: Self, x: int, y: int) -> None:
@@ -265,12 +281,11 @@ class ColorPicker:
             x: X-coordinate of the picked pixel.
             y: Y-coordinate of the picked pixel.
         """
-        frame = self.vision.opencv_image
-        if x < 0 or y < 0 or x >= frame.shape[1] or y >= frame.shape[0]:
+        frame = self.controller.frame
+        if not _frame_contains_point(frame, x, y):
             self.result = ((-1, -1, -1), (-1, -1))
         else:
-            r, g, b = (int(v) for v in frame[y, x, ::-1])
-            self.result = ((r, g, b), (x, y))
+            self.result = (_frame_pixel_to_rgb(frame, x, y), (x, y))
 
         self.master_screen.destroy()
         self.master_screen.quit()

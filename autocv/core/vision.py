@@ -20,22 +20,24 @@ __all__ = ("Vision",)
 import os
 import warnings
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Final, Literal, TypedDict, cast
+from importlib import import_module
+from typing import TYPE_CHECKING, Final, Literal, Self, TypedDict, cast
 
 import cv2 as cv
 import numpy as np
 import numpy.typing as npt
 from PIL import Image
-from typing_extensions import Self
-
-from paddleocr import PaddleOCR
 
 from .decorators import check_valid_hwnd, check_valid_image
 from .image_processing import filter_colors
 from .window_capture import WindowCapture
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
+
+    from paddleocr import PaddleOCR
+else:
+    PaddleOCR = None
 
 Color = tuple[int, int, int]  # RGB channel order
 Point = tuple[int, int]
@@ -59,8 +61,10 @@ class OcrTextEntry(TypedDict):
 
 RGBA_CHANNELS: Final[int] = 4
 COLOR_IMAGE_NDIMS: Final[int] = 3
+GRAYSCALE_IMAGE_NDIMS: Final[int] = 2
 RGB_CHANNELS: Final[int] = 3
 MAX_COLOR_VALUE: Final[int] = 255
+POINT_COORDS: Final[int] = 2
 
 
 SpeedPreset = Literal["fast", "balanced", "accurate"]
@@ -123,7 +127,7 @@ class Vision(WindowCapture):
             conf_threshold: OCR recognition confidence threshold between 0 and 1.
             speed: Preset that tunes detection settings.
             disable_model_source_check: When ``True``, disables PaddleOCR/PaddleX model host connectivity checks
-                via the ``DISABLE_MODEL_SOURCE_CHECK`` environment variable.
+                via the ``PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK`` environment variable.
         """
         super().__init__(hwnd)
         self.opencv_image: NDArrayUint8 = np.empty(0, dtype=np.uint8)
@@ -146,7 +150,10 @@ class Vision(WindowCapture):
             return self.api
 
         try:
-            self.api = PaddleOCR(
+            paddle_ocr_cls = PaddleOCR
+            if paddle_ocr_cls is None:
+                paddle_ocr_cls = import_module("paddleocr").PaddleOCR
+            self.api = paddle_ocr_cls(
                 # Core selection
                 lang=self._ocr_lang,
                 ocr_version="PP-OCRv5",
@@ -166,9 +173,12 @@ class Vision(WindowCapture):
                 cpu_threads=_OCR_CPU_THREADS,
             )
         except ModuleNotFoundError as exc:
-            if exc.name != "paddle":
+            if exc.name not in {"paddle", "paddleocr"}:
                 raise
-            msg = "PaddleOCR requires PaddlePaddle. Install `autocv[paddle-cpu]` or `autocv[paddle-gpu]`."
+            msg = (
+                "OCR support requires optional dependencies. "
+                "Install `autocv[ocr,paddle-cpu]` or `autocv[ocr,paddle-gpu]`."
+            )
             raise RuntimeError(msg) from exc
 
         return self.api
@@ -178,6 +188,46 @@ class Vision(WindowCapture):
         """Convert a PIL image to an OpenCV-compatible BGR array."""
         rgb = np.array(image.convert("RGB"), dtype=np.uint8)
         return cast("NDArrayUint8", cv.cvtColor(rgb, cv.COLOR_RGB2BGR))
+
+    @staticmethod
+    def _require_color_image(image: NDArrayUint8, *, caller: str) -> NDArrayUint8:
+        """Return ``image`` when it is a 3-channel BGR array.
+
+        Args:
+            image: Image buffer to validate.
+            caller: Human-readable operation name for error messages.
+
+        Returns:
+            NDArrayUint8: Validated BGR image.
+
+        Raises:
+            ValueError: If ``image`` is not a 3-channel BGR array.
+        """
+        if image.ndim != COLOR_IMAGE_NDIMS or image.shape[-1] != RGB_CHANNELS:
+            msg = f"{caller} requires a 3-channel BGR image."
+            raise ValueError(msg)
+        return image
+
+    @staticmethod
+    def _to_grayscale_image(image: NDArrayUint8, *, caller: str) -> NDArrayUint8:
+        """Return ``image`` as a grayscale array.
+
+        Args:
+            image: Image buffer to normalize.
+            caller: Human-readable operation name for error messages.
+
+        Returns:
+            NDArrayUint8: Grayscale image.
+
+        Raises:
+            ValueError: If ``image`` is neither grayscale nor 3-channel BGR.
+        """
+        if image.ndim == GRAYSCALE_IMAGE_NDIMS:
+            return image
+        if image.ndim == COLOR_IMAGE_NDIMS and image.shape[-1] == RGB_CHANNELS:
+            return cast("NDArrayUint8", cv.cvtColor(image, cv.COLOR_BGR2GRAY))
+        msg = f"{caller} requires a grayscale image or a 3-channel BGR image."
+        raise ValueError(msg)
 
     def set_backbuffer(self: Self, image: NDArrayUint8 | Image.Image) -> None:
         """Set the image buffer to the provided NumPy array or PIL Image.
@@ -216,8 +266,13 @@ class Vision(WindowCapture):
 
         Args:
             file_name: Path where the backbuffer snapshot is stored.
+
+        Raises:
+            OSError: If OpenCV cannot write the image to ``file_name``.
         """
-        cv.imwrite(file_name, self.opencv_image)
+        if not cv.imwrite(file_name, self.opencv_image):
+            msg = f"Failed to write backbuffer to {file_name!r}."
+            raise OSError(msg)
 
     @check_valid_hwnd
     @check_valid_image
@@ -235,11 +290,11 @@ class Vision(WindowCapture):
             int: Count of pixels with different intensities between frames.
         """
         current_region = self._crop_image(area, self.opencv_image)
-        current_gray = cv.cvtColor(current_region, cv.COLOR_BGR2GRAY)
+        current_gray = self._to_grayscale_image(current_region, caller="get_pixel_change")
 
         updated_frame = self.capture_frame(persist=False)
         updated_region = self._crop_image(area, updated_frame)
-        updated_gray = cv.cvtColor(updated_region, cv.COLOR_BGR2GRAY)
+        updated_gray = self._to_grayscale_image(updated_region, caller="get_pixel_change")
 
         diff = cv.absdiff(current_gray, updated_gray)
         return int(np.count_nonzero(diff))
@@ -290,6 +345,9 @@ class Vision(WindowCapture):
     def _poly_to_bbox(poly: object) -> tuple[int, int, int, int]:
         """Convert a PaddleOCR polygon into an ``(x_min, y_min, x_max, y_max)`` box."""
         points = np.asarray(poly, dtype=np.int32)
+        if points.ndim != GRAYSCALE_IMAGE_NDIMS or points.shape[0] == 0 or points.shape[1] != POINT_COORDS:
+            msg = "OCR polygon must be a non-empty sequence of x/y pairs."
+            raise ValueError(msg)
         xs = points[:, 0]
         ys = points[:, 1]
         return int(xs.min()), int(ys.min()), int(xs.max()), int(ys.max())
@@ -308,7 +366,9 @@ class Vision(WindowCapture):
         """Normalize PaddleOCR predictions into a single JSON-like dictionary."""
         payload: object = prediction
         json_payload: object | None = getattr(prediction, "json", None)
-        if json_payload is not None:
+        if callable(json_payload):
+            payload = cast("Callable[[], object]", json_payload)()
+        elif json_payload is not None:
             payload = json_payload
         if isinstance(payload, list):
             payload_list = cast("list[object]", payload)
@@ -320,10 +380,7 @@ class Vision(WindowCapture):
     @staticmethod
     def _prepare_ocr_input(image: NDArrayUint8) -> NDArrayUint8:
         """Preprocess an image for PaddleOCR inference."""
-        if image.ndim == COLOR_IMAGE_NDIMS and image.shape[-1] == RGB_CHANNELS:
-            gray: NDArrayUint8 = cast("NDArrayUint8", cv.cvtColor(image, cv.COLOR_BGR2GRAY))
-        else:
-            gray = image
+        gray = Vision._to_grayscale_image(image, caller="OCR preprocessing")
 
         gray = cast(
             "NDArrayUint8",
@@ -341,6 +398,28 @@ class Vision(WindowCapture):
         )
         gray = cast("NDArrayUint8", cv.normalize(gray, gray, 0, MAX_COLOR_VALUE, cv.NORM_MINMAX))
         return cast("NDArrayUint8", cv.cvtColor(gray, cv.COLOR_GRAY2BGR))
+
+    @staticmethod
+    def _get_ocr_bbox(
+        *,
+        index: int,
+        rec_boxes: Sequence[Sequence[float | int]] | None,
+        rec_polys: Sequence[object] | None,
+    ) -> tuple[int, int, int, int] | None:
+        """Return a valid OCR bounding box for ``index`` or ``None`` when the entry is malformed."""
+        if rec_boxes is not None and index < len(rec_boxes):
+            try:
+                return Vision._box_to_bbox(rec_boxes[index])
+            except (IndexError, TypeError, ValueError):
+                pass
+
+        if rec_polys is not None and index < len(rec_polys):
+            try:
+                return Vision._poly_to_bbox(rec_polys[index])
+            except (IndexError, TypeError, ValueError):
+                pass
+
+        return None
 
     @check_valid_image
     def get_text(
@@ -388,12 +467,7 @@ class Vision(WindowCapture):
             if min_confidence is not None and score < min_confidence:
                 continue
 
-            bbox: tuple[int, int, int, int] | None = None
-            if rec_boxes is not None and i < len(rec_boxes):
-                bbox = self._box_to_bbox(rec_boxes[i])
-            elif rec_polys is not None and i < len(rec_polys):
-                bbox = self._poly_to_bbox(rec_polys[i])
-
+            bbox = self._get_ocr_bbox(index=i, rec_boxes=rec_boxes, rec_polys=rec_polys)
             if bbox is None:
                 continue
 
@@ -428,13 +502,11 @@ class Vision(WindowCapture):
             ValueError: Raised when the backbuffer is not a 3-channel BGR image.
             IndexError: If the coordinates are out of bounds.
         """
-        if self.opencv_image.ndim != COLOR_IMAGE_NDIMS or self.opencv_image.shape[-1] != RGB_CHANNELS:
-            msg = "Backbuffer must be a 3-channel BGR image."
-            raise ValueError(msg)
+        image = self._require_color_image(self.opencv_image, caller="get_color")
         x, y = point
-        if not (0 <= x < self.opencv_image.shape[1] and 0 <= y < self.opencv_image.shape[0]):
+        if not (0 <= x < image.shape[1] and 0 <= y < image.shape[0]):
             raise IndexError(point)
-        b, g, r = self.opencv_image[y, x].tolist()
+        b, g, r = image[y, x].tolist()
         return int(r), int(g), int(b)
 
     @check_valid_image
@@ -454,7 +526,7 @@ class Vision(WindowCapture):
         Returns:
             Pixel coordinates in image space that match the colour constraint.
         """
-        image = self._crop_image(rect)
+        image = self._require_color_image(self._crop_image(rect), caller="find_color")
         mask = filter_colors(image, color, tolerance)
         points = np.column_stack(np.where(mask == MAX_COLOR_VALUE)[::-1])
         if points.size == 0:
@@ -490,7 +562,7 @@ class Vision(WindowCapture):
         Returns:
             Average colour in RGB channel order.
         """
-        image = self._crop_image(rect, image)
+        image = self._require_color_image(self._crop_image(rect, image), caller="get_average_color")
         avg_color = cv.mean(image)
         avg_color_bgr: NDArrayInt16
         if isinstance(avg_color, tuple):
@@ -502,6 +574,7 @@ class Vision(WindowCapture):
     @staticmethod
     def _pack_bgr_frame(frame: NDArrayUint8) -> npt.NDArray[np.uint32]:
         """Pack a BGR frame into 24-bit integers for fast uniqueness queries."""
+        frame = Vision._require_color_image(frame, caller="Color frequency analysis")
         pixels_bgr = frame.reshape(-1, RGB_CHANNELS)
         packed = (
             pixels_bgr[:, 0].astype(np.uint32)
@@ -583,7 +656,7 @@ class Vision(WindowCapture):
         Returns:
             Number of pixels matching the specified colour.
         """
-        cropped_image = self._crop_image(rect)
+        cropped_image = self._require_color_image(self._crop_image(rect), caller="get_count_of_color")
         match_mask = filter_colors(cropped_image, color, tolerance or 0)
         return int(np.count_nonzero(match_mask))
 
@@ -620,7 +693,7 @@ class Vision(WindowCapture):
         Returns:
             Median RGB colour inside the region.
         """
-        cropped_image = self._crop_image(rect)
+        cropped_image = self._require_color_image(self._crop_image(rect), caller="get_median_color")
         reshaped_image = cropped_image.reshape(-1, RGB_CHANNELS)
         median_color = np.median(reshaped_image, axis=0).astype(np.uint8)
         b, g, r = median_color.tolist()
@@ -636,6 +709,7 @@ class Vision(WindowCapture):
         Returns:
             Median colour in BGR order.
         """
+        image = Vision._require_color_image(image, caller="maximize_color_match")
         reshaped_image = image.reshape(-1, RGB_CHANNELS)
         return cast("NDArrayUint8", np.median(reshaped_image, axis=0).astype(np.uint8))
 
@@ -780,9 +854,13 @@ class Vision(WindowCapture):
         image2_f = image2.astype(np.float32)
 
         if mask is not None:
-            mask_expanded = mask.astype(bool)[..., None]
-            image1_f = np.where(mask_expanded, image1_f, np.nan)
-            image2_f = np.where(mask_expanded, image2_f, np.nan)
+            if mask.shape != image1.shape[:2]:
+                return -1
+            mask_bool = mask.astype(bool)
+            if image1_f.ndim == COLOR_IMAGE_NDIMS:
+                mask_bool = mask_bool[..., None]
+            image1_f = np.where(mask_bool, image1_f, np.nan)
+            image2_f = np.where(mask_bool, image2_f, np.nan)
 
         diff = np.abs(image1_f - image2_f)
         with warnings.catch_warnings():
@@ -844,9 +922,23 @@ class Vision(WindowCapture):
         image = self._crop_image(rect)
         sub_image_bgr, mask = self._prepare_sub_image(sub_image)
         main_image_gray, sub_image_gray = self._convert_to_grayscale(image, sub_image_bgr)
+        if sub_image_gray.shape[0] > main_image_gray.shape[0] or sub_image_gray.shape[1] > main_image_gray.shape[1]:
+            return []
         res = self._perform_template_matching(main_image_gray, sub_image_gray, mask, confidence)
         rects = self._process_matching_results(res, image, sub_image_bgr, mask, rect, median_tolerance)
         return self._group_and_convert_to_shape_list(rects)
+
+    @staticmethod
+    def _prepare_images_for_median_difference(
+        image1: NDArrayUint8,
+        image2: NDArrayUint8,
+    ) -> tuple[NDArrayUint8, NDArrayUint8]:
+        """Normalize images to comparable shapes for median-difference filtering."""
+        if image1.shape == image2.shape:
+            return image1, image2
+        image1_gray = Vision._to_grayscale_image(image1, caller="find_image median comparison")
+        image2_gray = Vision._to_grayscale_image(image2, caller="find_image median comparison")
+        return image1_gray, image2_gray
 
     @staticmethod
     def _prepare_sub_image(
@@ -896,9 +988,9 @@ class Vision(WindowCapture):
         Returns:
             Grayscale main image and template.
         """
-        main_image_gray = cv.cvtColor(main_image, cv.COLOR_BGR2GRAY)
-        sub_image_gray = cv.cvtColor(sub_image_bgr, cv.COLOR_BGR2GRAY)
-        return cast("NDArrayUint8", main_image_gray), cast("NDArrayUint8", sub_image_gray)
+        main_image_gray = Vision._to_grayscale_image(main_image, caller="find_image")
+        sub_image_gray = Vision._to_grayscale_image(sub_image_bgr, caller="find_image")
+        return main_image_gray, sub_image_gray
 
     @staticmethod
     def _perform_template_matching(
@@ -955,8 +1047,9 @@ class Vision(WindowCapture):
             main_image_region = main_image[y_i : y_i + template_height, x_i : x_i + template_width]
             found_rect = (x_i + offset_x, y_i + offset_y, template_width, template_height)
             if median_tolerance is not None:
-                found_median_diff = self._calculate_median_difference(main_image_region, sub_image_bgr, mask)
-                if found_median_diff < median_tolerance:
+                diff_image, diff_template = self._prepare_images_for_median_difference(main_image_region, sub_image_bgr)
+                found_median_diff = self._calculate_median_difference(diff_image, diff_template, mask)
+                if found_median_diff <= median_tolerance:
                     rects.append(found_rect)
             else:
                 rects.append(found_rect)
@@ -1016,7 +1109,7 @@ class Vision(WindowCapture):
         Returns:
             Contours matching the search criteria.
         """
-        image = self._crop_image(rect)
+        image = self._require_color_image(self._crop_image(rect), caller="find_contours")
         mask: MaskArray = filter_colors(image, color, tolerance)
 
         if close_and_dilate:
@@ -1051,8 +1144,18 @@ class Vision(WindowCapture):
         """
         if not points:
             return
+        image = self._require_color_image(self.opencv_image, caller="draw_points")
         points_arr = np.asarray(points, dtype=np.int64)
-        self.opencv_image[points_arr[:, 1], points_arr[:, 0]] = color[::-1]
+        valid_mask = (
+            (points_arr[:, 0] >= 0)
+            & (points_arr[:, 0] < image.shape[1])
+            & (points_arr[:, 1] >= 0)
+            & (points_arr[:, 1] < image.shape[0])
+        )
+        if not np.any(valid_mask):
+            return
+        valid_points = points_arr[valid_mask]
+        image[valid_points[:, 1], valid_points[:, 0]] = color[::-1]
 
     @check_valid_image
     def draw_contours(
@@ -1066,10 +1169,11 @@ class Vision(WindowCapture):
             contours: Contour(s) as produced by OpenCV.
             color: Drawing colour (RGB). Defaults to red.
         """
+        image = self._require_color_image(self.opencv_image, caller="draw_contours")
         contours_to_draw = [contours] if isinstance(contours, np.ndarray) else list(contours)
         if not contours_to_draw:
             return
-        cv.drawContours(self.opencv_image, cast("list[Contour]", contours_to_draw), -1, color[::-1], 2)
+        cv.drawContours(image, contours_to_draw, -1, color[::-1], 2)
 
     @check_valid_image
     def draw_circle(
@@ -1083,8 +1187,9 @@ class Vision(WindowCapture):
             circle: Circle definition ``(x, y, radius)``.
             color: Drawing colour (RGB). Defaults to red.
         """
+        image = self._require_color_image(self.opencv_image, caller="draw_circle")
         x, y, r = circle
-        cv.circle(self.opencv_image, (x, y), r, color[::-1], 2, cv.LINE_4)
+        cv.circle(image, (x, y), r, color[::-1], 2, cv.LINE_4)
 
     @check_valid_image
     def draw_rectangle(
@@ -1098,8 +1203,9 @@ class Vision(WindowCapture):
             rect: Rectangle specified as ``(x, y, width, height)``.
             color: Drawing colour (RGB). Defaults to red.
         """
+        image = self._require_color_image(self.opencv_image, caller="draw_rectangle")
         x, y, w, h = rect
-        cv.rectangle(self.opencv_image, (x, y), (x + w, y + h), color[::-1], 2, cv.LINE_4)
+        cv.rectangle(image, (x, y), (x + w, y + h), color[::-1], 2, cv.LINE_4)
 
     @check_valid_image
     def filter_colors(
@@ -1117,5 +1223,6 @@ class Vision(WindowCapture):
             keep_original_colors: When ``True``, retain source colours for matching pixels; otherwise replace the
                 backbuffer with a binary mask.
         """
-        filtered_image = filter_colors(self.opencv_image, colors, tolerance, keep_original_colors=keep_original_colors)
+        image = self._require_color_image(self.opencv_image, caller="filter_colors")
+        filtered_image = filter_colors(image, colors, tolerance, keep_original_colors=keep_original_colors)
         self.opencv_image = filtered_image

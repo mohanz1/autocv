@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
+import win32gui
 from unittest.mock import MagicMock, patch
 
 from autocv.core.window_capture import WindowCapture
@@ -42,6 +43,19 @@ def test_get_window_size_and_bounds_to_rect():
         assert wc.get_window_size() == (20, 30)
 
 
+@patch(
+    "autocv.core.window_capture.win32gui.GetWindowRect",
+    side_effect=win32gui.error(1400, "GetWindowRect", "Invalid window handle."),
+)
+def test_get_window_bounds_translates_win32_error_to_invalid_handle(mock_get_rect):
+    wc = WindowCapture(hwnd=9)
+
+    with pytest.raises(InvalidHandleError) as exc_info:
+        wc.get_window_bounds()
+
+    assert exc_info.value.hwnd == 9
+
+
 def test_find_by_title_casefold_and_exact():
     windows = [(1, "Foo Bar"), (2, "Baz")]
     assert WindowCapture._find_by_title("foo", windows, case_insensitive=True) == 1
@@ -73,6 +87,37 @@ def test_get_child_windows_enumerates(mock_get_class, mock_enum):
     wc = WindowCapture(hwnd=1)
     mock_enum.side_effect = lambda hwnd, func, arg: func(1234, arg)
     assert wc.get_child_windows() == [(1234, "Child")]
+
+
+@patch("autocv.core.window_capture.win32gui.EnumChildWindows")
+@patch("autocv.core.window_capture.win32gui.GetClassName", return_value="Child")
+def test_get_child_windows_accepts_explicit_hwnd_when_detached(mock_get_class, mock_enum):
+    wc = WindowCapture()
+    mock_enum.side_effect = lambda hwnd, func, arg: func(4321, arg)
+
+    assert wc.get_child_windows(hwnd=7) == [(4321, "Child")]
+    mock_enum.assert_called_once()
+    assert mock_enum.call_args.args[0] == 7
+
+
+def test_get_child_windows_requires_attached_or_explicit_hwnd():
+    wc = WindowCapture()
+
+    with pytest.raises(InvalidHandleError):
+        wc.get_child_windows()
+
+
+@patch(
+    "autocv.core.window_capture.win32gui.EnumChildWindows",
+    side_effect=win32gui.error(1400, "EnumChildWindows", "Invalid window handle."),
+)
+def test_get_child_windows_translates_win32_error_to_invalid_handle(mock_enum):
+    wc = WindowCapture(hwnd=7)
+
+    with pytest.raises(InvalidHandleError) as exc_info:
+        wc.get_child_windows()
+
+    assert exc_info.value.hwnd == 7
 
 
 @patch("autocv.core.window_capture.win32gui.IsWindowVisible", return_value=False)
@@ -168,7 +213,9 @@ def test_bitblt_to_array_returns_bgr_and_cleans_up():
     mem_dc = MagicMock()
     bmp_dc = MagicMock()
     bitmap = MagicMock()
+    previous_bitmap = object()
     mem_dc.CreateCompatibleDC.return_value = bmp_dc
+    bmp_dc.SelectObject.return_value = previous_bitmap
     bitmap.GetBitmapBits.return_value = bytes(2 * 3 * 4)
     bitmap.GetHandle.return_value = 999
 
@@ -183,6 +230,8 @@ def test_bitblt_to_array_returns_bgr_and_cleans_up():
 
     assert frame.shape == (3, 2, 3)
     assert frame.flags.c_contiguous
+    bmp_dc.SelectObject.assert_any_call(bitmap)
+    bmp_dc.SelectObject.assert_any_call(previous_bitmap)
     bmp_dc.DeleteDC.assert_called_once()
     mem_dc.DeleteDC.assert_called_once()
     mock_release.assert_called_once_with(1, 123)

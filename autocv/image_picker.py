@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
-__all__ = ("ImagePicker",)
+__all__ = ("ImagePicker", "ImagePickerCapture")
 
 import logging
-from tkinter import BOTH, YES, Canvas, Event, Frame, Tk, Toplevel
-from typing import TYPE_CHECKING, Final, Protocol
+from dataclasses import dataclass
+from tkinter import BOTH, YES, Canvas, Frame, Tk, Toplevel
+from typing import TYPE_CHECKING, Final, Protocol, Self
 
 import win32con
 import win32gui
-from typing_extensions import Self
 
 from .core import Vision
 from .models import InvalidHandleError
@@ -30,6 +30,23 @@ _DEFAULT_GEOM_PADDING: Final[int] = 2
 
 logger = logging.getLogger(__name__)
 
+Bounds = tuple[int, int, int, int]
+
+
+@dataclass(frozen=True, slots=True)
+class ImagePickerCapture:
+    """Structured result returned by the image picker.
+
+    Attributes:
+        image: Cropped ROI captured from the target window, or ``None`` when cancelled.
+        selection_rect: Selected ROI bounds as ``(x, y, width, height)`` in target-window coordinates.
+        window_rect: Full target window bounds as ``(x, y, width, height)``.
+    """
+
+    image: npt.NDArray[np.uint8] | None
+    selection_rect: Bounds | None
+    window_rect: Bounds | None
+
 
 class ImagePickerController:
     """Encapsulate window attachment and capture for region selection."""
@@ -46,7 +63,10 @@ class ImagePickerController:
 
     def window_rect(self) -> tuple[int, int, int, int]:
         """Return the window rectangle (x1, y1, x2, y2)."""
-        return win32gui.GetWindowRect(self.hwnd)
+        try:
+            return win32gui.GetWindowRect(self.hwnd)
+        except win32gui.error as exc:
+            raise InvalidHandleError(self.hwnd) from exc
 
     def capture_region(self, x1: int, y1: int, x2: int, y2: int) -> npt.NDArray[np.uint8]:
         """Capture the region defined in client coordinates."""
@@ -73,7 +93,13 @@ class CanvasEvent(Protocol):
 
 
 class ImagePicker:
-    """Interactive overlay for selecting and capturing a region of a window."""
+    """Interactive overlay for selecting and capturing a region of a window.
+
+    Attributes:
+        result: Cropped ROI captured from the window, or ``None`` when cancelled.
+        selection_rect: Selected ROI bounds as ``(x, y, width, height)``.
+        rect: Full target window bounds preserved for backwards compatibility.
+    """
 
     def __init__(self: Self, hwnd: int, master: Tk) -> None:
         """Initialize the ImagePicker and set up the selection overlay.
@@ -92,6 +118,7 @@ class ImagePicker:
         self.current_y: int = -1
         self.result: npt.NDArray[np.uint8] | None = None
         self.rect: tuple[int, int, int, int] | None = None
+        self.selection_rect: tuple[int, int, int, int] | None = None
         self._rect_id: int | None = None
 
         self.master.title("AutoCV Image Picker")
@@ -142,10 +169,9 @@ class ImagePicker:
         """
         self.start_x = event.x
         self.start_y = event.y
-        # Create an initial rectangle with minimal size
-        self._rect_id = self.snip_surface.create_rectangle(
-            0, 0, 1, 1, outline=_RECT_OUTLINE, width=_RECT_WIDTH, fill=_OVERLAY_COLOR
-        )
+        self.current_x = event.x
+        self.current_y = event.y
+        self._update_selection_rectangle(event.x, event.y)
 
     def on_snip_drag(self: Self, event: CanvasEvent) -> None:
         """Update the selection rectangle as the mouse is dragged.
@@ -154,9 +180,22 @@ class ImagePicker:
             event: Tkinter event containing the current mouse coordinates.
         """
         self.current_x, self.current_y = event.x, event.y
+        self._update_selection_rectangle(event.x, event.y)
+
+    def _update_selection_rectangle(self: Self, x: int, y: int) -> None:
+        """Create or update the selection rectangle for the current drag position."""
         if self._rect_id is None:
-            self._rect_id = 1
-        self.snip_surface.coords(self._rect_id, self.start_x, self.start_y, self.current_x, self.current_y)
+            created_rect = self.snip_surface.create_rectangle(
+                self.start_x,
+                self.start_y,
+                x,
+                y,
+                outline=_RECT_OUTLINE,
+                width=_RECT_WIDTH,
+                fill=_OVERLAY_COLOR,
+            )
+            self._rect_id = created_rect if isinstance(created_rect, int) else 1
+        self.snip_surface.coords(self._rect_id, self.start_x, self.start_y, x, y)
 
     def take_bounded_screenshot(self: Self, x1: float, y1: float, x2: float, y2: float) -> None:
         """Capture a screenshot of the selected region of the window.
@@ -172,15 +211,24 @@ class ImagePicker:
         """
         x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
         self.result = self.controller.capture_region(x1, y1, x2, y2)
-        # Store full window dimensions as a fallback or for additional context.
+        self.selection_rect = (x1, y1, x2 - x1, y2 - y1)
         self.rect = self.controller.full_rect_as_bounds()
 
-    def on_button_release(self: Self, _: Event[Canvas]) -> None:
+    @property
+    def capture(self: Self) -> ImagePickerCapture:
+        """Return the current image-picker result in structured form."""
+        return ImagePickerCapture(image=self.result, selection_rect=self.selection_rect, window_rect=self.rect)
+
+    def on_button_release(self: Self, event: CanvasEvent) -> None:
         """Finalize the region selection and capture the screenshot.
 
         Once the left mouse button is released, the selected region is determined from the recorded
         coordinates, a screenshot is taken, and the overlay window is closed.
         """
+        event_x = getattr(event, "x", self.current_x)
+        event_y = getattr(event, "y", self.current_y)
+        self.current_x = event_x if isinstance(event_x, int) else self.current_x
+        self.current_y = event_y if isinstance(event_y, int) else self.current_y
         x1 = min(self.start_x, self.current_x)
         y1 = min(self.start_y, self.current_y)
         x2 = max(self.start_x, self.current_x)

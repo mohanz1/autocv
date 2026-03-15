@@ -4,18 +4,19 @@ from __future__ import annotations
 
 __all__ = ("ImageFilter",)
 
-from typing import Final, cast
+from typing import Final, Self, cast
 
 import cv2 as cv
 import numpy as np
 import numpy.typing as npt
-from typing_extensions import Self
 
 from .models import FilterSettings
 
 ESC_CODE: Final[int] = 27
 WINDOW_FILTER: Final[str] = "Image Filter"
 WINDOW_TRACKBARS: Final[str] = "Trackbars"
+COLOR_IMAGE_NDIMS: Final[int] = 3
+BGR_CHANNELS: Final[int] = 3
 
 ImageArray = npt.NDArray[np.uint8]
 
@@ -25,12 +26,26 @@ def nothing(_: int) -> None:
     return
 
 
+def _require_color_image(image: ImageArray) -> ImageArray:
+    """Return ``image`` when it is a 3-channel BGR array, otherwise raise ``ValueError``."""
+    if image.ndim != COLOR_IMAGE_NDIMS or image.shape[-1] != BGR_CHANNELS:
+        msg = "ImageFilter requires a BGR image with 3 channels."
+        raise ValueError(msg)
+    return image
+
+
+def _apply_channel_offset(channel: ImageArray, delta: int) -> ImageArray:
+    """Apply a signed offset to an HSV channel with saturating uint8 arithmetic."""
+    adjusted = channel.astype(np.int16) + delta
+    return np.clip(adjusted, 0, 255).astype(np.uint8)
+
+
 class FilterEngine:
     """Encapsulate filtering operations based on current settings."""
 
     def __init__(self, image: ImageArray) -> None:
-        self.image = image
-        self.hsv_image = cv.cvtColor(image, cv.COLOR_BGR2HSV)
+        self.image = _require_color_image(image)
+        self.hsv_image = cv.cvtColor(self.image, cv.COLOR_BGR2HSV)
         self.filter_settings = FilterSettings()
 
     def apply(self) -> ImageArray:
@@ -54,16 +69,14 @@ class FilterEngine:
         hsv_mask = cv.inRange(self.hsv_image, lower, upper)
         hsv_filtered = cv.bitwise_and(self.hsv_image, self.hsv_image, mask=hsv_mask)
 
-        hsv_filtered[..., 1] = np.clip(
-            hsv_filtered[..., 1] + self.filter_settings.s_add - self.filter_settings.s_subtract,
-            0,
-            255,
-        ).astype(np.uint8)
-        hsv_filtered[..., 2] = np.clip(
-            hsv_filtered[..., 2] + self.filter_settings.v_add - self.filter_settings.v_subtract,
-            0,
-            255,
-        ).astype(np.uint8)
+        hsv_filtered[..., 1] = _apply_channel_offset(
+            cast("ImageArray", hsv_filtered[..., 1]),
+            self.filter_settings.s_add - self.filter_settings.s_subtract,
+        )
+        hsv_filtered[..., 2] = _apply_channel_offset(
+            cast("ImageArray", hsv_filtered[..., 2]),
+            self.filter_settings.v_add - self.filter_settings.v_subtract,
+        )
 
         bgr_filtered = cv.cvtColor(hsv_filtered, cv.COLOR_HSV2BGR).astype(np.uint8, copy=False)
         return self._apply_morphology(self._apply_canny(bgr_filtered))

@@ -12,9 +12,7 @@ __all__ = (
     "InvalidLengthError",
 )
 
-from typing import Final
-
-from typing_extensions import Self
+from typing import Final, Self
 
 _INVALID_HANDLE_MESSAGE: Final[str] = "Invalid handle: {hwnd}. Please set handle before calling this method."
 _INVALID_IMAGE_MESSAGE: Final[str] = "Invalid image. Please call refresh() before calling this method."

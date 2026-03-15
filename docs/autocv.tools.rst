@@ -23,6 +23,9 @@ ImagePicker
 .. autoclass:: autocv.image_picker.ImagePicker
    :members:
 
+``ImagePicker.rect`` keeps the legacy full-window bounds, while ``ImagePicker.selection_rect`` stores the actual
+selected ROI. For new top-level API usage, prefer :meth:`autocv.autocv.AutoCV.image_picker_capture`.
+
 ImageFilter
 -----------
 

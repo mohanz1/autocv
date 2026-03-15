@@ -3,11 +3,9 @@ name: CI
 on:
   workflow_dispatch:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
-    branches:
-      - main
+    branches: [main]
 
 permissions:
   contents: read
@@ -16,59 +14,56 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  UV_NO_SOURCES: "1"
+
 jobs:
-  changes:
+  lint-type:
+    name: Lint and Type
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: read
-    outputs:
-      source: ${{ steps.filter.outputs.source }}
-      docs: ${{ steps.filter.outputs.docs }}
-      stubs: ${{ steps.filter.outputs.stubs }}
+    timeout-minutes: 15
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
 
-      - name: Detect file changes
-        id: filter
-        uses: dorny/paths-filter@v3
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v7
         with:
-          filters: |
-            source:
-              - 'autocv/**'
-              - 'pipelines/**'
-              - 'tests/**'
-              - 'pyproject.toml'
-              - 'uv.lock'
-            docs:
-              - 'docs/**'
-              - 'public/docs/**'
-            stubs:
-              - 'autocv/**/*.py'
-              - 'autocv/**/*.pyi'
-              - 'pipelines/stubs.nox.py'
-              - 'pyproject.toml'
+          python-version: "3.12"
+          activate-environment: true
+          enable-cache: true
+
+      - name: Sync dependencies
+        run: uv sync --locked --group lint --group type
+
+      - name: Ruff Format
+        run: uv run --no-sync --group lint ruff format --check .
+
+      - name: Ruff Check
+        run: uv run --no-sync --group lint ruff check . --output-format=github
+
+      - name: Mypy
+        run: uv run --no-sync --group type mypy
 
   test:
-    needs: [changes]
-    if: ${{ needs.changes.outputs.source == 'true' || needs.changes.outputs.stubs == 'true' || github.event_name != 'pull_request' }}
+    name: ${{ matrix.job-name }}
     runs-on: windows-latest
-    defaults:
-      run:
-        shell: bash
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12"]
-
+        include:
+          - python-version: "3.11"
+            job-name: Tests (Python 3.11)
+            pytest-command: pytest -q tests
+            upload-coverage: false
+          - python-version: "3.12"
+            job-name: Tests and Coverage (Python 3.12)
+            pytest-command: pytest -q tests --cov=autocv --cov-config=pyproject.toml --cov-report=term --cov-report=xml
+            upload-coverage: true
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
 
       - name: Setup uv
         uses: astral-sh/setup-uv@v7
@@ -76,203 +71,56 @@ jobs:
           python-version: ${{ matrix.python-version }}
           activate-environment: true
           enable-cache: true
-          prune-cache: false
 
-      - name: Test Installation
-        run: |
-          uv pip install .
-          uv pip uninstall autocv
+      - name: Sync dependencies
+        run: uv sync --locked --group test
 
-      - name: Run tests
-        run: |
-          uvx nox -s pytest -- --coverage
-          python scripts/ci/normalize_coverage.py
+      - name: Pytest
+        run: uv run --no-sync --group test ${{ matrix.pytest-command }}
 
-      - name: Upload coverage
-        uses: actions/upload-artifact@v6
+      - name: Upload coverage artifact
+        if: ${{ matrix.upload-coverage }}
+        uses: actions/upload-artifact@v4
         with:
-          name: .coverage.${{ runner.os }}.${{ matrix.python-version }}
-          path: .coverage
-          retention-days: 1
+          name: coverage-xml
+          path: coverage.xml
           if-no-files-found: error
-          include-hidden-files: true
+          retention-days: 7
 
-  upload-coverage:
-    needs: [changes, test]
-    if: ${{ needs.test.result == 'success' }}
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
-      - name: Setup uv
-        uses: astral-sh/setup-uv@v7
-        with:
-          python-version: "3.11"
-          activate-environment: true
-          enable-cache: true
-
-      - name: Download coverage
-        uses: actions/download-artifact@v7
-        with:
-          path: coverages/
-          # Not specifying any name will lead to the download of all available artifacts
-
-      - name: Extract individual coverage files
-        run: |
-          cd coverages
-
-          for coverage_dir in ./.coverage.*; do
-              mv "$coverage_dir/.coverage" "../$coverage_dir"
-              rmdir "$coverage_dir"
-          done
-
-          cd ..
-
-      - name: Combine coverage
-        run: |
-          uv sync --frozen --only-group coverage
-
-          coverage combine
-          coverage xml
-          coverage report
-
-      - name: Upload coverage to codecov
+      - name: Upload coverage to Codecov
+        if: ${{ matrix.upload-coverage }}
         uses: codecov/codecov-action@v5
-
-  linting:
-    needs: [changes]
-    if: ${{ needs.changes.outputs.source == 'true' || github.event_name != 'pull_request' }}
-    runs-on: windows-latest
-    defaults:
-      run:
-        shell: bash
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
         with:
-          fetch-depth: 0
-
-      - name: Setup uv
-        uses: astral-sh/setup-uv@v7
-        with:
-          python-version: "3.11"
-          activate-environment: true
-          enable-cache: true
-          prune-cache: false
-
-      - name: Check stubs
-        if: ${{ needs.changes.outputs.stubs == 'true' }}
-        run: |
-          uvx nox -s generate-stubs
-          if [ "$(git status --short)" ]; then
-            echo "Stubs were not updated accordingly to the changes. Please run 'uvx nox -s generate-stubs' and commit the changes to fix this."
-            git status --short
-            exit 1
-          fi
-
-      - name: Audit
-        if: always() && !cancelled()
-        run: |
-          uvx nox -s audit
-
-      - name: Ty
-        if: always() && !cancelled()
-        run: |
-          uvx nox -s ty -- --output-format=github
-
-      - name: Ruff
-        if: always() && !cancelled()
-        run: |
-          uvx nox -s ruff -- --output-format=github
-
-      - name: Codespell
-        if: always() && !cancelled()
-        run: |
-          uvx nox -s codespell
-
-      - name: Check trailing whitespaces
-        if: always() && !cancelled()
-        run: |
-          uvx nox -s check-trailing-whitespaces
+          files: coverage.xml
+          name: python-${{ matrix.python-version }}
+          fail_ci_if_error: false
 
   docs:
-    needs: [changes]
-    if: ${{ needs.changes.outputs.docs == 'true' || github.event_name != 'pull_request' }}
-    runs-on: windows-latest
-    permissions:
-      contents: write
-    defaults:
-      run:
-        shell: bash
-
+    name: Docs
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
 
       - name: Setup uv
         uses: astral-sh/setup-uv@v7
         with:
+          python-version: "3.12"
           activate-environment: true
-          python-version: 3.12
           enable-cache: true
-          prune-cache: false
 
-      - name: Sphinx build
-        run: |
-          uvx nox -s sphinx
+      - name: Sync dependencies
+        run: uv sync --locked --group docs
 
-      - name: Upload artifacts
+      - name: Sphinx
+        run: uv run --no-sync --group docs sphinx-build -W docs public/docs
+
+      - name: Upload docs artifact
         if: github.event_name == 'pull_request'
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         with:
-          name: docs
+          name: docs-html
           path: public/docs
-
-      - name: Deploy to GitHub Pages
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          publish_branch: docs
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: public/docs
-          force_orphan: true
-
-  auto-merge:
-    needs: [upload-coverage, linting, docs]
-    if: ${{ github.actor == 'dependabot[bot]' }}
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
-      - name: Auto merge
-        uses: ahmadnassri/action-dependabot-auto-merge@v2
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-
-  ci-done:
-    needs: [upload-coverage, linting, docs]
-    if: always() && !cancelled()
-    runs-on: ubuntu-latest
-    steps:
-      - name: Set status based on required jobs
-        env:
-          RESULTS: ${{ join(needs.*.result, ' ') }}
-        run: |
-          for result in $RESULTS; do
-            if [ "$result" != "success" ] && [ "$result" != "skipped" ]; then
-              exit 1
-            fi
-          done
+          if-no-files-found: error
+          retention-days: 7

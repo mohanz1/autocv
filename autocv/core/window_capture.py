@@ -14,14 +14,13 @@ from __future__ import annotations
 
 __all__ = ("WindowCapture",)
 
-from typing import TYPE_CHECKING, Final, TypeAlias
+from typing import TYPE_CHECKING, Final, Self, SupportsIndex, SupportsInt, TypeAlias
 
 import numpy as np
 import numpy.typing as npt
 import win32con
 import win32gui
 import win32ui
-from typing_extensions import Self
 
 from autocv.models import InvalidHandleError
 
@@ -37,6 +36,7 @@ Bounds: TypeAlias = tuple[int, int, int, int]  # left, top, right, bottom
 Rect: TypeAlias = tuple[int, int, int, int]  # x, y, width, height
 Size: TypeAlias = tuple[int, int]
 NDArrayUint8: TypeAlias = npt.NDArray[np.uint8]
+HandleLike: TypeAlias = WindowHandle | str | bytes | bytearray | SupportsInt | SupportsIndex
 
 _UNSET_HANDLE: Final[WindowHandle] = -1
 _BGRA_CHANNELS: Final[int] = 4
@@ -109,6 +109,17 @@ class WindowCapture:
         self._cached_bounds = self._fetch_window_bounds(self.hwnd)
         return self._cached_bounds
 
+    @staticmethod
+    def _coerce_valid_hwnd(hwnd: HandleLike) -> WindowHandle:
+        """Return ``hwnd`` as an integer or raise ``InvalidHandleError``."""
+        try:
+            target_hwnd = int(hwnd)
+        except (TypeError, ValueError) as exc:
+            raise InvalidHandleError(_UNSET_HANDLE) from exc
+        if target_hwnd == _UNSET_HANDLE:
+            raise InvalidHandleError(target_hwnd)
+        return target_hwnd
+
     @check_valid_hwnd
     def get_window_bounds(self: Self, *, use_cache: bool = False) -> Bounds:
         """Return the window bounds.
@@ -178,7 +189,6 @@ class WindowCapture:
         """
         return self._find_by_title(title, self.get_windows_with_hwnds(), case_insensitive=case_insensitive)
 
-    @check_valid_hwnd
     def get_child_windows(self: Self, hwnd: WindowHandle | None = None) -> list[ChildWindowEntry]:
         """Return child windows for the provided or current handle.
 
@@ -189,12 +199,16 @@ class WindowCapture:
             list[ChildWindowEntry]: Child handles and class names.
 
         Raises:
-            InvalidHandleError: If the instance is not attached to a valid handle (validated by the decorator).
+            InvalidHandleError: If neither ``hwnd`` nor the current attachment provide a usable handle.
         """
-        target_hwnd = hwnd or self.hwnd
-        child_windows: list[ChildWindowEntry] = []
-        win32gui.EnumChildWindows(target_hwnd, self._child_window_enumeration_handler, child_windows)
-        return child_windows
+        target_hwnd = self._coerce_valid_hwnd(self.hwnd if hwnd is None else hwnd)
+        try:
+            child_windows: list[ChildWindowEntry] = []
+            win32gui.EnumChildWindows(target_hwnd, self._child_window_enumeration_handler, child_windows)
+        except win32gui.error as exc:
+            raise InvalidHandleError(target_hwnd) from exc
+        else:
+            return child_windows
 
     def set_hwnd_by_title(self: Self, title: str, *, case_insensitive: bool = False) -> bool:
         """Update ``hwnd`` when a matching window title is discovered.
@@ -269,8 +283,12 @@ class WindowCapture:
     @staticmethod
     def _fetch_window_bounds(hwnd: WindowHandle) -> Bounds:
         """Fetch absolute window bounds from the OS."""
-        left, top, right, bottom = win32gui.GetWindowRect(hwnd)
-        return left, top, right, bottom
+        try:
+            left, top, right, bottom = win32gui.GetWindowRect(hwnd)
+        except win32gui.error as exc:
+            raise InvalidHandleError(hwnd) from exc
+        else:
+            return left, top, right, bottom
 
     @staticmethod
     def _find_by_title(title: str, windows: Sequence[WindowEntry], *, case_insensitive: bool) -> WindowHandle | None:
@@ -278,15 +296,10 @@ class WindowCapture:
 
         The scan preserves the ordering produced by the underlying Win32 enumeration call.
         """
-        if case_insensitive:
-            needle = title.casefold()
-            for hwnd, window_title in windows:
-                if needle in window_title.casefold():
-                    return hwnd
-            return None
-
+        needle = title.casefold() if case_insensitive else title
         for hwnd, window_title in windows:
-            if title in window_title:
+            haystack = window_title.casefold() if case_insensitive else window_title
+            if needle in haystack:
                 return hwnd
         return None
 
@@ -351,19 +364,22 @@ class WindowCapture:
         mem_dc = None
         bmp_dc = None
         bitmap = None
+        previous_bitmap = None
 
         try:
             mem_dc = win32ui.CreateDCFromHandle(window_dc)
             bmp_dc = mem_dc.CreateCompatibleDC()
             bitmap = win32ui.CreateBitmap()
             bitmap.CreateCompatibleBitmap(mem_dc, width, height)
-            bmp_dc.SelectObject(bitmap)
+            previous_bitmap = bmp_dc.SelectObject(bitmap)
             bmp_dc.BitBlt((0, 0), (width, height), mem_dc, (x, y), win32con.SRCCOPY)
 
             bitmap_bits = bitmap.GetBitmapBits(True)
             bgra_frame = np.frombuffer(bitmap_bits, dtype=np.uint8).reshape((height, width, _BGRA_CHANNELS))
             return np.ascontiguousarray(bgra_frame[..., :_BGR_CHANNELS])
         finally:
+            if bmp_dc is not None and previous_bitmap is not None:
+                bmp_dc.SelectObject(previous_bitmap)
             if bmp_dc is not None:
                 bmp_dc.DeleteDC()
             if mem_dc is not None:
