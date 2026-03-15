@@ -11,7 +11,7 @@ from __future__ import annotations
 import ctypes
 import platform
 from importlib import import_module
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Any, Final
 
 if __package__ in {None, ""} and platform.system() != "Windows":
     msg = "Only Windows platform is currently supported."
@@ -60,10 +60,13 @@ def _configure_process_dpi_awareness() -> None:
     """Configure process DPI awareness when running on Windows."""
     if platform.system() != "Windows":
         return
-    if platform.release() in _WINDOWS_RELEASES_WITH_SHCORE:
-        ctypes.windll.shcore.SetProcessDpiAwareness(2)
+    windll: Any | None = getattr(ctypes, "windll", None)
+    if windll is None:
         return
-    ctypes.windll.user32.SetProcessDPIAware()
+    if platform.release() in _WINDOWS_RELEASES_WITH_SHCORE:
+        windll.shcore.SetProcessDpiAwareness(2)
+        return
+    windll.user32.SetProcessDPIAware()
 
 
 try:
