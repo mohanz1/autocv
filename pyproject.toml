@@ -52,7 +52,7 @@ CI = "https://github.com/mohanz1/autocv/actions"
 dev = [{ include-group = "test" }, { include-group = "lint" }, { include-group = "type" }, { include-group = "docs" }]
 docs = [
     "furo>=2025.9,<2026",
-    "sphinx>=8.2,<9",
+    "sphinx>=8.2,<10",
     "sphinx-copybutton>=0.5,<1",
 ]
 lint = ["ruff>=0.15,<1"]
