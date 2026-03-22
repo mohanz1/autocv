@@ -15,6 +15,29 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  docs-changes:
+    name: Docs Change Detection
+    runs-on: ubuntu-latest
+    outputs:
+      docs: ${{ steps.filter.outputs.docs }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Detect docs-impacting changes
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            docs:
+              - "docs/**"
+              - "README.md"
+              - "pyproject.toml"
+              - "autocv/**/*.py"
+              - "autocv/**/*.pyi"
+              - "autocv/py.typed"
+              - ".github/workflows/ci.yml"
+
   lint-type:
     name: Lint and Type
     runs-on: ubuntu-latest
@@ -94,6 +117,8 @@ jobs:
 
   docs:
     name: Docs
+    needs: docs-changes
+    if: ${{ github.event_name == 'workflow_dispatch' || needs.docs-changes.outputs.docs == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

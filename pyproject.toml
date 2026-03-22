@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "autocv"
 version = "1.1.0"
 description = "Windows-first computer vision automation toolkit."
-requires-python = ">=3.11,<3.13"
+requires-python = ">=3.11,<3.15"
 dependencies = [
     "numpy>=2.2,<3",
     "opencv-python>=4.12,<4.14",
