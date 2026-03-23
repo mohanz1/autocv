@@ -992,14 +992,14 @@ name = "paddlepaddle-gpu"
 version = "3.2.2"
 source = { registry = "https://www.paddlepaddle.org.cn/packages/stable/cu129/" }
 dependencies = [
-    { name = "httpx" },
-    { name = "networkx" },
-    { name = "numpy" },
-    { name = "opt-einsum" },
-    { name = "pillow" },
-    { name = "protobuf" },
-    { name = "safetensors" },
-    { name = "typing-extensions" },
+    { name = "httpx", marker = "sys_platform == 'win32'" },
+    { name = "networkx", marker = "sys_platform == 'win32'" },
+    { name = "numpy", marker = "sys_platform == 'win32'" },
+    { name = "opt-einsum", marker = "sys_platform == 'win32'" },
+    { name = "pillow", marker = "sys_platform == 'win32'" },
+    { name = "protobuf", marker = "sys_platform == 'win32'" },
+    { name = "safetensors", marker = "sys_platform == 'win32'" },
+    { name = "typing-extensions", marker = "sys_platform == 'win32'" },
 ]
 wheels = [
     { url = "https://paddle-whl.bj.bcebos.com/stable/cu129/paddlepaddle-gpu/paddlepaddle_gpu-3.2.2-cp311-cp311-win_amd64.whl" },
@@ -2139,11 +2139,11 @@ wheels = [
 
 [[package]]
 name = "types-pywin32"
-version = "311.0.0.20260317"
+version = "311.0.0.20260323"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/3b/ca/738dab36a8cd4084c612faaa75cbb6694ae7234fc1afcaf8ec6826a8e251/types_pywin32-311.0.0.20260317.tar.gz", hash = "sha256:3b716a7fd0420d5f7dd45b2dcaf26e0831589ffd0b5b961ac293cc632ad4df1d", size = 330301, upload-time = "2026-03-17T04:06:28.46Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/b5/cc/f03ddb7412ac2fc2238358b617c2d5919ba96812dff8d3081f3b2754bb83/types_pywin32-311.0.0.20260323.tar.gz", hash = "sha256:2e8dc6a59fedccbc51b241651ce1e8aa58488934f517debf23a9c6d0ff329b4b", size = 332263, upload-time = "2026-03-23T04:15:20.004Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/fa/f7/aa92309ea16c795fe3f9217a3b1d5cbe155798e50cee5cfd72b8a670ddd8/types_pywin32-311.0.0.20260317-py3-none-any.whl", hash = "sha256:d1c2771a20d8189fc758ffb8bd3d04651a6908946b3d3ce6a3992c0e96740d68", size = 393384, upload-time = "2026-03-17T04:06:27.091Z" },
+    { url = "https://files.pythonhosted.org/packages/dc/82/d786d5d8b846e3cbe1ee52da8945560b111c789b42c3771b2129b312ab94/types_pywin32-311.0.0.20260323-py3-none-any.whl", hash = "sha256:2f2b03fc72ae77ccbb0ee258da0f181c3a38bd8602f6e332e42587b3b0d5f095", size = 395435, upload-time = "2026-03-23T04:15:18.76Z" },
 ]
 
 [[package]]
