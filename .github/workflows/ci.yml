@@ -109,7 +109,7 @@ jobs:
 
       - name: Upload coverage to Codecov
         if: ${{ matrix.upload-coverage }}
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v6
         with:
           files: coverage.xml
           name: python-${{ matrix.python-version }}
