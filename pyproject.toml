@@ -65,7 +65,7 @@ test = [
 type = [
     "ty>=0.0,<1",
     "types-pillow>=10.2,<11",
-    "types-pywin32>=311,<313",
+    "types-pywin32>=311.0.0.20260408,<313",
 ]
 
 [tool.uv]

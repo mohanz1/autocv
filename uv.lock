@@ -179,7 +179,7 @@ dev = [
     { name = "sphinx-copybutton", specifier = ">=0.5,<1" },
     { name = "ty", specifier = ">=0.0,<1" },
     { name = "types-pillow", specifier = ">=10.2,<11" },
-    { name = "types-pywin32", specifier = ">=311,<313" },
+    { name = "types-pywin32", specifier = ">=311.0.0.20260408,<313" },
 ]
 docs = [
     { name = "furo", specifier = ">=2025.12.19,<2026" },
@@ -196,7 +196,7 @@ test = [
 type = [
     { name = "ty", specifier = ">=0.0,<1" },
     { name = "types-pillow", specifier = ">=10.2,<11" },
-    { name = "types-pywin32", specifier = ">=311,<313" },
+    { name = "types-pywin32", specifier = ">=311.0.0.20260408,<313" },
 ]
 
 [[package]]
@@ -2139,11 +2139,11 @@ wheels = [
 
 [[package]]
 name = "types-pywin32"
-version = "311.0.0.20260323"
+version = "311.0.0.20260408"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/b5/cc/f03ddb7412ac2fc2238358b617c2d5919ba96812dff8d3081f3b2754bb83/types_pywin32-311.0.0.20260323.tar.gz", hash = "sha256:2e8dc6a59fedccbc51b241651ce1e8aa58488934f517debf23a9c6d0ff329b4b", size = 332263, upload-time = "2026-03-23T04:15:20.004Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/30/40/0d182fbf578f30f7ff2b07b8fe494cc42178992d0087a739c70990adca8c/types_pywin32-311.0.0.20260408.tar.gz", hash = "sha256:cb86c6beae20195165e770a65c3ee707746dc777ca8e03e4f06a66d4013a4bd0", size = 332341, upload-time = "2026-04-08T04:33:29.824Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/dc/82/d786d5d8b846e3cbe1ee52da8945560b111c789b42c3771b2129b312ab94/types_pywin32-311.0.0.20260323-py3-none-any.whl", hash = "sha256:2f2b03fc72ae77ccbb0ee258da0f181c3a38bd8602f6e332e42587b3b0d5f095", size = 395435, upload-time = "2026-03-23T04:15:18.76Z" },
+    { url = "https://files.pythonhosted.org/packages/0d/b5/3cc67baf622805270d84e2252dfa130daf7ccd49795f80b51350abb91bd9/types_pywin32-311.0.0.20260408-py3-none-any.whl", hash = "sha256:0b691da60aaed0ee7169a69268bad1e2051eb52f4acc10248c103aadcd1f2451", size = 395413, upload-time = "2026-04-08T04:33:28.476Z" },
 ]
 
 [[package]]
