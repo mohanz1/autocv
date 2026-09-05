@@ -63,7 +63,7 @@ test = [
     "pytest-xdist>=3.8,<4",
 ]
 type = [
-    "ty>=0.0,<1",
+    "ty>=0.0.29,<1",
     "types-pillow>=10.2,<11",
     "types-pywin32>=311,<313",
 ]
