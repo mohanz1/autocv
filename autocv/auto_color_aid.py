@@ -127,7 +127,7 @@ class ColorSelectionState:
         min_color = np.amin(colors, axis=0)
 
         best_color = ((max_color + min_color) // 2).astype(np.uint8)
-        self.best_tolerance = int((max_color - min_color).max() + 1)
+        self.best_tolerance = int(np.max(max_color - min_color) + 1)
         self.best_color = (int(best_color[0]), int(best_color[1]), int(best_color[2]))
 
 

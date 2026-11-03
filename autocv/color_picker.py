@@ -187,7 +187,7 @@ class ColorPicker:
         self.snip_surface.pack()
 
         self.snip_surface.create_image(0, 0, image=photo_img, anchor=NW)
-        self.snip_surface.img = photo_img  # type: ignore[attr-defined]
+        self.snip_surface.img = photo_img  # ty: ignore[unresolved-attribute]
 
         self.set_geometry()
         self.master_screen.deiconify()
@@ -215,7 +215,7 @@ class ColorPicker:
         # Update the canvas with the new image.
         self.snip_surface.delete("center")
         self.snip_surface.create_image(0, 0, image=photo_image, anchor=NW)
-        self.snip_surface.img = photo_image  # type: ignore[attr-defined]
+        self.snip_surface.img = photo_image  # ty: ignore[unresolved-attribute]
         self.draw_center_rectangle(cropped_image)
 
         # Check if the left mouse button state has changed (indicating a click).

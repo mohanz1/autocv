@@ -351,7 +351,7 @@ class Vision(WindowCapture):
             raise ValueError(msg)
         xs = points[:, 0]
         ys = points[:, 1]
-        return int(xs.min()), int(ys.min()), int(xs.max()), int(ys.max())
+        return int(np.min(xs)), int(np.min(ys)), int(np.max(xs)), int(np.max(ys))
 
     @staticmethod
     def _box_to_bbox(box: Sequence[float | int]) -> tuple[int, int, int, int]:

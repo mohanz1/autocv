@@ -216,12 +216,12 @@ class Input(Vision):
 
     def _set_window_active(self: Self, *, active: bool) -> None:
         """Send a ``WM_ACTIVATE`` message to the target window."""
-        win32api.SendMessage(self.hwnd, win32con.WM_ACTIVATE, int(active), self.hwnd)  # type: ignore[arg-type]
+        win32api.SendMessage(self.hwnd, win32con.WM_ACTIVATE, int(active), self.hwnd)  # ty: ignore[invalid-argument-type]
 
     @check_valid_hwnd
     def _client_to_screen(self: Self, point: ClientPoint) -> ClientPoint:
         """Convert a client-area point into screen coordinates."""
-        return cast("ClientPoint", win32gui.ClientToScreen(self.hwnd, point))
+        return win32gui.ClientToScreen(self.hwnd, point)
 
     @staticmethod
     def _make_vk_lparam(vk_code: int, *, keyup: bool = False) -> int:
@@ -323,8 +323,8 @@ class Input(Vision):
             win32api.SendMessage(
                 self.hwnd,
                 win32con.WM_SETCURSOR,
-                self.hwnd,  # type: ignore[arg-type]
-                self._make_lparam(result, win32con.WM_MOUSEMOVE),  # type: ignore[arg-type]
+                self.hwnd,  # ty: ignore[invalid-argument-type]
+                self._make_lparam(result, win32con.WM_MOUSEMOVE),  # ty: ignore[invalid-argument-type]
             )
             win32api.PostMessage(self.hwnd, win32con.WM_MOUSEMOVE, 0, client_lparam)
         else:
@@ -356,7 +356,7 @@ class Input(Vision):
         top_hwnd = self._get_topmost_hwnd()
         lparam_button = self._make_lparam(result, button_to_press)
         win32gui.SendMessage(top_hwnd, win32con.WM_MOUSEACTIVATE, top_hwnd, lparam_button)
-        win32api.SendMessage(self.hwnd, win32con.WM_SETCURSOR, self.hwnd, lparam_button)  # type: ignore[arg-type]
+        win32api.SendMessage(self.hwnd, win32con.WM_SETCURSOR, self.hwnd, lparam_button)  # ty: ignore[invalid-argument-type]
 
         dispatch = win32gui.SendMessage if send_message else win32gui.PostMessage
         click_lparam: int = int(win32api.MAKELONG(*self._last_moved_point)) if send_message else client_lparam
@@ -376,8 +376,8 @@ class Input(Vision):
         """
         l_param = self._make_vk_lparam(vk_code)
         self._set_window_active(active=True)
-        win32api.SendMessage(self.hwnd, win32con.WM_KEYDOWN, vk_code, l_param)  # type: ignore[arg-type]
-        win32api.SendMessage(self.hwnd, win32con.WM_CHAR, chr(vk_code), l_param)  # type: ignore[arg-type]
+        win32api.SendMessage(self.hwnd, win32con.WM_KEYDOWN, vk_code, l_param)  # ty: ignore[invalid-argument-type]
+        win32api.SendMessage(self.hwnd, win32con.WM_CHAR, chr(vk_code), l_param)  # ty: ignore[invalid-argument-type]
         self._set_window_active(active=False)
 
     @check_valid_hwnd
@@ -389,7 +389,7 @@ class Input(Vision):
         """
         l_param = self._make_vk_lparam(vk_code, keyup=True)
         self._set_window_active(active=True)
-        win32api.SendMessage(self.hwnd, win32con.WM_KEYUP, vk_code, l_param)  # type: ignore[arg-type]
+        win32api.SendMessage(self.hwnd, win32con.WM_KEYUP, vk_code, l_param)  # ty: ignore[invalid-argument-type]
         self._set_window_active(active=False)
 
     @check_valid_hwnd
